@@ -1,0 +1,17 @@
+{
+    "text": "Top Level",
+    "children": [{
+            "text": "Level 2: A",
+            "children": [{
+                    "text": "Son of A"
+                },
+                {
+                    "text": "Daughter of A"
+                }
+            ]
+        },
+        {
+            "text": "Level 2: B"
+        }
+    ]
+}
