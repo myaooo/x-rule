@@ -12,6 +12,7 @@ logger = get_logger(__name__)
 
 
 class ModelManager:
+    """A wrapper that """
 
     def __init__(self):
         self.models = {}
