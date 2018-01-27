@@ -1,6 +1,9 @@
 .idea/
 datasets
+*.mdl
+models
 
+py-discretize/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

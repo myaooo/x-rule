@@ -3,23 +3,23 @@ import pickle
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor, export_graphviz
 
 from iml.utils.io_utils import obj2json
-from iml.models import SKModelWrapper, Classifier, Regressor
-from iml.models.surrogate import Surrogate
+from iml.models import SKModelWrapper, Classifier, Regressor, CLASSIFICATION, REGRESSION
+from iml.models.surrogate import SurrogateMixin
 
 
 class Tree(SKModelWrapper, Classifier, Regressor):
     """
     A wrapper class that wraps sklearn.tree.DecisionTreeClassifier
     """
-    def __init__(self, problem='classification', name='tree', max_depth=None, min_samples_split=2,
+    def __init__(self, problem=CLASSIFICATION, name='tree', max_depth=None, min_samples_split=2,
                  min_samples_leaf=1):
-        super(Tree, self).__init__(name)
-        self.problem = problem
-        if problem == 'classification':
+        super(Tree, self).__init__(problem=problem, name=name)
+        self._problem = problem
+        if problem == CLASSIFICATION:
             self._model = DecisionTreeClassifier(max_depth=max_depth,
                                                 min_samples_split=min_samples_split,
                                                 min_samples_leaf=min_samples_leaf)
-        elif problem == 'regression':
+        elif problem == REGRESSION:
             self._model = DecisionTreeRegressor(max_depth=max_depth,
                                                min_samples_split=min_samples_split,
                                                min_samples_leaf=min_samples_leaf)
@@ -28,9 +28,9 @@ class Tree(SKModelWrapper, Classifier, Regressor):
 
     @property
     def type(self):
-        if self.problem == "classification":
+        if self._problem == CLASSIFICATION:
             return 'tree-classifier'
-        elif self.problem == 'regressor':
+        elif self._problem == REGRESSION:
             return 'tree-regressor'
         return 'tree'
 
@@ -84,8 +84,8 @@ def load(filename):
     return Tree.load(filename)
 
 
-class TreeSurrogate(Tree, Surrogate):
-    def __init__(self, problem='classification', name='tree', max_depth=None, min_samples_split=2,
+class TreeSurrogate(Tree, SurrogateMixin):
+    def __init__(self, problem=CLASSIFICATION, name='tree', max_depth=None, min_samples_split=2,
                  min_samples_leaf=1):
-        Surrogate.__init__(self, name)
+        # SurrogateMixin.__init__(self, name)
         Tree.__init__(self, problem, name, max_depth, min_samples_split, min_samples_leaf)

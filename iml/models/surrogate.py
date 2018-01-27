@@ -9,6 +9,18 @@ SampleFn = Callable[[], np.ndarray]
 ArrayLike = Union[List[Union[np.ndarray,float]], np.ndarray]
 
 
+class GaussianDistribution:
+    def __init__(self, mean, cov):
+        self.mean = mean
+        self.cov = cov
+
+    def sample(self, n: Optional[int]=None):
+        return np.random.multivariate_normal(self.mean, self.cov, n)
+
+    def __call__(self, *args, **kwargs):
+        return self.sample(*args, **kwargs)
+
+
 class Mixture:
     def __init__(self, sample_fns: List[SampleFn], weights: Optional[np.ndarray] = None):
         self.sample_fns = sample_fns
@@ -17,7 +29,9 @@ class Mixture:
     def sample(self, n: int) -> List[np.ndarray]:
         results = []
         n_samples = np.random.choice(len(self), size=n, p=self.weights)
-        for i in n_samples:
+        # print('n_samples:')
+        # print(n_samples)
+        for i in n_samples.tolist():
             results.append(self.sample_fns[i]())
         return results
 
@@ -41,9 +55,9 @@ def gaussian_mixture(means: ArrayLike,
                      weights: Optional[np.ndarray] = None
                      ) -> Mixture:
     sample_fns = [
-        lambda: np.random.multivariate_normal(mean, sigma2cov(cov, len(mean)))
-        for mean, cov in zip(means, covs)
+        GaussianDistribution(mean, sigma2cov(cov, len(mean))) for mean, cov in zip(means, covs)
     ]
+    # print(sample_fns[0].cov)
     return Mixture(sample_fns, weights)
 
 
@@ -55,38 +69,51 @@ def gaussian_mixture_sample(n: int,
     return gaussian_mixture(means, covs, weights).sample(n)
 
 
-class Surrogate(ModelBase):
+class SurrogateMixin(ModelBase):
 
     def __init__(self, name: str):
-        super(Surrogate, self).__init__(name)
+        super(SurrogateMixin, self).__init__(name)
         self.target = None  # type: Optional[ModelBase]
         self.data_distribution = None
 
-    def surrogate(self, target: ModelBase, instances: np.ndarray, sigma: float, n_sampling: int):
+    def surrogate(self, target: ModelBase, instances: np.ndarray,
+                  sigmas: Union[List[float], np.ndarray], n_sampling: int,
+                  **kwargs):
         # if n_sampling is None:
         #     n_sampling = int(self.sampling_rate * len(instances))
         self.target = target
-        self.data_distribution = gaussian_mixture(instances, [sigma] * len(instances))
+        self.data_distribution = gaussian_mixture(instances, [sigmas]*len(instances))
         train_x = self.data_distribution.sample(n_sampling)
-        train_y = target.infer(train_x)
-        self.train(train_x, train_y)
+        train_y = target.predict(train_x)
+        # print(self.data_distribution.weights)
+        # print('instances')
+        # print(instances)
+        # print('train_y')
+        # print(train_y)
+        self.train(train_x, train_y, **kwargs)
 
     def fidelity(self, x):
         if self.target is None:
             raise RuntimeError("The target model has to be set before calling this method!")
-        target_y = self.target.infer(x)
-        predict_y = self.infer(x)
+        y_target = self.target.predict(x)
+        y_pred = self.predict(x)
 
+        return self.score(y_target, y_pred)
+
+    def self_test(self, n_sample=200):
+        x = self.data_distribution.sample(n_sample)
+        fidelity = self.fidelity(x)
+        print("Self test fidelity: {:.5f}".format(fidelity))
+
+    def evaluate(self, x, y, stage='train'):
+        prefix = 'Training'
+        if stage == 'test':
+            prefix = 'Testing'
+        y_pred = self.predict(x)
+        fidelity = self.fidelity(x)
+        score = self.score(y, y_pred)
+        print(prefix + " fidelity: {:.5f}; score: {:.5f}".format(fidelity, score))
 
     @property
     def type(self):
         return 'surrogate'
-
-    def train(self, x, y):
-        raise NotImplementedError("Base class")
-
-    def test(self, x, y):
-        raise NotImplementedError("Base class")
-
-    def infer(self, x):
-        raise NotImplementedError("Base class")
