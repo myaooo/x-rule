@@ -35,7 +35,7 @@ def train_tree(name='tree'):
     tree.train(train_x, train_y)
     tree.test(test_x, test_y)
     tree.describe()
-    tree.export(f'{name}.json')
+    tree.export('{}.json'.format(name))
     tree.save()
 
 
