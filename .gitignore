@@ -2,7 +2,8 @@
 datasets
 *.mdl
 models
-
+!iml/models
+tmp
 py-discretize/
 
 # Byte-compiled / optimized / DLL files

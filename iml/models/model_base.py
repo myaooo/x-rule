@@ -4,14 +4,17 @@ from typing import Optional, Union
 from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn.metrics import log_loss, accuracy_score, mean_squared_error, r2_score
 
-FILE_EXTENSION = 'mdl'
+from iml.utils.io_utils import get_path, before_save, obj2pkl, pkl2obj
+from iml.config import model_dir
+
+FILE_EXTENSION = '.mdl'
 
 CLASSIFICATION = 'classification'
 REGRESSION = 'regression'
 
 
-def format_name(name):
-    return f"{name}.{FILE_EXTENSION}"
+def _format_name(name):
+    return get_path(model_dir(), "{}{}".format(name, FILE_EXTENSION))
 
 
 # class Metrics:
@@ -58,9 +61,8 @@ class ModelBase:
 
     def save(self, filename=None):
         if filename is None:
-            filename = format_name(self.name)
-        with open(filename, "wb") as f:
-            pickle.dump(self, f)
+            filename = _format_name(self.name)
+        obj2pkl(self, filename)
 
     @classmethod
     def load(cls, filename):

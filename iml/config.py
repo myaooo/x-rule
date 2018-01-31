@@ -14,6 +14,10 @@ def root_dir():
     return ROOT_DIR
 
 
+def model_dir():
+    return os.path.join(root_dir(), 'models')
+
+
 def mode(new_mode=None):
     global ENV
     if new_mode is None:

@@ -7,6 +7,12 @@ import json
 import io
 import csv
 
+from typing import Dict, Union, Optional, Tuple, Callable, Any
+
+import dill as pickle
+import numpy as np
+import pandas as pd
+
 from iml.config import root_dir
 
 
@@ -44,11 +50,44 @@ def write2file(s_io, filename=None, mode='w', encoding=None):
             f.write(s_io)
 
 
-def obj2json(obj_, filename=None, **kwargs):
+def obj2pkl(obj, filename=None, *args, **kwargs):
     if filename is not None:
         before_save(filename)
-        return json.dump(obj_, open(filename, 'w'), **kwargs)
-    return json.dumps(obj_, **kwargs)
+        with open(filename, 'wb') as f:
+            return pickle.dump(obj, f, *args, **kwargs)
+    return pickle.dumps(obj, **kwargs)
+
+
+def pkl2obj(filename=None):
+    if not file_exists(filename):
+        raise FileNotFoundError("Cannot found file {}".format(filename))
+    with open(filename, 'rb') as f:
+        return pickle.load(f)
+
+
+def obj2json(obj, filename=None, *args, **kwargs):
+    if filename is not None:
+        before_save(filename)
+        with open(filename, 'w') as f:
+            return json.dump(obj, f, *args, **kwargs)
+    return json.dumps(obj, **kwargs)
+
+
+def df2csv(df, filename, **kwargs):
+    if not isinstance(df, pd.DataFrame):
+        df = pd.DataFrame(df)
+    return df.to_csv(filename, index=False, **kwargs)
+
+
+def csv2df(filename):
+    return pd.read_csv(filename)
+
+
+def array2txt(array: np.ndarray, filename=None, *args, **kwargs):
+    np.savetxt(filename, array, *args, **kwargs)
+
+def txt2array(filename=None, *args, **kwargs):
+    np.savetxt(filename, array, *args, **kwargs)
 
 
 def lists2csv(list_of_list, file_path, delimiter=',', encoding=None):
@@ -59,7 +98,7 @@ def lists2csv(list_of_list, file_path, delimiter=',', encoding=None):
         write2file(s_io, file_path, 'w', encoding=encoding)
 
 
-def csv2list(file_path, delimiter=',', mode='r', encoding=None, skip=0):
+def csv2lists(file_path, delimiter=',', mode='r', encoding=None, skip=0):
     lists = []
     assert_file_exists(file_path)
     with open(file_path, mode, newline='', encoding=encoding) as f:
@@ -114,3 +153,41 @@ def before_save(file_or_dir):
     dir_name = os.path.dirname(os.path.abspath(file_or_dir))
     if not os.path.exists(dir_name):
         os.makedirs(dir_name)
+
+
+def get_ext(filename):
+    _, ext = os.path.splitext(filename)
+    return ext
+
+
+Saver = Callable[[Any, str], Any]
+Loader = Callable[[str], Any]
+
+_ext_table = {
+    '.pkl': (obj2pkl, pkl2obj),
+    '.json': (obj2json, None),
+    '.csv': (df2csv, csv2df),
+    '.txt': (array2txt, txt2array),
+}  # type: Dict[str, Tuple[Saver, Loader]]
+
+
+def register_file_handling(ext: str, saver: Saver, loader: Loader):
+    assert ext not in _ext_table
+    _ext_table[ext] = (saver, loader)
+
+
+def save_file(obj, filename, *args, **kwargs):
+
+    ext = get_ext(filename)
+    if ext in _ext_table:
+        return _ext_table[ext][0](obj, filename, *args, **kwargs)
+    else:
+        raise ValueError("Unsupported file {} with file extension {}".format(filename, ext))
+
+
+def load_file(filename):
+    ext = get_ext(filename)
+    if ext in _ext_table:
+        return _ext_table[ext][1](filename)
+    else:
+        raise ValueError("Unsupported file {} with file extension {}".format(filename, ext))
