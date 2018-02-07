@@ -13,7 +13,7 @@ import dill as pickle
 import numpy as np
 import pandas as pd
 
-from iml.config import root_dir
+from iml.config import Config
 
 
 def get_path(path, filename=None, absolute=False):
@@ -25,12 +25,7 @@ def get_path(path, filename=None, absolute=False):
     :param absolute: return the absolute path
     :return: return the path relative to the project root dir, default to return relative path to the called place.
     """
-    _p = os.path.join(root_dir(), path)
-    if filename:
-        _p = os.path.join(_p, filename)
-    if absolute:
-        return os.path.abspath(_p)
-    return os.path.relpath(_p)
+    return Config.get_path(path, filename, absolute)
 
 
 def write2file(s_io, filename=None, mode='w', encoding=None):
@@ -59,18 +54,23 @@ def obj2pkl(obj, filename=None, *args, **kwargs):
 
 
 def pkl2obj(filename=None):
-    if not file_exists(filename):
-        raise FileNotFoundError("Cannot found file {}".format(filename))
+    assert_file_exists(filename)
     with open(filename, 'rb') as f:
         return pickle.load(f)
 
 
-def obj2json(obj, filename=None, *args, **kwargs):
+def dict2json(obj, filename=None, *args, **kwargs):
     if filename is not None:
         before_save(filename)
         with open(filename, 'w') as f:
             return json.dump(obj, f, *args, **kwargs)
     return json.dumps(obj, **kwargs)
+
+
+def json2dict(filename, *args, **kwargs):
+    assert_file_exists(filename)
+    with open(filename, 'r') as f:
+        return json.load(f, *args, **kwargs)
 
 
 def df2csv(df, filename, **kwargs):
@@ -80,14 +80,17 @@ def df2csv(df, filename, **kwargs):
 
 
 def csv2df(filename):
+    assert_file_exists(filename)
     return pd.read_csv(filename)
 
 
-def array2txt(array: np.ndarray, filename=None, *args, **kwargs):
-    np.savetxt(filename, array, *args, **kwargs)
+def array2npy(array: np.ndarray, filename, *args, **kwargs):
+    return np.save(filename, array, *args, **kwargs)
 
-def txt2array(filename=None, *args, **kwargs):
-    np.savetxt(filename, array, *args, **kwargs)
+
+def npy2array(filename, *args, **kwargs):
+    assert_file_exists(filename)
+    return np.load(filename, *args, **kwargs)
 
 
 def lists2csv(list_of_list, file_path, delimiter=',', encoding=None):
@@ -99,8 +102,8 @@ def lists2csv(list_of_list, file_path, delimiter=',', encoding=None):
 
 
 def csv2lists(file_path, delimiter=',', mode='r', encoding=None, skip=0):
-    lists = []
     assert_file_exists(file_path)
+    lists = []
     with open(file_path, mode, newline='', encoding=encoding) as f:
         csv_reader = csv.reader(f, delimiter=delimiter)
         for i in range(skip):
@@ -134,14 +137,14 @@ def assert_file_exists(file_path):
     if file_exists(file_path):
         return
     else:
-        raise LookupError("Cannot find file: {:s}".format(os.path.abspath(file_path)))
+        raise FileNotFoundError("Cannot find file: {:s}".format(os.path.abspath(file_path)))
 
 
 def assert_path_exists(file_or_dir):
     if os.path.exists(file_or_dir):
         return
     else:
-        raise LookupError("Cannot find file or dir: {:s}".format(os.path.abspath(file_or_dir)))
+        raise FileNotFoundError("Cannot find file or dir: {:s}".format(os.path.abspath(file_or_dir)))
 
 
 def before_save(file_or_dir):
@@ -165,9 +168,9 @@ Loader = Callable[[str], Any]
 
 _ext_table = {
     '.pkl': (obj2pkl, pkl2obj),
-    '.json': (obj2json, None),
+    '.json': (dict2json, None),
     '.csv': (df2csv, csv2df),
-    '.txt': (array2txt, txt2array),
+    '.npy': (array2npy, npy2array),
 }  # type: Dict[str, Tuple[Saver, Loader]]
 
 
@@ -185,9 +188,9 @@ def save_file(obj, filename, *args, **kwargs):
         raise ValueError("Unsupported file {} with file extension {}".format(filename, ext))
 
 
-def load_file(filename):
+def load_file(filename, *args, **kwargs):
     ext = get_ext(filename)
     if ext in _ext_table:
-        return _ext_table[ext][1](filename)
+        return _ext_table[ext][1](filename, *args, **kwargs)
     else:
         raise ValueError("Unsupported file {} with file extension {}".format(filename, ext))

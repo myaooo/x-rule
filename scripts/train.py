@@ -39,24 +39,27 @@ def train_tree(name='tree'):
     tree.save()
 
 
-def train_nn(neurons=(20,)):
-    train_x, train_y, test_x, test_y, feature_names = prep_data()
-    name = '-'.join(['nn']+[str(neuron) for neuron in neurons])
-    nn = NeuralNet(name=name, neurons=neurons, activation="relu", alpha=0.01, max_iter=2000, solver='adam')
+def train_nn(name='nn', dataset='wine', neurons=(20,)):
+    data = get_dataset(dataset, split=True, discrete=False)
+    train_x, train_y, test_x, test_y, feature_names = \
+        data['train_x'], data['train_y'], data['test_x'], data['test_y'], data['feature_names']
+    model_name = '-'.join([dataset, name]+[str(neuron) for neuron in neurons])
+    nn = NeuralNet(name=model_name, neurons=neurons, activation="relu", alpha=0.01, max_iter=5000, solver='adam')
     nn.train(train_x, train_y)
     nn.test(test_x, test_y)
     nn.save()
 
 
-def train_rule(name='rule'):
-    data = get_dataset('breast_cancer', split=True, discrete=True)
+def train_rule(name='rule', dataset='breast_cancer'):
+    data = get_dataset(dataset, split=True, discrete=True)
     train_x, train_y, test_x, test_y, feature_names = \
         data['train_x'], data['train_y'], data['test_x'], data['test_y'], data['feature_names']
     from iml.models.rule_model import SBRL
 
     # print(train_x.shape, train_x.dtype)
     discretizer = data['discretizer']
-    brl = SBRL(name=name, rule_maxlen=2, discretizer=discretizer)
+    model_name = '-'.join([dataset, name])
+    brl = SBRL(name=model_name, rule_maxlen=3, discretizer=discretizer)
     brl.train(train_x, train_y)
     # print(brl.infer(test_x))
     brl.test(test_x, test_y)
@@ -64,19 +67,22 @@ def train_rule(name='rule'):
     brl.save()
 
 
-def rule_surrogate(model_file, name='rule-s-nn', is_global=True, sampling_rate=10):
+def rule_surrogate(model_file, is_global=True, sampling_rate=5):
     from iml.models.rule_model import RuleSurrogate
     model = load_model(model_file)
-    train_x, train_y, test_x, test_y, feature_names = prep_data()
+    dataset = model.name.split('-')[0]
+    data = get_dataset(dataset, split=True, discrete=True)
+    train_x, train_y, test_x, test_y, feature_names = \
+        data['train_x'], data['train_y'], data['test_x'], data['test_y'], data['feature_names']
     # print(feature_names)
     model.test(test_x, test_y)
 
-    rule_model = RuleSurrogate(name=name, rule_maxlen=2,
-                               minsupport=0.01,
-                               _lambda=400, nchain=40, eta=1)
-    rule_model.discretizer.fit(train_x, train_y)
+    model_name = 'rule-surrogate-' + model.name
+    rule_model = RuleSurrogate(name=model_name, discretizer=data['discretizer'],
+                               rule_minlen=1, rule_maxlen=3, min_support=0.02,
+                               _lambda=100, nchain=40, eta=1, iters=5000)
     if is_global:
-        sigmas = np.std(train_x, axis=0)/ (len(train_x) ** 0.7)
+        sigmas = np.std(train_x, axis=0) / (len(train_x) ** 0.7)
     else:
         sigmas = np.std(train_x, axis=0)/np.sqrt(len(train_x))
     # sigmas = [0] * train_x.shape[1]
@@ -89,7 +95,7 @@ def rule_surrogate(model_file, name='rule-s-nn', is_global=True, sampling_rate=1
     # print(train_y)
     # print('target_y')
     # print(model.predict(instances))
-    rule_model.surrogate(model, instances, sigmas, sampling_rate*len(instances), rediscretize=False)
+    rule_model.surrogate(model, instances, sigmas, sampling_rate*len(instances), discretize=True)
     rule_model.describe(feature_names=feature_names)
     rule_model.save()
     rule_model.self_test()
@@ -100,4 +106,10 @@ def rule_surrogate(model_file, name='rule-s-nn', is_global=True, sampling_rate=1
 
 
 if __name__ == '__main__':
-    train_rule()
+    train_rule(dataset='breast_cancer')
+    # train_rule(dataset='iris')
+    # train_rule(dataset='wine')
+    # train_nn(dataset='breast_cancer')
+    # train_nn(dataset='iris')
+    # train_nn(dataset='wine')
+    # rule_surrogate('models/iris-nn-20.mdl')

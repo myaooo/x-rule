@@ -1,0 +1,9 @@
+.sidebar-label {
+    text-align: right;
+    margin-right: 2px;
+}
+
+.sidebar-input {
+    text-align: left;
+    /* margin-right: 2px; */
+}

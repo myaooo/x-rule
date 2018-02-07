@@ -4,8 +4,8 @@ from typing import Optional, Union
 from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn.metrics import log_loss, accuracy_score, mean_squared_error, r2_score
 
-from iml.utils.io_utils import get_path, before_save, obj2pkl, pkl2obj
-from iml.config import model_dir
+from iml.utils.io_utils import get_path, before_save, obj2pkl, pkl2obj, assert_file_exists
+from iml import Config
 
 FILE_EXTENSION = '.mdl'
 
@@ -14,7 +14,7 @@ REGRESSION = 'regression'
 
 
 def _format_name(name):
-    return get_path(model_dir(), "{}{}".format(name, FILE_EXTENSION))
+    return get_path(Config.model_dir(), "{}{}".format(name, FILE_EXTENSION))
 
 
 # class Metrics:
@@ -27,7 +27,12 @@ def _format_name(name):
 #         return log_loss(y_true, y_predict)
 
 
-class ModelBase:
+class ModelInterface:
+    def predict(self, x):
+        raise NotImplementedError("Interface class")
+
+
+class ModelBase(ModelInterface):
     def __init__(self, name):
         self.name = name
 
@@ -74,6 +79,7 @@ class ModelBase:
 
 
 def load_model(filename: str) -> ModelBase:
+    assert_file_exists(filename)
     with open(filename, "rb") as f:
         mdl = pickle.load(f)
         # assert isinstance(mdl, ModelBase)

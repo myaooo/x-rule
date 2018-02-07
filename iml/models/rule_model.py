@@ -9,8 +9,8 @@ import numpy as np
 # from rpy2.robjects import FactorVector, DataFrame, numpy2ri, r
 
 from mdlp.discretization import MDLP
-# from pysbrl import train_sbrl
-import pysbrl
+from pysbrl import train_sbrl
+# import pysbr
 
 from iml.models import Classifier, SurrogateMixin
 from iml.data_processing import categorical2pysbrl_data
@@ -36,9 +36,9 @@ class Rule:
         self.feature_indices = feature_indices
         self.categories = categories
         self.output = output  # The probability distribution
-        self.supports = support
+        self.support = support
 
-    def describe(self, feature_names=None, category_intervals=None, label='label', default=False):
+    def describe(self, feature_names=None, category_intervals=None, label='label'):
         pred_label = np.argmax(self.output)
         if label == 'label':
             output = str(pred_label) + " ({})".format(self.output[pred_label])
@@ -47,20 +47,22 @@ class Rule:
         else:
             raise ValueError("Unknown label {}".format(label))
         output = "{}: ".format(label) + output
-        if feature_names is None:
-            _feature_names = ["X" + str(idx) for idx in self.feature_indices]
-        else:
-            _feature_names = [feature_names[idx] for idx in self.feature_indices]
-        if category_intervals is None:
-            categories = [" = " + str(category) for category in self.categories]
-        else:
-            categories = []
-            for interval in category_intervals:
-                assert len(interval) == 2
-                categories.append(" in " + str(interval))
+
+        default = self.feature_indices[0] == -1
         if default:
             s = "DEFAULT " + output
         else:
+            if feature_names is None:
+                _feature_names = ["X" + str(idx) for idx in self.feature_indices]
+            else:
+                _feature_names = [feature_names[idx] for idx in self.feature_indices]
+            if category_intervals is None:
+                categories = [" = " + str(category) for category in self.categories]
+            else:
+                categories = []
+                for interval in category_intervals:
+                    assert len(interval) == 2
+                    categories.append(" in " + str(interval))
             s = "IF "
             # conditions
             conditions = ["({}{})".format(feature, category) for feature, category in zip(_feature_names, categories)]
@@ -68,9 +70,9 @@ class Rule:
             # results
             s += " THEN " + output
 
-        if self.supports is not None:
-            supports = [("+" if i == pred_label else "-") + str(support) for i, support in enumerate(self.supports)]
-            s += " [" + "/".join(supports) + "]"
+        if self.support is not None:
+            support = [("+" if i == pred_label else "-") + str(support) for i, support in enumerate(self.support)]
+            s += " [" + "/".join(support) + "]"
         return s
 
     def is_satisfy(self, x_cat):
@@ -292,8 +294,8 @@ class SBRL(Classifier):
     # r_sbrl = importr('sbrl')
 
     def __init__(self, rule_minlen=1, rule_maxlen=2,
-                 min_support=0.02, _lambda=50, eta=1, iters=30000, nchain=30, name='sbrl',
-                 discretizer=None, feature_names=None):
+                 min_support=0.02, _lambda=50, eta=1, iters=10000, nchain=30, name='sbrl',
+                 discretizer=None):
         super(SBRL, self).__init__(name)
         self._r_model = None
         self.rule_minlen = rule_minlen
@@ -309,9 +311,22 @@ class SBRL(Classifier):
         self._rule_indices = None  # type: Optional[np.ndarray]
         self._rule_probs = None  # type: Optional[np.ndarray]
         self._rule_names = None
-        self._feature_names = feature_names
-        self._mat_feature_rule = None
+        # self._feature_names = None
+        # self._label_names = None
+        # self._mat_feature_rule = None
         self._rule_list = []  # type: List[Rule]
+
+    @property
+    def rule_list(self):
+        return self._rule_list
+
+    # @property
+    # def feature_names(self):
+    #     return self._feature_names
+    #
+    # @property
+    # def label_names(self):
+    #     return self._label_names
 
     def fit_discretizer(self, x, y):
         self.discretizer.fit(x, y)
@@ -331,15 +346,18 @@ class SBRL(Classifier):
     # def score(self, y_true, y_pred):
     #     return self.accuracy(y_true, y_pred)
 
-    def train(self, x, y, feature_names=None, discretize=True):
+    def train(self, x, y, feature_names=None, label_names=None, discretize=True):
         """
 
         :param x: 2D np.ndarry (n_instances, n_features) could be continuous
         :param y: 1D np.ndarray (n_instances, ) labels
         :param feature_names:
+        :param label_names:
         :param discretize: (bool) whether to use the new training data to fit the discretizer again
         :return:
         """
+        # self._feature_names = feature_names
+        # self._label_names = label_names
         _x = x
         if discretize:
             if self.discretizer is None:
@@ -350,9 +368,9 @@ class SBRL(Classifier):
         data_file, label_file = categorical2pysbrl_data(_x, y, data_name, supp=self.min_support,
                                                         zmin=self.rule_minlen, zmax=self.rule_maxlen)
         n_labels = len(set(y))
-        _model = pysbrl.train_sbrl(data_file, label_file, self._lambda, eta=self.eta,
-                                   max_iters=self.iters, nchain=self.nchain,
-                                   alphas=[1 for _ in range(n_labels)])
+        _model = train_sbrl(data_file, label_file, self._lambda, eta=self.eta,
+                            max_iters=self.iters, nchain=self.nchain,
+                            alphas=[1 for _ in range(n_labels)])
 
         self._rule_indices = _model[0]
         self._rule_probs = _model[1]
@@ -364,8 +382,8 @@ class SBRL(Classifier):
             # feature_indices, categories = self._rule_name2rule(_rule_name)
             self._rule_list.append(self._rule_name2rule(_rule_name, self._rule_probs[i]))
         acc, loss, support_summary = self.evaluate(x, y, stage='train')
-        for rule, supports in zip(self._rule_list, support_summary):
-            rule.supports = supports
+        for rule, support in zip(self._rule_list, support_summary):
+            rule.support = support
 
     def evaluate(self, x, y, stage='train') -> Tuple[float, float, np.ndarray]:
         y_prob, supports = self.predict_prob(x, rt_support=True)
@@ -392,7 +410,7 @@ class SBRL(Classifier):
     @staticmethod
     def _rule_name2rule(rule_name, prob):
         if rule_name == 'default':
-            return Rule([0], [0], prob)
+            return Rule([-1], [-1], prob)
 
         raw_rules = rule_name[1:-1].split(',')
         feature_indices = []
@@ -447,18 +465,21 @@ class SBRL(Classifier):
     def describe(self, feature_names=None, rt_str=False):
         s = "The rule list is:\n\n     "
 
-        n_rules = len(self._rule_indices)
+        # n_rules = len(self._rule_indices)
+        # feature_names = feature_names if feature_names is not None else self._feature_names
 
         for i, rule in enumerate(self._rule_list):
             category_intervals = None
             if self.discretizer is not None:
                 category_intervals = []
                 for idx, cat in zip(rule.feature_indices, rule.categories):
+                    if idx < 0:
+                        continue
                     category_intervals.append(
                         self.discretizer.cat2intervals(np.array([cat]), idx)[0]
                     )
             is_last = i == len(self._rule_list) - 1
-            s += rule.describe(feature_names, category_intervals, label="prob", default=is_last) + "\n"
+            s += rule.describe(feature_names, category_intervals, label="prob") + "\n"
             if len(self._rule_list) > 1 and not is_last:
                 s += "\nELSE "
 
@@ -471,10 +492,6 @@ class RuleSurrogate(SBRL, SurrogateMixin):
     def __init__(self, **kwargs):
         # SurrogateMixin.__init__(self, name)
         SBRL.__init__(self, **kwargs)
-
-
-# class MultiClassBRL(SBRL):
-
 
 
 if __name__ == '__main__':

@@ -2,7 +2,7 @@ from typing import Callable, List, Optional, Union, Any
 
 import numpy as np
 
-from iml.models import ModelBase
+from iml.models import ModelBase, ModelInterface
 
 
 SampleFn = Callable[[], np.ndarray]
@@ -76,7 +76,7 @@ class SurrogateMixin(ModelBase):
         self.target = None  # type: Optional[ModelBase]
         self.data_distribution = None
 
-    def surrogate(self, target: ModelBase, instances: np.ndarray,
+    def surrogate(self, target: ModelInterface, instances: np.ndarray,
                   sigmas: Union[List[float], np.ndarray], n_sampling: int,
                   **kwargs):
         # if n_sampling is None:

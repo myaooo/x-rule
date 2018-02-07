@@ -2,7 +2,7 @@ import pickle
 
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor, export_graphviz
 
-from iml.utils.io_utils import obj2json
+from iml.utils.io_utils import dict2json
 from iml.models import SKModelWrapper, Classifier, Regressor, CLASSIFICATION, REGRESSION
 from iml.models.surrogate import SurrogateMixin
 
@@ -11,20 +11,31 @@ class Tree(SKModelWrapper, Classifier, Regressor):
     """
     A wrapper class that wraps sklearn.tree.DecisionTreeClassifier
     """
+
     def __init__(self, problem=CLASSIFICATION, name='tree', max_depth=None, min_samples_split=2,
                  min_samples_leaf=1):
         super(Tree, self).__init__(problem=problem, name=name)
         self._problem = problem
+        # self._feature_names = None
+        # self._label_names = None
         if problem == CLASSIFICATION:
             self._model = DecisionTreeClassifier(max_depth=max_depth,
-                                                min_samples_split=min_samples_split,
-                                                min_samples_leaf=min_samples_leaf)
+                                                 min_samples_split=min_samples_split,
+                                                 min_samples_leaf=min_samples_leaf)
         elif problem == REGRESSION:
             self._model = DecisionTreeRegressor(max_depth=max_depth,
-                                               min_samples_split=min_samples_split,
-                                               min_samples_leaf=min_samples_leaf)
+                                                min_samples_split=min_samples_split,
+                                                min_samples_leaf=min_samples_leaf)
         else:
             raise ValueError(f"Unrecognized problem type {problem}")
+
+    # @property
+    # def feature_names(self):
+    #     return self._feature_names
+    #
+    # @property
+    # def label_names(self):
+    #     return self._label_names
 
     @property
     def type(self):
@@ -75,8 +86,9 @@ class Tree(SKModelWrapper, Classifier, Regressor):
                     node['right'] = _build(children_right[idx])
 
                 return node
+
             nodes = _build(0)
-            return obj2json(nodes, filename)
+            return dict2json(nodes, filename)
         raise ValueError(f'Unsupported value "{type}" for argument "type"')
 
 

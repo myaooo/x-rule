@@ -1,20 +1,21 @@
 from typing import List, Union, Tuple, Set, Iterable
 import logging
 import functools
-import dill as pickle
 
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.datasets import load_iris, load_breast_cancer, load_wine
 
 from mdlp.discretization import MDLP
-from fim import fpgrowth
+from fim import fpgrowth, eclat
 
 from iml.utils.io_utils import before_save, get_path, file_exists, load_file, save_file
 
 
 _datasets_path = get_path('datasets')
 _cached_path = get_path('datasets/cached')
+
+# print(_datasets_path)
 
 sklearn_datasets = {'breast_cancer', 'iris', 'wine'}
 
@@ -73,8 +74,9 @@ def add_cache_support(n_files=None):
     return decorate
 
 
-@add_cache_support()
-def get_dataset(data_name, discrete=False, seed=None, split=None, train_size=0.75, shuffle=True):
+# @add_cache_support()
+@functools.lru_cache(16)
+def get_dataset(data_name, discrete=False, seed=None, split=None, train_size=0.75, shuffle=True, verbose=1):
     data = None
     if data_name in sklearn_datasets:
         if data_name == 'breast_cancer':
@@ -84,7 +86,7 @@ def get_dataset(data_name, discrete=False, seed=None, split=None, train_size=0.7
         elif data_name == 'wine':
             data = load_wine()
     else:
-        raise ValueError("Unknown data_name: {}".format(data_name))
+        raise LookupError("Unknown data_name: {}".format(data_name))
     x = data['data']
     y = data['target']
     # feature_names = data['feature_names']
@@ -96,7 +98,7 @@ def get_dataset(data_name, discrete=False, seed=None, split=None, train_size=0.7
         data['discretizer'] = discretizer
     if split:
         names = [get_path(_datasets_path, data_name + suffix)
-                 for suffix in ['/train_x.txt', '/train_y.txt', '/test_x.txt', '/test_y.txt']
+                 for suffix in ['/train_x.npy', '/train_y.npy', '/test_x.npy', '/test_y.npy']
                  ]
         train_x, test_x, train_y, test_y = get_split(x, y, train_size=train_size, shuffle=shuffle, filenames=names)
         data.update({
@@ -105,12 +107,22 @@ def get_dataset(data_name, discrete=False, seed=None, split=None, train_size=0.7
             'train_y': train_y,
             'test_y': test_y,
         })
+    for key in ['feature_names', 'target_names']:
+        if isinstance(data[key], np.ndarray):
+            data[key] = data[key].tolist()
+
+    if verbose > 0:
+        print("Data Specs: {:s}".format(data_name))
+        print("#data: {:d}".format(len(data['target'])))
+        print("#features: {:d}".format(data['data'].shape[1]))
+        print("#labels: {:d}".format(len(np.unique(data['target']))))
+        print("-----------------------")
     return data
 
 
 @add_cache_support(4)
 def get_split(x, y, **kwargs):
-    return split(x, y, **kwargs)
+    return split_data(x, y, **kwargs)
 
 
 def categorical2transactions(x: np.ndarray) -> List[List[str]]:
@@ -146,9 +158,10 @@ def itemset2feature_categories(itemset: Iterable[str]) -> Tuple[List[int], List[
 
 def transactions2freqitems(transactions_by_labels: List[List], supp=0.05, zmin=1, zmax=3) -> List[tuple]:
 
+    supp = int(supp*100)
     itemsets = set()
     for trans in transactions_by_labels:
-        itemset = [tuple(sorted(r[0])) for r in fpgrowth(trans, supp=supp, zmin=zmin, zmax=zmax)]
+        itemset = [tuple(sorted(r[0])) for r in eclat(trans, supp=supp, zmin=zmin, zmax=zmax)]
         itemsets |= set(itemset)
 
     itemsets = list(itemsets)

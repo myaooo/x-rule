@@ -1,0 +1,22 @@
+{
+  "root_dir": "/",
+  "model_dir": "models",
+  "models": [
+    {
+      "model": "breast_cancer-rule",
+      "dataset": "breast_cancer"
+    },
+    {
+      "model": "wine-rule",
+      "dataset": "wine"
+    },
+    {
+      "model": "iris-rule",
+      "dataset": "iris"
+    },
+    {
+      "model": "breast_cancer-nn-20",
+      "dataset": "breast_cancer"
+    }
+  ]
+}

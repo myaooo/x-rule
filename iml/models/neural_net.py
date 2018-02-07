@@ -22,6 +22,10 @@ class NeuralNet(SKModelWrapper, Regressor, Classifier):
         super(NeuralNet, self).__init__(problem=problem, name=name)
         self.scaler = None
         self._model = None  # type: Union[MLPClassifier, MLPRegressor]
+        # self._feature_names = None
+        # self._label_names = None
+        # self.neurons = neurons
+        # self.activation = activation
         if standardize:
             self.scaler = (StandardScaler(), StandardScaler())
         if self._problem == CLASSIFICATION:
@@ -37,6 +41,22 @@ class NeuralNet(SKModelWrapper, Regressor, Classifier):
         else:
             raise ValueError("Unrecognized problem type {}".format(problem))
 
+    # @property
+    # def feature_names(self):
+    #     return self._feature_names
+    #
+    # @property
+    # def label_names(self):
+    #     return self._label_names
+
+    @property
+    def neurons(self):
+        return self.model.hidden_layer_sizes
+
+    @property
+    def activation(self):
+        return self.model.activation
+
     def evaluate(self, x, y, stage='train'):
         if self._problem == CLASSIFICATION:
             return Classifier.evaluate(self, x, y, stage=stage)
@@ -45,8 +65,12 @@ class NeuralNet(SKModelWrapper, Regressor, Classifier):
         else:
             raise ValueError("Unrecognized problem type {}".format(self._problem))
 
-    def train(self, x, y, **kwargs):
+    def train(self, x, y, feature_names=None, label_names=None, **kwargs):
         _x, _y = x, y
+        # if feature_names is not None:
+        #     self._feature_names = feature_names
+        # if label_names is not None:
+        #     self._label_names = label_names
         if self.scaler is not None:
             self.scaler[0].fit(x)
             _x = self.scaler[0].transform(x)
@@ -60,6 +84,7 @@ class NeuralNet(SKModelWrapper, Regressor, Classifier):
         assert self._problem == CLASSIFICATION
         if self.scaler is not None:
             x = self.scaler[0].transform(x)
+
         return self.model.predict_proba(x)
 
     def predict(self, x):
@@ -71,6 +96,7 @@ class NeuralNet(SKModelWrapper, Regressor, Classifier):
 
         return y
 
+
     # def score(self, y_true, y_pred):
     #     if self._problem == CLASSIFICATION:
     #         return self.accuracy(y_true, y_pred)
@@ -81,10 +107,10 @@ class NeuralNet(SKModelWrapper, Regressor, Classifier):
 
     @property
     def type(self):
-        if self._problem == CLASSIFICATION:
-            return 'nn-classifier'
-        elif self._problem == REGRESSION:
-            return 'nn-regressor'
+        # if self._problem == CLASSIFICATION:
+        #     return 'nn-classifier'
+        # elif self._problem == REGRESSION:
+        #     return 'nn-regressor'
         return 'nn'
 
     @property
