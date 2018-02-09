@@ -5,42 +5,57 @@ import './index.css';
 import { Histogram } from '../../models';
 
 // const MAX_NUM_RULES = 3;
+const MAX_STR_LEN = 16;
+const CUT_SIZE = (MAX_STR_LEN - 2) / 2;
+const fontSize = 12;
+// const tension = 0.3;
+export const collapsedHeight = fontSize * 2;
+export const expandedHeight = collapsedHeight + 80;
 
 export interface ConditionViewProps {
   featureName: string;
   category: (number | null)[] | number;
-  hist?: Histogram;
+  hist?: Histogram[];
   width: number;
-  height: number;
   min: number;
   max: number;
   ratios: [number, number, number];
   transform: string;
-  fontSize: number;
   activated: boolean;
-  onMouseEnter: React.MouseEventHandler<SVGGElement>;
-  onMouseLeave: React.MouseEventHandler<SVGGElement>;
-  onClick: React.MouseEventHandler<SVGGElement>;
-  // selectFeature: ({deselect}: {deselect: boolean}) => Action;
+  onMouseEnter?: React.MouseEventHandler<SVGGElement>;
+  onMouseLeave?: React.MouseEventHandler<SVGGElement>;
+  onClick?: React.MouseEventHandler<SVGGElement>;
+  collapsed?: boolean;
+  colors?: d3.ScaleOrdinal<number, string>;
 }
+
+const defaultColors = d3.scaleOrdinal<number, string>(d3.schemeCategory10);
 
 export interface ConditionViewState {
   // activated: boolean;
 }
 
-function condition2String(featureName: string, category: (number | null)[] | number): string {
-  let conditionString: string;
+function condition2String(featureName: string, category: (number | null)[] | number): { tspan: string; title: string } {
+  const abrString = featureName.length > MAX_STR_LEN
+    ? `"${featureName.substr(0, CUT_SIZE)}…${featureName.substr(-CUT_SIZE, CUT_SIZE)}"`
+    : featureName;
+  let featureMap = (feature: string): string => `${feature} is any`;
   if (typeof category === 'number') {
-    conditionString = `${featureName} = ${category}`;
+    featureMap = (feature: string) => `${feature} = ${category}`;
   } else {
-    if (category[0] === null && category[1] === null) conditionString = `${featureName} is any`;
+    const low = category[0];
+    const high = category[1];
+    if (low === null && high === null) featureMap = (feature: string) => `${feature} is any`;
     else {
-      conditionString = `${featureName}`;
-      if (category[0] !== null) conditionString = `${category[0]} < ` + conditionString;
-      if (category[1] !== null) conditionString = conditionString + ` < ${category[1]}`;
+      const lowString = low !== null ? `${low.toPrecision(3)} < ` : '';
+      const highString = high !== null ? ` < ${high.toPrecision(3)}` : '';
+      featureMap = (feature: string) => lowString + feature + highString;
     }
   }
-  return conditionString;
+  return {
+    tspan: featureMap(abrString),
+    title: featureMap(featureName)
+  };
 }
 
 function interval2Range(interval: (number | null)[], min: number, max: number): { low: number; high: number } {
@@ -58,26 +73,29 @@ export default class ConditionView extends React.Component<ConditionViewProps, C
   xScale: d3.ScaleLinear<number, number>;
   yScale: d3.ScaleLinear<number, number>;
   margin: { top: number; bottom: number; left: number; right: number };
-  
+
   constructor(props: ConditionViewProps) {
     super(props);
     this.state = { activated: false };
-    this.margin = { top: 10, bottom: 35, left: 25, right: 5 };
+    this.margin = { top: 10, bottom: 35, left: 25, right: 10 };
   }
 
-  renderHist(hist: Histogram) {
+  renderHist(hists: Histogram[]) {
     const margin = this.margin;
-    const { width, height, category, min, max } = this.props;
+    const { width, category, min, max, colors } = this.props;
     // const interval = hist.centers[1] - hist.centers[0];
-    // const nBins = hist.centers.length;
+    const colorFn = colors ? colors : defaultColors;
     const chartWidth = width - margin.left - margin.right;
-    const chartHeight = height - margin.top - margin.bottom;
-    let lineData: [number, number][] = hist.counts.map((count: number, i: number): [number, number] => {
-      return [hist.centers[i], count];
+    const chartHeight = expandedHeight - margin.top - margin.bottom;
+    const lineDataList: [number, number][][] = hists.map((hist): [number, number][] => {
+      const lineData: [number, number][] = hist.counts.map((count: number, i: number): [number, number] => {
+        return [hist.centers[i], count];
+      });
+      // this.min = hist.centers[0] - interval / 2;
+      // this.max = hist.centers[nBins - 1] + interval / 2;
+      return [[min, 0], ...lineData, [max, 0]];
     });
-    // this.min = hist.centers[0] - interval / 2;
-    // this.max = hist.centers[nBins - 1] + interval / 2;
-    lineData = [[min, 0], ...lineData, [max, 0]];
+    
     const xScale = d3
       .scaleLinear()
       .domain([min, max]) // input
@@ -85,9 +103,9 @@ export default class ConditionView extends React.Component<ConditionViewProps, C
 
     const yScale = d3
       .scaleLinear()
-      .domain([0, Math.max(...hist.counts)]) // input
+      .domain([0, Math.max(...(hists.map((hist) => Math.max(...hist.counts))))]) // input
       .range([chartHeight, 0]); // output
-    
+
     this.xScale = xScale;
     this.yScale = yScale;
 
@@ -95,15 +113,16 @@ export default class ConditionView extends React.Component<ConditionViewProps, C
       .line<[number, number]>()
       .x((d: number[]): number => xScale(d[0]))
       .y((d: number[]): number => yScale(d[1]))
-      .curve(d3.curveCardinal.tension(0.4));
-    const lineString = line(lineData);
+      .curve(d3.curveNatural);
+      // .curve(d3.curveCardinal.tension(tension));
+    const lineStrings = lineDataList.map((lineData) => line(lineData));
     const area = d3
       .area<[number, number]>()
       .x((d: number[]): number => xScale(d[0]))
       .y1((d: number[]): number => yScale(d[1]))
       .y0(yScale(0))
-      .curve(d3.curveCardinal.tension(0.4));
-    const areaString = area(lineData);
+      .curve(d3.curveNatural);
+    const areaStrings = lineDataList.map((lineData) => area(lineData));
 
     // if (lineString === null || areaString === null) return '';
     let highLightedArea = null;
@@ -112,89 +131,95 @@ export default class ConditionView extends React.Component<ConditionViewProps, C
       const { low, high } = interval2Range(category, min, max);
       highLightedArea = (
         <g>
-          <path d={`M ${xScale(low)} 0 v ${chartHeight}`} className="feature-dist-highlight"/>
-          <path d={`M ${xScale(high)} 0 v ${chartHeight}`} className="feature-dist-highlight"/>
-        <rect 
-          x={xScale(low)} 
-          y={0} 
-          width={xScale(high) - xScale(low)} 
-          height={chartHeight} 
-          className="feature-dist-area-highlight"
-        />
+          <path d={`M ${xScale(low)} 0 v ${chartHeight}`} className="feature-dist-highlight" />
+          <path d={`M ${xScale(high)} 0 v ${chartHeight}`} className="feature-dist-highlight" />
+          <rect
+            x={xScale(low)}
+            y={0}
+            width={xScale(high) - xScale(low)}
+            height={chartHeight}
+            className="feature-dist-area-highlight"
+          />
         </g>
       );
     }
     return (
       <g transform={`translate(${margin.left},${margin.top})`}>
-        {areaString && <path className="feature-dist-area" d={areaString} />}
-        {lineString && <path className="feature-dist" d={lineString} />}
+        {areaStrings.map((areaString: string, i: number) => {
+          return areaString && (
+            <path className="feature-dist-area" d={areaString} fill={colorFn(i)} />
+          );
+        })}
+        {lineStrings.map((lineString: string, i: number) => {
+          return lineString && (
+            <path className="feature-dist" d={lineString} stroke={colorFn(i)} />
+          );
+        })}
         {/* {highLightedAreaString && <path className="feature-dist-area-highlight" d={highLightedAreaString} />} */}
         {highLightedArea}
+        <g ref={(ref: SVGGElement) => (this.xAxisRef = ref)} />
+        <g ref={(ref: SVGGElement) => (this.yAxisRef = ref)} />
       </g>
     );
-
   }
   renderHistAxis() {
     d3
       .select(this.xAxisRef)
       .attr('class', 'x-axis')
-      .attr('transform', `translate(${this.margin.left},${this.props.height - this.margin.bottom})`)
-      .call(d3.axisBottom(this.xScale).ticks(5).tickSize(3));
+      .attr('transform', `translate(0,${this.yScale(0)})`)
+      .call(
+        d3
+          .axisBottom(this.xScale)
+          .ticks(5)
+          .tickSize(3)
+      );
     d3
       .select(this.yAxisRef)
       .attr('class', 'y-axis')
-      .attr('transform', `translate(${this.margin.left},${this.margin.top})`)
-      .call(d3.axisLeft(this.yScale).ticks(2).tickSize(3));
+      .attr('transform', `translate(0,0)`)
+      .call(
+        d3
+          .axisLeft(this.yScale)
+          .ticks(2)
+          .tickSize(3)
+      );
   }
   renderCondition() {
-    const { featureName, category, width, height, fontSize, activated, hist, ratios } = this.props;
+    const { featureName, category, width, activated, ratios, collapsed } = this.props;
     const { margin } = this;
-    const conditionHeight = Math.ceil(fontSize * 1.5);
-    const conditionWidth = width - margin.left - margin.right;
-    const conditionString = condition2String(featureName, category);
-    let rangeWidth: number = conditionWidth * ratios[1];
-    let rangeX: number = conditionWidth * ratios[0];
-    // if (typeof category !== 'number') {
-    //   const { low, high } = interval2Range(category, min, max);
-    //   rangeWidth = (high - low) / (max - min) * conditionWidth;
-    //   rangeX += (low - min) / (max - min) * conditionWidth;
-    // }
+    const totalHeight = collapsed ? collapsedHeight : expandedHeight;
+    const cHeight = Math.ceil(fontSize * 1.5);
+    const cWidth = width - margin.left - margin.right;
+    const {tspan, title} = condition2String(featureName, category);
+    let rangeWidth: number = cWidth * ratios[1];
+    let rangeX: number = cWidth * ratios[0];
     return (
-      <g transform={`translate(${margin.left},${hist ? height : ((height + conditionHeight) / 2)})`}>
+      <g transform={`translate(${margin.left},${totalHeight - fontSize * 0.25})`}>
         <rect
-          y={-conditionHeight}
-          width={conditionWidth}
-          height={5}
+          y={-cHeight}
+          width={cWidth}
+          height={cHeight}
           className={activated ? 'bg-rect-active' : 'bg-rect'}
         />
-        <rect
-          x={rangeX + 1}
-          y={-conditionHeight + 1}
-          width={rangeWidth - 2}
-          height={5 - 2}
-          className="range-rect"
-        />
-        <text x={conditionWidth / 2} y={-fontSize * 0.2} textAnchor="middle" fontSize={fontSize}>
-          {conditionString}
+        <rect x={rangeX + 1} y={1 - cHeight} width={rangeWidth - 2} height={cHeight - 2} className="range-rect" />
+        <text x={cWidth / 2} y={-fontSize * 0.3} textAnchor="middle" fontSize={fontSize}>
+          <tspan>{tspan}</tspan>
+          <title>{title}</title>
         </text>
       </g>
     );
   }
   componentDidUpdate() {
     // Hack: make sure the element is already mounted, then render the axis
-    if (this.props.hist !== undefined) this.renderHistAxis();
+    if (this.props.hist !== undefined && !this.props.collapsed) this.renderHistAxis();
   }
   render() {
-    const { transform, hist } = this.props;
+    const { transform, hist, collapsed } = this.props;
     const { onMouseEnter, onMouseLeave, onClick } = this.props;
-    const conditionElement = this.renderCondition();
-    const histElement = hist === undefined ? '' : this.renderHist(hist);
     return (
       <g transform={transform} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} onClick={onClick}>
-        {conditionElement}
-        {histElement}
-        <g ref={(ref: SVGGElement) => (this.xAxisRef = ref)} />
-        <g ref={(ref: SVGGElement) => (this.yAxisRef = ref)} />
+        {this.renderCondition()}
+        {hist !== undefined && !collapsed && this.renderHist(hist)}
       </g>
     );
   }

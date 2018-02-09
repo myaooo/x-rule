@@ -12,20 +12,20 @@ class Tree(SKModelWrapper, Classifier, Regressor):
     A wrapper class that wraps sklearn.tree.DecisionTreeClassifier
     """
 
-    def __init__(self, problem=CLASSIFICATION, name='tree', max_depth=None, min_samples_split=2,
-                 min_samples_leaf=1):
+    def __init__(self, problem=CLASSIFICATION, name='tree', criterion='gini', splitter='best',
+                 max_depth=None, min_samples_split=2, min_samples_leaf=1, **kwargs):
         super(Tree, self).__init__(problem=problem, name=name)
         self._problem = problem
         # self._feature_names = None
         # self._label_names = None
         if problem == CLASSIFICATION:
-            self._model = DecisionTreeClassifier(max_depth=max_depth,
+            self._model = DecisionTreeClassifier(criterion=criterion, max_depth=max_depth, splitter=splitter,
                                                  min_samples_split=min_samples_split,
-                                                 min_samples_leaf=min_samples_leaf)
+                                                 min_samples_leaf=min_samples_leaf, **kwargs)
         elif problem == REGRESSION:
-            self._model = DecisionTreeRegressor(max_depth=max_depth,
+            self._model = DecisionTreeRegressor(criterion=criterion, max_depth=max_depth, splitter=splitter,
                                                 min_samples_split=min_samples_split,
-                                                min_samples_leaf=min_samples_leaf)
+                                                min_samples_leaf=min_samples_leaf, **kwargs)
         else:
             raise ValueError(f"Unrecognized problem type {problem}")
 
@@ -49,7 +49,7 @@ class Tree(SKModelWrapper, Classifier, Regressor):
     def model(self):
         return self._model
 
-    def describe(self):
+    def describe(self, feature_names=None):
         tree = self.model.tree_
         print(f"Depth: {tree.max_depth}")
         print(f"#Node: {tree.node_count}")
@@ -97,7 +97,6 @@ def load(filename):
 
 
 class TreeSurrogate(Tree, SurrogateMixin):
-    def __init__(self, problem=CLASSIFICATION, name='tree', max_depth=None, min_samples_split=2,
-                 min_samples_leaf=1):
-        # SurrogateMixin.__init__(self, name)
-        Tree.__init__(self, problem, name, max_depth, min_samples_split, min_samples_leaf)
+    def __init__(self, **kwargs):
+        print(kwargs)
+        super(TreeSurrogate, self).__init__(**kwargs)

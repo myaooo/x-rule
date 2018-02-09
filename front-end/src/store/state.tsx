@@ -10,7 +10,10 @@ export interface ModelState {
 //   readonly isFetching: boolean;
 // }
 
+export type SelectedDataType = 'train' | 'test';
+
 export interface DataBaseState {
+  // [name: SelectedDataType]: PlainData;
   train?: PlainData;
   test?: PlainData;
 }
@@ -27,14 +30,12 @@ export interface FeatureState {
 //   isFetching: false
 // };
 
-export type SelectedDataType = 'train' | 'test' | null;
-
 export interface RootState {
   // modelBase: ModelBaseState;
   // selectedModel: string;
   model: ModelState;
   dataBase: DataBaseState;
-  selectedData: SelectedDataType;
+  selectedData: SelectedDataType[];
   selectedFeature: FeatureState;
 }
 

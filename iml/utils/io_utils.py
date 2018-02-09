@@ -84,6 +84,16 @@ def csv2df(filename):
     return pd.read_csv(filename)
 
 
+def array2csv(array, filename, **kwargs):
+    df = pd.DataFrame(array)
+    return df.to_csv(filename, index=False, **kwargs)
+
+
+def csv2array(filename):
+    assert_file_exists(filename)
+    return pd.read_csv(filename).as_matrix()
+
+
 def array2npy(array: np.ndarray, filename, *args, **kwargs):
     return np.save(filename, array, *args, **kwargs)
 
@@ -168,8 +178,8 @@ Loader = Callable[[str], Any]
 
 _ext_table = {
     '.pkl': (obj2pkl, pkl2obj),
-    '.json': (dict2json, None),
-    '.csv': (df2csv, csv2df),
+    '.json': (dict2json, json2dict),
+    '.csv': (array2csv, csv2array),
     '.npy': (array2npy, npy2array),
 }  # type: Dict[str, Tuple[Saver, Loader]]
 

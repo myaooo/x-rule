@@ -66,10 +66,10 @@ function dataBaseReducer(
   }
 }
 
-function selectDatasetReducer(state: SelectedDataType = null, action: SelectDatasetAction): SelectedDataType {
+function selectDatasetReducer(state: SelectedDataType[] = [], action: SelectDatasetAction): SelectedDataType[] {
   switch (action.type) {
     case ActionType.SELECT_DATASET:
-      return action.name;
+      return action.dataNames;
     default:
       return state;
   }

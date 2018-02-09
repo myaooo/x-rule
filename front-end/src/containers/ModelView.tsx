@@ -7,7 +7,7 @@ import {
   fetchModelIfNeeded,
   getModel,
   RootState,
-  getData,
+  getSelectedData,
   getModelIsFetching
 } from '../store';
 import { RuleModel, PlainData, ModelBase, isRuleModel } from '../models';
@@ -18,14 +18,14 @@ import FeatureList from '../containers/FeatureList';
 export interface ModelViewStateProp {
   model: RuleModel | ModelBase | null;
   modelIsFetching: boolean;
-  data: PlainData | undefined;
+  data: (PlainData | undefined)[];
 }
 
 const mapStateToProps = (state: RootState): ModelViewStateProp => {
   return {
     model: getModel(state),
     modelIsFetching: getModelIsFetching(state),
-    data: getData(state)
+    data: getSelectedData(state)
   };
 };
 
@@ -70,16 +70,17 @@ class ModelView extends React.Component<ModelViewProp, any> {
     const width = 800;
     const height = 800;
     const featureWidth = 160;
+    const availableData = data[0] || data[1];
     // let modelElement = (<div> Loading Dataset...</div>);
     return (
         <Card>
-          {data !== undefined &&
+          {availableData !== undefined &&
           <svg width={featureWidth} height={height}>
-            <FeatureList width={featureWidth} featureNames={data.featureNames} rules={model.rules} /> 
+            <FeatureList width={featureWidth} featureNames={availableData.featureNames} rules={model.rules} /> 
           </svg>}
-          {data !== undefined && <Divider type="vertical" />}
-          <svg ref={(ref: SVGSVGElement) => this.svgRef = ref} width={width - featureWidth} height={height}>
-            <RuleList model={model} data={data} width={width - featureWidth} height={height} /> 
+          {availableData !== undefined && <Divider type="vertical" />}
+          <svg ref={(ref: SVGSVGElement) => this.svgRef = ref} width={width} height={height}>
+            <RuleList model={model} data={data} width={width} height={height} /> 
           </svg>
         </Card>
       );

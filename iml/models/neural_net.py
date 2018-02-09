@@ -16,9 +16,9 @@ from iml.models import SKModelWrapper, Regressor, Classifier, CLASSIFICATION, RE
 class NeuralNet(SKModelWrapper, Regressor, Classifier):
 
     def __init__(self, name='nn', problem=CLASSIFICATION,
-                 neurons=(10,), activation='relu', solver='sgd',
-                 alpha=0.0001, learning_rate_init=0.001,
-                 max_iter=1000, tol=1e-5, standardize=True):
+                 neurons=(10,), activation='relu', solver='adam',
+                 alpha=0.0001, learning_rate='adaptive', learning_rate_init=0.001,
+                 max_iter=1000, tol=1e-5, standardize=True, **kwargs):
         super(NeuralNet, self).__init__(problem=problem, name=name)
         self.scaler = None
         self._model = None  # type: Union[MLPClassifier, MLPRegressor]
@@ -30,14 +30,14 @@ class NeuralNet(SKModelWrapper, Regressor, Classifier):
             self.scaler = (StandardScaler(), StandardScaler())
         if self._problem == CLASSIFICATION:
             self._model = MLPClassifier(hidden_layer_sizes=neurons, activation=activation,
-                                        solver=solver, alpha=alpha, learning_rate='adaptive',
+                                        solver=solver, alpha=alpha, learning_rate=learning_rate,
                                         learning_rate_init=learning_rate_init,
-                                        max_iter=max_iter, tol=tol)
+                                        max_iter=max_iter, tol=tol, **kwargs)
         elif problem == REGRESSION:
             self._model = MLPRegressor(hidden_layer_sizes=neurons, activation=activation,
-                                       solver=solver, alpha=alpha, learning_rate='adaptive',
+                                       solver=solver, alpha=alpha, learning_rate=learning_rate,
                                        learning_rate_init=learning_rate_init,
-                                       max_iter=max_iter, tol=tol)
+                                       max_iter=max_iter, tol=tol, **kwargs)
         else:
             raise ValueError("Unrecognized problem type {}".format(problem))
 

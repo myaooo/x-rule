@@ -51,6 +51,7 @@ export interface PlainData {
     labelNames: string[];
     continuous: boolean[];
     hists: Histogram[];
+    name: 'train' | 'test';
 }
 
 export class Matrix {

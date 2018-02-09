@@ -114,7 +114,8 @@ def data2json(data_name, is_train: bool, bins=None):
     y = data['train_y' if is_train else 'test_y']
     if bins is None:
         bins = int(np.sqrt(len(y)))
-        print(bins)
+        bins = max(bins, 15)
+        # print(bins)
     hists = data2histogram(x, bins)
     return {
         'data': x.tolist(),
@@ -122,5 +123,6 @@ def data2json(data_name, is_train: bool, bins=None):
         'featureNames': data['feature_names'],
         'labelNames': data['target_names'],
         'continuous': [True] * x.shape[1],
-        'hists': hists
+        'hists': hists,
+        'name': 'train' if is_train else 'test'
     }

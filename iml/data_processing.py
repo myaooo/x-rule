@@ -4,6 +4,7 @@ import functools
 
 import numpy as np
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
 from sklearn.datasets import load_iris, load_breast_cancer, load_wine
 
 from mdlp.discretization import MDLP
@@ -12,12 +13,10 @@ from fim import fpgrowth, eclat
 from iml.utils.io_utils import before_save, get_path, file_exists, load_file, save_file
 
 
-_datasets_path = get_path('datasets')
-_cached_path = get_path('datasets/cached')
+_datasets_path = 'datasets/'
+_cached_path = 'datasets/cached/'
 
 # print(_datasets_path)
-
-sklearn_datasets = {'breast_cancer', 'iris', 'wine'}
 
 split_data = train_test_split
 
@@ -74,28 +73,82 @@ def add_cache_support(n_files=None):
     return decorate
 
 
+_csv_files = ['target', 'data', 'is_categorical']
+_json_files = ['feature_names', 'target_names', 'descriptions']
+
+
+def save_data(data, name):
+
+    dataset_path = _datasets_path + name
+    print("data saved to {}".format(dataset_path))
+    for field in _csv_files:
+        filename = field + '.csv'
+        file_path = get_path(dataset_path, filename)
+        before_save(file_path)
+        save_file(data[field], file_path)
+
+    descriptor = {key: data[key] for key in _json_files}
+    save_file(descriptor, get_path(dataset_path, 'spec.json'))
+
+
+def load_data(name):
+    dataset_path = _datasets_path + name
+    dataset = {}
+    for field in _csv_files:
+        filename = field + '.csv'
+        file_path = get_path(dataset_path, filename)
+        dataset[field] = load_file(file_path)
+
+    for field in ['target', 'is_categorical']:
+        dataset[field] = dataset[field].reshape((-1))
+
+    descriptor = load_file(get_path(dataset_path, 'spec.json'))
+    for key, val in descriptor.items():
+        dataset[key] = val
+    return dataset
+
+
+sklearn_datasets = {'breast_cancer', 'iris', 'wine'}
+local_datasets = {'diabetes'}
+
+
 # @add_cache_support()
 @functools.lru_cache(16)
-def get_dataset(data_name, discrete=False, seed=None, split=None, train_size=0.75, shuffle=True, verbose=1):
-    data = None
+def get_dataset(data_name, discrete=False, seed=None, split=None,
+                train_size=0.75, shuffle=True, one_hot=True, verbose=1):
     if data_name in sklearn_datasets:
         if data_name == 'breast_cancer':
             data = load_breast_cancer()
         elif data_name == 'iris':
             data = load_iris()
-        elif data_name == 'wine':
+        else:  # data_name == 'wine':
             data = load_wine()
+    elif data_name in local_datasets:
+        data = load_data(data_name)
     else:
         raise LookupError("Unknown data_name: {}".format(data_name))
+
+    if one_hot and 'is_categorical' in data:
+        if verbose:
+            print('Converting categorical features to one hot numeric')
+        is_categorical = data['is_categorical']
+        one_hot_encoder = OneHotEncoder(categorical_features=is_categorical).fit(data['data'])
+        data['raw_data'] = data['data']
+        data['data'] = one_hot_encoder.transform(data['data']).toarray()
+        data['one_hot_encoder'] = one_hot_encoder
+
     x = data['data']
     y = data['target']
     # feature_names = data['feature_names']
     if discrete:
+        if verbose:
+            print('Discretizing all continuous features using MDLP discretizer')
         discretizer_name = data_name + '-discretizer' + ('' if seed is None else ('-' + str(seed))) + '.pkl'
         discretizer_path = get_path(_cached_path, discretizer_name)
         discretizer = get_discretizer(x, y, filenames=discretizer_path)
         data['data'] = discretizer.transform(x)
         data['discretizer'] = discretizer
+
     if split:
         names = [get_path(_datasets_path, data_name + suffix)
                  for suffix in ['/train_x.npy', '/train_y.npy', '/test_x.npy', '/test_y.npy']
@@ -107,11 +160,14 @@ def get_dataset(data_name, discrete=False, seed=None, split=None, train_size=0.7
             'train_y': train_y,
             'test_y': test_y,
         })
+
+    # hacker for some feature_names are arrays
     for key in ['feature_names', 'target_names']:
         if isinstance(data[key], np.ndarray):
             data[key] = data[key].tolist()
 
     if verbose > 0:
+        print("-----------------------")
         print("Data Specs: {:s}".format(data_name))
         print("#data: {:d}".format(len(data['target'])))
         print("#features: {:d}".format(data['data'].shape[1]))
@@ -235,3 +291,6 @@ def get_discretizer(x, y, seed=None) -> MDLP:
     discretizer = MDLP(random_state=seed)
     discretizer.fit(x, y)
     return discretizer
+
+
+

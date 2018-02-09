@@ -1,7 +1,7 @@
 // Action Types
 import { Dispatch as ReduxDispatch, Action } from 'redux';
 import { ThunkAction } from 'redux-thunk';
-import { RootState } from './state';
+import { RootState, SelectedDataType } from './state';
 import { ModelBase, PlainData } from '../models';
 
 import dataService from '../service/dataService';
@@ -42,7 +42,7 @@ export interface ReceiveDatasetAction extends Action {
 
 export interface SelectDatasetAction extends Action {
   readonly type: ActionType.SELECT_DATASET;
-  readonly name: 'train' | 'test' | null;
+  readonly dataNames: SelectedDataType[];
 }
 
 export interface SelectFeatureAction extends Action {
@@ -96,10 +96,10 @@ export function receiveDataset({
   };
 }
 
-export function selectDataset(name: 'train' | 'test'): SelectDatasetAction {
+export function selectDataset(dataNames: SelectedDataType[]): SelectDatasetAction {
   return {
     type: ActionType.SELECT_DATASET,
-    name
+    dataNames
   };
 }
 

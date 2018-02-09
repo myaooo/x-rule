@@ -7,6 +7,8 @@ export interface OutputViewProps {
   width: number;
   height: number;
   output: number[];
+  support: number[];
+  maxSupport: number;
   barWidth: number;
   interval: number;
   labels?: (i: number) => string;
@@ -36,14 +38,14 @@ export default class OutputView extends React.Component<OutputViewProps, OutputV
   }
   renderBar(bars: number[]) {
     const {barWidth, interval, width, height} = this.props;
-    const {margin, colors, arrowSize, textWidth} = this;
+    const {colors, arrowSize, textWidth} = this;
     const delta = barWidth + interval;
     const chartHeight = bars.length * delta + interval;
     const chartWidth = width - arrowSize - textWidth - 20;
     const xScale = d3.scaleLinear().domain([0.0, 1.0]).range([0, chartWidth]);
     const labels = this.props.labels || ((i: number) => `L${i}`);
     let yShift = (height - chartHeight) / 2;
-    yShift = yShift < margin.top ? margin.top : yShift;
+    // yShift = yShift < margin.top ? margin.top : yShift;
     return (
       <g transform={`translate(${arrowSize + textWidth},${yShift})`}>
         <path d={`M 0 0 v ${delta * bars.length + interval}`} strokeWidth="1px" stroke="#000" />
@@ -61,12 +63,32 @@ export default class OutputView extends React.Component<OutputViewProps, OutputV
       </g>
     );
   }
+  renderSupport(support: number[], maxSupport: number, width: number) {
+    let totalSupport = 0;
+    // support.forEach(s => {
+    //   totalSupport += s;
+    // });
+    const xScale = d3.scaleLinear().domain([0, maxSupport]).range([0, width]);
+    return (
+      <g> 
+        {support.map((s: number, i: number) => {
+          const x = xScale(totalSupport);
+          totalSupport += s;
+          return (
+            <rect key={i} x={x} width={xScale(s)} height={5}/>
+          );
+        })}
+        <text>Support:</text>
+        <text>{totalSupport}</text>
+      </g>
+    );
+  }
   render() {
     const {transform, output, height} = this.props;
 
     return (
       <g transform={transform}>
-        {this.renderArrow(this.arrowSize, `translate(0, ${height / 2})`)}
+        {this.renderArrow(this.arrowSize, `translate(0, ${(height - this.arrowSize) / 2})`)}
         {this.renderBar(output)}
       </g>
     );
