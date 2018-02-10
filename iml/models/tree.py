@@ -27,7 +27,7 @@ class Tree(SKModelWrapper, Classifier, Regressor):
                                                 min_samples_split=min_samples_split,
                                                 min_samples_leaf=min_samples_leaf, **kwargs)
         else:
-            raise ValueError(f"Unrecognized problem type {problem}")
+            raise ValueError("Unrecognized problem type {}".format(problem))
 
     # @property
     # def feature_names(self):
@@ -51,8 +51,8 @@ class Tree(SKModelWrapper, Classifier, Regressor):
 
     def describe(self, feature_names=None):
         tree = self.model.tree_
-        print(f"Depth: {tree.max_depth}")
-        print(f"#Node: {tree.node_count}")
+        print("Depth: {}".format(tree.max_depth))
+        print("#Node: {}".format(tree.node_count))
 
     def export(self, filename=None, filetype='dot'):
         """
