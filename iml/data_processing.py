@@ -123,19 +123,22 @@ def get_dataset(data_name, discrete=False, seed=None, split=None,
             data = load_iris()
         else:  # data_name == 'wine':
             data = load_wine()
+        data['is_categorical'] = np.array([False] * data['data'].shape[1])
     elif data_name in local_datasets:
         data = load_data(data_name)
     else:
         raise LookupError("Unknown data_name: {}".format(data_name))
 
-    if one_hot and 'is_categorical' in data:
+    if one_hot:
+        is_categorical = data['is_categorical']
         if verbose:
             print('Converting categorical features to one hot numeric')
-        is_categorical = data['is_categorical']
         one_hot_encoder = OneHotEncoder(categorical_features=is_categorical).fit(data['data'])
-        data['raw_data'] = data['data']
-        data['data'] = one_hot_encoder.transform(data['data']).toarray()
         data['one_hot_encoder'] = one_hot_encoder
+        if verbose:
+            print('Total number of categorical features:', np.sum(is_categorical))
+            if hasattr(one_hot_encoder, 'n_values_'):
+                print('One hot value numbers:', one_hot_encoder.n_values_)
 
     x = data['data']
     y = data['target']

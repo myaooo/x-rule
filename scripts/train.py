@@ -1,37 +1,33 @@
 from typing import List
 
 import numpy as np
-import pandas as pd
-from sklearn.datasets import load_breast_cancer, load_iris
 
-# from vendors.mdlpc import MDLPDiscretizer
-from mdlp.discretization import MDLP
 from iml.models import Tree, NeuralNet, load_model, RuleSurrogate, TreeSurrogate
-from iml.data_processing import split_data, get_dataset
+from iml.data_processing import get_dataset
 from iml.utils.io_utils import get_path
 
 
-def prep_data(dataset='breast_cancer', discretize=False):
-    if dataset == 'breast_cancer':
-        data = load_breast_cancer()
-    elif dataset == 'iris':
-        data = load_iris()
-    else:
-        raise ValueError("Unknown dataset {}!".format(dataset))
-    x = data['data']
-    y = data['target']
-    if discretize:
-        x = MDLP().fit_transform(x, y)
-    train_x, test_x, train_y, test_y = split_data(x, y, train_size=0.8, shuffle=False)
-    # train_x, train_y = zip(*train_data)
-    # test_x, test_y = zip(*test_data)
-    feature_names = data['feature_names']  # type: List[str]
-    feature_names = [feature_name.replace(' ', '_') for feature_name in feature_names]
-    return np.array(train_x), np.array(train_y), np.array(test_x), np.array(test_y), feature_names
+# def prep_data(dataset='breast_cancer', discretize=False):
+#     if dataset == 'breast_cancer':
+#         data = load_breast_cancer()
+#     elif dataset == 'iris':
+#         data = load_iris()
+#     else:
+#         raise ValueError("Unknown dataset {}!".format(dataset))
+#     x = data['data']
+#     y = data['target']
+#     if discretize:
+#         x = MDLP().fit_transform(x, y)
+#     train_x, test_x, train_y, test_y = split_data(x, y, train_size=0.8, shuffle=False)
+#     # train_x, train_y = zip(*train_data)
+#     # test_x, test_y = zip(*test_data)
+#     feature_names = data['feature_names']  # type: List[str]
+#     feature_names = [feature_name.replace(' ', '_') for feature_name in feature_names]
+#     return np.array(train_x), np.array(train_y), np.array(test_x), np.array(test_y), feature_names
 
 
 def train_tree(name='tree', dataset='wine'):
-    data = get_dataset(dataset, split=True, discrete=False)
+    data = get_dataset(dataset, split=True, discrete=False, one_hot=True)
     train_x, train_y, test_x, test_y, feature_names = \
         data['train_x'], data['train_y'], data['test_x'], data['test_y'], data['feature_names']
     model_name = '-'.join([dataset, name])
@@ -44,12 +40,14 @@ def train_tree(name='tree', dataset='wine'):
 
 
 def train_nn(name='nn', dataset='wine', neurons=(20,), **kwargs):
-    data = get_dataset(dataset, split=True, discrete=False)
+    data = get_dataset(dataset, split=True, discrete=False, one_hot=True)
     train_x, train_y, test_x, test_y, feature_names = \
         data['train_x'], data['train_y'], data['test_x'], data['test_y'], data['feature_names']
+    one_hot_encoder, is_categorical = data['one_hot_encoder'], data['is_categorical']
     model_name = '-'.join([dataset, name] + [str(neuron) for neuron in neurons])
     nn = NeuralNet(name=model_name, neurons=neurons, activation="relu",
-                   alpha=0.01, max_iter=5000, verbose=True, **kwargs)
+                   alpha=0.01, max_iter=5000,
+                   one_hot_encoder=one_hot_encoder, **kwargs)
     nn.train(train_x, train_y)
     nn.test(test_x, test_y)
     nn.save()
@@ -73,9 +71,10 @@ def train_rule(name='rule', dataset='breast_cancer'):
 
 
 def train_surrogate(model_file, is_global=True, sampling_rate=5, surrogate='rule'):
+    is_rule = surrogate == 'rule'
     model = load_model(model_file)
     dataset = model.name.split('-')[0]
-    data = get_dataset(dataset, split=True, discrete=True)
+    data = get_dataset(dataset, split=True, discrete=is_rule, one_hot=is_rule)
     train_x, train_y, test_x, test_y, feature_names = \
         data['train_x'], data['train_y'], data['test_x'], data['test_y'], data['feature_names']
     # print(feature_names)
@@ -87,7 +86,7 @@ def train_surrogate(model_file, is_global=True, sampling_rate=5, surrogate='rule
                                         rule_minlen=1, rule_maxlen=3, min_support=0.02,
                                         _lambda=100, nchain=40, eta=1, iters=5000)
     elif surrogate == 'tree':
-        surrogate_model = TreeSurrogate(name=model_name, max_depth=10, min_samples_leaf=3)
+        surrogate_model = TreeSurrogate(name=model_name, max_depth=10, min_samples_leaf=0.01)
     else:
         raise ValueError("Unknown surrogate type {}".format(surrogate))
     if is_global:
@@ -129,6 +128,8 @@ if __name__ == '__main__':
     # train_surrogate('models/wine-nn-20.mdl', surrogate='tree')
     # train_nn(dataset='diabetes', neurons=(50, 50), standardize=False,
     #          solver='sgd', momentum=0.8)
-
-    train_nn(dataset='diabetes', neurons=(200, 100, 50), standardize=False,
-             tol=1e-6)
+    train_nn(dataset='diabetes', neurons=(50,), verbose=True, tol=1e-6)
+    # train_nn(dataset='diabetes', neurons=(200, 100, 50), standardize=False,
+             # tol=1e-6)
+    # train_surrogate('models/diabetes-nn-200-100-50.mdl', surrogate='tree', sampling_rate=0.1)
+    np.histogram()

@@ -98,5 +98,5 @@ def load(filename):
 
 class TreeSurrogate(Tree, SurrogateMixin):
     def __init__(self, **kwargs):
-        print(kwargs)
+        # print(kwargs)
         super(TreeSurrogate, self).__init__(**kwargs)

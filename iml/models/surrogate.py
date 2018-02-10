@@ -85,11 +85,6 @@ class SurrogateMixin(ModelBase):
         self.data_distribution = gaussian_mixture(instances, [sigmas]*len(instances))
         train_x = self.data_distribution.sample(n_sampling)
         train_y = target.predict(train_x)
-        # print(self.data_distribution.weights)
-        # print('instances')
-        # print(instances)
-        # print('train_y')
-        # print(train_y)
         self.train(train_x, train_y, **kwargs)
 
     def fidelity(self, x):
