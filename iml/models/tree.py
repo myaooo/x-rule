@@ -89,7 +89,7 @@ class Tree(SKModelWrapper, Classifier, Regressor):
 
             nodes = _build(0)
             return dict2json(nodes, filename)
-        raise ValueError(f'Unsupported value "{type}" for argument "type"')
+        raise ValueError('Unsupported value "{}" for argument "type"'.format(filetype))
 
 
 def load(filename):
