@@ -1,5 +1,7 @@
 import { combineReducers } from 'redux';
-import { ModelState, DataBaseState, SelectedDataType, FeatureState } from './state';
+import { 
+  ModelState, DataBaseState, SelectedDataType, FeatureState, TreeStyles, initTreeStyles, FeatureStatus 
+} from './state';
 
 import {
   ActionType,
@@ -8,7 +10,8 @@ import {
   RequestDatasetAction,
   ReceiveDatasetAction,
   SelectDatasetAction,
-  SelectFeatureAction
+  SelectFeatureAction,
+  ChangeTreeStylesAction,
   // Actions,
 } from './actions';
 
@@ -21,7 +24,7 @@ export const initialModelState: ModelState = {
 
 export const initialDataBaseState: DataBaseState = {};
 
-export const initialFeatureState: FeatureState = { idx: 0, count: 0 };
+export const initialFeaturesState: FeatureState[] = [];
 
 function modelStateReducer(
   state: ModelState = initialModelState,
@@ -75,31 +78,43 @@ function selectDatasetReducer(state: SelectedDataType[] = [], action: SelectData
   }
 }
 
-function selectFeatureReducer(state: FeatureState = initialFeatureState, action: SelectFeatureAction): FeatureState {
+function selectedFeaturesReducer(
+  state: FeatureState[] = initialFeaturesState, 
+  action: SelectFeatureAction
+): FeatureState[] {
   switch (action.type) {
     case ActionType.SELECT_FEATURE:
-      if (action.idx === state.idx) {
-        const count = state.count + (action.deselect ? -1 : 1);
-        if (count < 0) {
-          console.error(`State count of select feature ${state.idx} is negative!`);  // tslint:disable-line
+      if (action.deselect) {
+        const idx = state.findIndex((f: FeatureState) => f.idx === action.idx);
+        if (idx === -1) return state;
+        const feature = state[idx];
+        feature.status--;
+        if (feature.status < FeatureStatus.HOVER) {
+          return [...(state.slice(0, idx)), ...(state.slice(idx + 1))];
         }
-        return {...state, count};
+        return state;
       } else {
-        if (action.deselect) {
-          console.log(`Deselecting a different feature ${action.idx}!`);  // tslint:disable-line
-          return state;
+        const idx = state.findIndex((f: FeatureState) => f.idx === action.idx);
+        if (idx === -1) 
+          return [...state, {idx: action.idx, status: FeatureStatus.HOVER}];
+        else if (state[idx].status < FeatureStatus.SELECT) {
+          state[idx].status++;
         }
-        if (state.count === 2) {
-          console.log(`Feature ${state.idx} is already selected with count 2, deselect first!`);  // tslint:disable-line
-          return state;
-        }
-        return {...state, idx: action.idx, count: 1};
+        return state;
       }
     default:
       return state;
   }
 }
 
+function treeStyleReducer(state: TreeStyles = initTreeStyles, action: ChangeTreeStylesAction): TreeStyles {
+  switch (action.type) {
+    case ActionType.CHANGE_TREE_STYLES:
+      return {...state, ...action.newStyles};
+    default:
+      return state;
+  }
+}
 // function selectedDataReducer(
 //   state: string,
 //   action:
@@ -109,5 +124,6 @@ export const rootReducer = combineReducers({
   model: modelStateReducer,
   dataBase: dataBaseReducer,
   selectedData: selectDatasetReducer,
-  selectedFeature: selectFeatureReducer
+  selectedFeatures: selectedFeaturesReducer,
+  treeStyles: treeStyleReducer,
 });

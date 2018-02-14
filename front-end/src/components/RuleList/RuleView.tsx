@@ -6,6 +6,7 @@ import ConditionView from './ConditionView';
 import { collapsedHeight, expandedHeight } from './ConditionView';
 import OutputView from './OutputView';
 import './index.css';
+import { FeatureStatus } from '../../store';
 
 // const MAX_NUM_RULES = 3;
 
@@ -13,21 +14,21 @@ export interface RuleViewProps {
   rule: Rule;
   featureNames?: (i: number) => string;
   labelNames?: (i: number) => string;
-  categoryRatios: (feature: number, category: number) => [number, number, number];
-  categoryIntervals: (feature: number, category: number) => number | (number | null)[];
-  mins: (i: number) => number;
-  maxs: (i: number) => number;
   hists?: (i: number) => Histogram[];
   transform?: string;
   width: number;
   interval: number;
   nConditions: number;
-  selectFeature: ({ idx, deselect }: { idx: number; deselect: boolean }) => Action;
-  activatedFeature: number;
-  featureIsSelected: boolean;
+
   logicString: string;
   collapsed?: boolean;
   onClickCollapse?: (collapse: boolean) => void;
+  featureStatus?(feature: number): FeatureStatus;
+  categoryRatios(feature: number, category: number): [number, number, number];
+  categoryIntervals(feature: number, category: number): number | (number | null)[];
+  selectFeature?({ idx, deselect }: { idx: number; deselect: boolean }): Action;
+  mins(i: number): number;
+  maxs(i: number): number;
 }
 
 export interface RuleViewState {
@@ -40,28 +41,29 @@ export default class RuleView extends React.Component<RuleViewProps, RuleViewSta
     this.handleMouseLeave = this.handleMouseLeave.bind(this);
   }
   handleMouseEnter(idx: number) {
-    this.props.selectFeature({ idx, deselect: false });
+    const { selectFeature } = this.props;
+    if (selectFeature)
+      selectFeature({ idx, deselect: false });
   }
   handleMouseLeave(idx: number) {
-    this.props.selectFeature({ idx, deselect: true });
+    const { selectFeature } = this.props;
+    if (selectFeature)
+      selectFeature({ idx, deselect: true });
   }
   handleClick(idx: number) {
-    const { featureIsSelected, activatedFeature, selectFeature } = this.props;
-    if (activatedFeature === idx) {
-      if (featureIsSelected) {
-        selectFeature({ idx, deselect: true });
-      } else {
-        selectFeature({ idx, deselect: false });
-      }
-    }
+    const { featureStatus, selectFeature } = this.props;
+    if (featureStatus && selectFeature)
+      selectFeature({idx, deselect: featureStatus(idx) === FeatureStatus.SELECT});
   }
   render() {
-    const { rule, featureNames, mins, maxs, categoryIntervals, activatedFeature, hists, categoryRatios } = this.props;
-    const { transform, width, interval, nConditions, logicString, labelNames } = this.props;
+    const { rule, featureNames, mins, maxs, categoryIntervals, featureStatus, hists, categoryRatios } = this.props;
+    const { transform, interval, nConditions, logicString, labelNames } = this.props;
     const { collapsed, onClickCollapse } = this.props;
     const outputWidth = 120;
     const logicWidth = 70;
-    const conditionWidth = (width - outputWidth - logicWidth - (nConditions - 1) * interval) / nConditions;
+    // const conditionWidth = (width - outputWidth - logicWidth - (nConditions - 1) * interval) / nConditions;
+    const conditionWidth = 200;
+    const outputX = (conditionWidth + interval) * nConditions + 10 + logicWidth;
     const isDefaultRule = rule.conditions[0].feature === -1;
     const height = collapsed ? collapsedHeight : expandedHeight;
     const outputView = (
@@ -71,7 +73,7 @@ export default class RuleView extends React.Component<RuleViewProps, RuleViewSta
         height={height}
         barWidth={10}
         interval={5}
-        transform={`translate(${width - outputWidth + 10},${0})`}
+        transform={`translate(${outputX},${0})`}
         labels={labelNames}
         support={rule.support}
         maxSupport={500}
@@ -97,7 +99,7 @@ export default class RuleView extends React.Component<RuleViewProps, RuleViewSta
             max={maxs(condition.feature)}
             hist={hists ? hists(condition.feature) : undefined}
             transform={`translate(${(conditionWidth + interval) * i},${0})`}
-            activated={activatedFeature === feature}
+            activated={featureStatus ? featureStatus(feature) >= FeatureStatus.HOVER : false}
             ratios={categoryRatios(feature, category)}
             collapsed={collapsed}
           />

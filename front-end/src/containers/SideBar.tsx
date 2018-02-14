@@ -2,10 +2,12 @@ import { Card, Divider, Collapse } from 'antd';
 // import { Menu, Icon } from 'antd';
 import * as React from 'react';
 import { connect } from 'react-redux';
-import { RuleModel, ModelBase } from '../models';
+import { RuleModel, ModelBase, isTreeModel } from '../models';
 import { RootState, getModel } from '../store';
 import DataSelector from './DataSelector';
 import './SideBar.css';
+import TreeStyleControl from './TreeStyleControl';
+import ModelInfo from '../components/ModelInfo';
 
 const { Panel } = Collapse;
 
@@ -30,7 +32,7 @@ export interface SideBarState {
   activeKey: string | string[];
 }
 
-const defaultActiveKey = ['1'];
+const defaultActiveKey = ['1', '2', '3'];
 
 class SideBar extends React.Component<SideBarProps, SideBarState> {
   constructor(props: SideBarProps) {
@@ -42,7 +44,8 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
     this.setState({activeKey: key});
   }
   render() {
-    const {model} = this.props;
+    const {model, collapsed} = this.props;
+    let i = 1;
     return (
       <Card bordered={false}>
         <Divider>Controls</Divider>
@@ -52,9 +55,21 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
             onChange={this.onChange}
           >
             {model !== null && 
-              <Panel header="Dataset: " key="1">
-                <DataSelector key={'1'} datasetName={model.dataset}/>
-              </Panel>}
+              <Panel header={collapsed ? 'M' : 'Model Info: '} key={(i++).toString()}>
+                <ModelInfo model={model}/>
+              </Panel>
+            }
+            {model !== null && 
+              <Panel header={collapsed ? 'D' : `Dataset: ${model.dataset}`} key={(i++).toString()}>
+                <DataSelector datasetName={model.dataset}/>
+              </Panel>
+            }
+            {model !== null && isTreeModel(model) && 
+              <Panel header={collapsed ? 'S' : 'Styles'} key={(i++).toString()}>
+                <TreeStyleControl/>
+                {/* <DataSelector key={(i++).toString()} datasetName={model.dataset}/> */}
+              </Panel>
+            }
           </Collapse>
       </Card>
       // <Menu theme="light" mode="inline">

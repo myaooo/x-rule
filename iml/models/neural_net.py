@@ -1,34 +1,28 @@
 """
 A Simple Neural Net Model
 """
-from typing import Union
 
 import numpy as np
 
-from numpy.random import RandomState
-
 from sklearn.neural_network import MLPClassifier, MLPRegressor
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder
 
 from iml.models import SKModelWrapper, Regressor, Classifier, CLASSIFICATION, REGRESSION
+from iml.models.preprocess import PreProcessMixin, OneHotProcessor, StandardProcessor
 
 
-class NeuralNet(SKModelWrapper, Regressor, Classifier):
+class NeuralNet(PreProcessMixin, SKModelWrapper, Regressor, Classifier):
 
     def __init__(self, name='nn', problem=CLASSIFICATION,
                  neurons=(10,), activation='relu', solver='adam',
-                 alpha=0.0001, max_iter=1000, standardize=True,
-                 one_hot_encoder=None, **kwargs):
-        super(NeuralNet, self).__init__(problem=problem, name=name)
+                 alpha=0.0001, max_iter=1000,
+                 standardize=True, one_hot_encoder: OneHotEncoder=None,
+                 **kwargs):
         self.scaler = None
-        self._model = None  # type: Union[MLPClassifier, MLPRegressor]
-        self.is_categorical = None
-        self.one_hot_encoder = one_hot_encoder  # type: OneHotEncoder
-        if one_hot_encoder is not None:
-            self.is_categorical = one_hot_encoder.categorical_features
-        if standardize:
-            self.scaler = (StandardScaler(), StandardScaler())
-        if self._problem == CLASSIFICATION:
+
+        super(NeuralNet, self).__init__(problem=problem, name=name)
+
+        if problem == CLASSIFICATION:
             self._model = MLPClassifier(hidden_layer_sizes=neurons, activation=activation,
                                         solver=solver, alpha=alpha,
                                         max_iter=max_iter, **kwargs)
@@ -39,31 +33,14 @@ class NeuralNet(SKModelWrapper, Regressor, Classifier):
         else:
             raise ValueError("Unrecognized problem type {}".format(problem))
 
-    def fit_transformer(self, x, y):
-        if self.is_categorical is None:
-            self.is_categorical = [False] * x.shape[1]
-        is_categorical = self.is_categorical
-        if self.scaler is not None:
-            is_numerical = np.logical_not(is_categorical)
-            scale_x = x[:, is_numerical]
-            self.scaler[0].fit(scale_x)
-            if self._problem == REGRESSION:
-                self.scaler[1].fit(y)
-
-    def transform_data(self, x, y=None):
-        _x, _y = x.copy(), y
-
-        if self.scaler is not None:
-            is_numerical = np.logical_not(self.is_categorical)
-            _scale_x = self.scaler[0].transform(_x[:, is_numerical])
-            _x[:, is_numerical] = _scale_x
-            if self._problem == REGRESSION and y is not None:
-                _y = self.scaler[1].transform(y)
-        if self.one_hot_encoder:
-            _x = self.one_hot_encoder.transform(_x)
-        if y is None:
-            return _x
-        return _x, _y
+        # self.standardize = standardize
+        is_numerical = None
+        if one_hot_encoder is not None and one_hot_encoder.categorical_features is not None:
+            is_numerical = np.logical_not(one_hot_encoder.categorical_features)
+        if standardize:
+            self.add_processor(StandardProcessor(is_numerical, transform_y=problem == REGRESSION))
+        if one_hot_encoder is not None:
+            self.add_processor(OneHotProcessor(one_hot_encoder))
 
     @property
     def neurons(self):
@@ -81,41 +58,62 @@ class NeuralNet(SKModelWrapper, Regressor, Classifier):
         else:
             raise ValueError("Unrecognized problem type {}".format(self._problem))
 
-    def train(self, x, y, feature_names=None, label_names=None, **kwargs):
-        self.fit_transformer(x, y)
-        _x, _y = self.transform_data(x, y)
-        self.model.fit(_x, _y)
-        self.evaluate(x, y, stage='train')
-
-    def predict_prob(self, x):
-        assert self._problem == CLASSIFICATION
-        _x = self.transform_data(x)
-        return self.model.predict_proba(_x)
-
-    def predict(self, x):
-        _x = self.transform_data(x)
-        y = self.model.predict(_x)
-        if self._problem == REGRESSION and self.scaler is not None:
-            y = self.scaler[1].inverse_transform(y)
-        return y
-
-
-    # def score(self, y_true, y_pred):
-    #     if self._problem == CLASSIFICATION:
-    #         return self.accuracy(y_true, y_pred)
-    #     elif self._problem == REGRESSION:
-    #         return self.mse(y_true, y_pred)
-    #     else:
-    #         raise RuntimeError("Unknown problem type: {:}".format(self._problem))
-
     @property
     def type(self):
-        # if self._problem == CLASSIFICATION:
-        #     return 'nn-classifier'
-        # elif self._problem == REGRESSION:
-        #     return 'nn-regressor'
         return 'nn'
 
-    @property
-    def model(self):
-        return self._model
+    # @property
+    # def model(self):
+    #     return self._model
+
+    # def train(self, x, y, **kwargs):
+    #     if self.standardize:
+    #         if self._problem == CLASSIFICATION:
+    #             self.fit(x)
+    #         else:
+    #             self.fit(x, y)
+    #     _x, _y = self.transform(x, y)
+    #     self.model.fit(_x, _y)
+    #     # self.evaluate(x, y, stage='train')
+    #
+    # def predict_prob(self, x):
+    #     assert self._problem == CLASSIFICATION
+    #     _x = self.transform(x)
+    #     return super(NeuralNet, self).predict_prob(_x)
+    #
+    # def predict(self, x):
+    #     _x = self.transform(x)
+    #     y = self.model.predict(_x)
+    #     return self.inverse_transform(y)
+
+
+# class NeuralNetX(OneHotMixin, StandardizeMixin, NeuralNet):
+#     """
+#     NeuralNet with PreProcess Support
+#     """
+#     def __init__(self, standardize=True, one_hot_encoder: OneHotEncoder=None, **kwargs):
+#         self.standardize = standardize
+#         is_numerical = None
+#         if one_hot_encoder is not None and one_hot_encoder.categorical_features is not None:
+#             is_numerical = np.logical_not(one_hot_encoder.categorical_features)
+#
+#         super(NeuralNetX, self).__init__(is_numerical=is_numerical, one_hot_encoder=one_hot_encoder, **kwargs)
+#
+#     def train(self, x, y, **kwargs):
+#         if self.standardize:
+#             self.fit(x, y)
+#         _x, _y = self.transform(x, y)
+#         self.model.fit(_x, _y)
+#         self.evaluate(x, y, stage='train')
+#
+#     def predict_prob(self, x):
+#         assert self._problem == CLASSIFICATION
+#         _x = self.transform(x)
+#         return super(NeuralNetX, self).predict_prob(_x)
+#
+#     def predict(self, x):
+#         _x = self.transform(x)
+#         y = self.model.predict(_x)
+#         if self._problem == REGRESSION and self.scaler is not None:
+#             y = self.scaler[1].inverse_transform(y)
+#         return self.inverse_transform(y)

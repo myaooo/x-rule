@@ -1,17 +1,20 @@
 import RuleList from '../components/RuleList';
 import { Action } from 'redux';
 import { connect } from 'react-redux';
-import { RootState, getActivatedFeature, Dispatch, selectFeature, getFeatureIsSelected } from '../store';
+import { 
+  RootState, Dispatch, selectFeature, FeatureStatus, getFeatureStates, FeatureState 
+} from '../store';
 
 type RuleListStateProp = {
-  activatedFeature: number;
-  featureIsSelected: boolean;
+  featureStatus(i: number): FeatureStatus,
 };
 
 const mapStateToProps = (state: RootState): RuleListStateProp => {
   return {
-    activatedFeature: getActivatedFeature(state),
-    featureIsSelected: getFeatureIsSelected(state)
+    featureStatus: (i: number) => {
+      const f = getFeatureStates(state).find((v: FeatureState) => v.idx === i);
+      return f ? f.status : FeatureStatus.DEFAULT;
+    }
   };
 };
 

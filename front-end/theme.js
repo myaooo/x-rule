@@ -8,5 +8,6 @@ module.exports = () => {
     'card-padding-wider': '16px',
     'padding-md': '12px',
     'padding-lg': '18px',
+    'slider-margin': '6px 4px 6px',
   };
 };

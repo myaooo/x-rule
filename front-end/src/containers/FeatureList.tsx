@@ -1,17 +1,18 @@
 import FeatureList from '../components/FeatureList';
 import { Action } from 'redux';
 import { connect } from 'react-redux';
-import { RootState, getActivatedFeature, Dispatch, selectFeature, getFeatureIsSelected } from '../store';
+import { RootState, getFeatureStates, FeatureState, FeatureStatus, Dispatch, selectFeature } from '../store';
 
-type FeatureListStateProp = {
-  activatedFeature?: number;
-  featureIsSelected?: boolean;
+type RuleListStateProp = {
+  featureStatus?(i: number): FeatureStatus,
 };
 
-const mapStateToProps = (state: RootState): FeatureListStateProp => {
+const mapStateToProps = (state: RootState): RuleListStateProp => {
   return {
-    activatedFeature: getActivatedFeature(state),
-    featureIsSelected: getFeatureIsSelected(state)
+    featureStatus: (i: number) => {
+      const f = getFeatureStates(state).find((v: FeatureState) => v.idx === i);
+      return f ? f.status : FeatureStatus.DEFAULT;
+    }
   };
 };
 

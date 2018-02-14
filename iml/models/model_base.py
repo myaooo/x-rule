@@ -50,6 +50,7 @@ class ModelBase(ModelInterface):
         :param y:
         :return: accuracy
         """
+        # raise NotImplementedError("Base class")
         return self.evaluate(x, y, stage='test')
 
     def evaluate(self, x, y, stage='train'):
@@ -99,11 +100,12 @@ class SKModelWrapper(ModelBase):
 
     @property
     def model(self):
-        raise NotImplementedError("This is the SKModelWrapper base class!")
+        return self._model
+        # raise NotImplementedError("This is the SKModelWrapper base class!")
 
     def train(self, x, y, **kwargs):
         self.model.fit(x, y)
-        self.evaluate(x, y, stage='train')
+        # self.evaluate(x, y, stage='train')
 
     def predict_prob(self, x):
         assert self._problem == CLASSIFICATION

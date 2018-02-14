@@ -5,14 +5,11 @@ from functools import reduce
 
 import numpy as np
 
-# from rpy2.robjects.packages import importr
-# from rpy2.robjects import FactorVector, DataFrame, numpy2ri, r
-
 from mdlp.discretization import MDLP
 from pysbrl import train_sbrl
-# import pysbr
 
 from iml.models import Classifier, SurrogateMixin
+from iml.models.preprocess import PreProcessMixin, DiscreteProcessor
 from iml.data_processing import categorical2pysbrl_data
 
 # numpy2ri.activate()
@@ -293,9 +290,8 @@ class SBRL(Classifier):
     """
     # r_sbrl = importr('sbrl')
 
-    def __init__(self, rule_minlen=1, rule_maxlen=2,
-                 min_support=0.02, _lambda=50, eta=1, iters=10000, nchain=30, name='sbrl',
-                 discretizer=None):
+    def __init__(self, name='sbrl', rule_minlen=1, rule_maxlen=2,
+                 min_support=0.02, _lambda=50, eta=1, iters=10000, nchain=30):
         super(SBRL, self).__init__(name)
         self._r_model = None
         self.rule_minlen = rule_minlen
@@ -306,15 +302,18 @@ class SBRL(Classifier):
         self.iters = iters
         self.nchain = nchain
 
-        assert discretizer is None or isinstance(discretizer, MDLP)
-        self.discretizer = discretizer  # type: Optional[MDLP]
+        # assert discretizer is None or isinstance(discretizer, MDLP)
+        # self.discretizer = discretizer  # type: Optional[MDLP]
+
         self._rule_indices = None  # type: Optional[np.ndarray]
         self._rule_probs = None  # type: Optional[np.ndarray]
         self._rule_names = None
-        # self._feature_names = None
-        # self._label_names = None
-        # self._mat_feature_rule = None
         self._rule_list = []  # type: List[Rule]
+        self._n_classes = None
+        self._n_features = None
+
+        # if discretizer is not None:
+        #     self.add_processor(DiscreteProcessor(discretizer))
 
     @property
     def rule_list(self):
@@ -328,8 +327,8 @@ class SBRL(Classifier):
     # def label_names(self):
     #     return self._label_names
 
-    def fit_discretizer(self, x, y):
-        self.discretizer.fit(x, y)
+    # def fit_discretizer(self, x, y):
+    #     self.discretizer.fit(x, y)
 
     @property
     def n_rules(self):
@@ -337,7 +336,11 @@ class SBRL(Classifier):
 
     @property
     def n_classes(self):
-        return self._rule_probs.shape[1]
+        return self._n_classes
+
+    @property
+    def n_features(self):
+        return self._n_features
 
     @property
     def type(self):
@@ -346,71 +349,65 @@ class SBRL(Classifier):
     # def score(self, y_true, y_pred):
     #     return self.accuracy(y_true, y_pred)
 
-    def train(self, x, y, feature_names=None, label_names=None, discretize=True):
+    def train(self, x, y, **kwargs):
         """
 
-        :param x: 2D np.ndarry (n_instances, n_features) could be continuous
+        :param x: 2D np.ndarray (n_instances, n_features) could be continuous
         :param y: 1D np.ndarray (n_instances, ) labels
-        :param feature_names:
-        :param label_names:
-        :param discretize: (bool) whether to use the new training data to fit the discretizer again
         :return:
         """
-        # self._feature_names = feature_names
-        # self._label_names = label_names
-        _x = x
-        if discretize:
-            if self.discretizer is None:
-                logging.warning('discretize flag is set, buy no discretizer available!')
-            else:
-                _x = self.discretizer.transform(x)
+
         data_name = 'tmp/train'
-        data_file, label_file = categorical2pysbrl_data(_x, y, data_name, supp=self.min_support,
+        data_file, label_file = categorical2pysbrl_data(x, y, data_name, supp=self.min_support,
                                                         zmin=self.rule_minlen, zmax=self.rule_maxlen)
         n_labels = len(set(y))
         _model = train_sbrl(data_file, label_file, self._lambda, eta=self.eta,
                             max_iters=self.iters, nchain=self.nchain,
                             alphas=[1 for _ in range(n_labels)])
-
+        self._n_classes = n_labels
+        self._n_features = x.shape[1]
         self._rule_indices = _model[0]
         self._rule_probs = _model[1]
         self._rule_names = _model[2]
 
         self._rule_list = []
+
         for i, idx in enumerate(self._rule_indices):
             _rule_name = self._rule_names[idx]
-            # feature_indices, categories = self._rule_name2rule(_rule_name)
             self._rule_list.append(self._rule_name2rule(_rule_name, self._rule_probs[i]))
-        acc, loss, support_summary = self.evaluate(x, y, stage='train')
+        support_summary = self.compute_support(x, y)
         for rule, support in zip(self._rule_list, support_summary):
             rule.support = support
 
-    def evaluate(self, x, y, stage='train') -> Tuple[float, float, np.ndarray]:
-        y_prob, supports = self.predict_prob(x, rt_support=True)
-        y_pred = np.argmax(y_prob, axis=1)
-        # Avoid recalculation
-        acc = self.accuracy(y, y_pred)
-
+    def compute_support(self, x, y):
         n_classes = self.n_classes
         n_rules = self.n_rules
-        # Calculating support
+        _, supports = self._predict(x, rt_support=True)
         support_summary = np.zeros((n_rules, n_classes), dtype=np.int)
         for i, support in enumerate(supports):
             support_labels = y[support]
             unique_labels, unique_counts = np.unique(support_labels, return_counts=True)
             support_summary[i, unique_labels] = unique_counts
+        return support_summary
+
+    def evaluate(self, x, y, stage='train') -> Tuple[float, float]:
+        y_prob, supports = self.predict_prob(x, rt_support=True)
+        y_pred = np.argmax(y_prob, axis=1)
+        # Avoid recalculation
+        acc = self.accuracy(y, y_pred)
+
         # Loss
         loss = self.log_loss(y, y_prob)
         prefix = 'Training'
         if stage == 'test':
             prefix = 'Testing'
         print(prefix + " accuracy: {:.5f}; loss: {:.5f}".format(acc, loss))
-        return acc, loss, support_summary
+        return acc, loss
 
     @staticmethod
-    def _rule_name2rule(rule_name, prob):
+    def _rule_name2rule(rule_name, prob, support=None):
         if rule_name == 'default':
-            return Rule([-1], [-1], prob)
+            return Rule([-1], [-1], prob, support)
 
         raw_rules = rule_name[1:-1].split(',')
         feature_indices = []
@@ -421,26 +418,19 @@ class SBRL(Classifier):
                 raise ValueError("No '=' find in the rule!")
             feature_indices.append(int(raw_rule[1:idx]))
             categories.append(int(raw_rule[(idx+1):]))
-        return Rule(feature_indices, categories, prob)
+        return Rule(feature_indices, categories, prob, support=support)
 
-    def predict_prob(self, x, discretize: bool=True, rt_support: bool=False):
+    def _predict_prob(self, x, rt_support: bool=False):
         """
 
         :param x: an instance of pandas.DataFrame object, representing the data to be making predictions on.
-        :param discretize: Whether to discretize the input or not.
-            If the self.discretizer is None, then this flag is neglected
         :param rt_support: Whether to return the support of each rules. Default to False
         :return: `prob` if `rt_support` is `False`, `(prob, supports)` if `rt_support` is `True`.
             `prob` is a 2D array with shape `(n_instances, n_classes)`.
             `supports` is a list of (n_classes,) 1D arrays denoting the support.
         """
         _x = x
-        if discretize and self.discretizer is not None:
-            _x = self.discretizer.transform(x)
 
-        # sbrl.predict
-        # results = self.r_sbrl.predict_sbrl(self._r_model, np2rdf(x))
-        # return np.array([numpy2ri.ri2py(result) for result in results]).T
         n_classes = self._rule_probs.shape[1]
         y = np.empty((_x.shape[0], n_classes), dtype=np.double)
         un_satisfied = np.ones([_x.shape[0]], dtype=bool)
@@ -456,14 +446,67 @@ class SBRL(Classifier):
             return y, supports
         return y
 
-    def predict(self, x, discretize=True):
-        y_prob = self.predict_prob(x, discretize=discretize)
+    def predict_prob(self, x, **kwargs):
+        return self._predict_prob(x, **kwargs)
+
+    def _predict(self, x, rt_support=False):
+        if rt_support:
+            y_prob, support = self._predict_prob(x, rt_support)
+        else:
+            y_prob = self._predict_prob(x)
         # print(y_prob[:50])
         y_pred = np.argmax(y_prob, axis=1)
+        if rt_support:
+            return y_pred, support
         return y_pred
 
+    def predict(self, x, **kwargs):
+        return self._predict(x, **kwargs)
+
+    # def describe(self, feature_names=None, rt_str=False):
+    #     s = "The rule list is:\n\n     "
+    #
+    #     # n_rules = len(self._rule_indices)
+    #     # feature_names = feature_names if feature_names is not None else self._feature_names
+    #
+    #     for i, rule in enumerate(self._rule_list):
+    #         category_intervals = None
+    #         if self.discretizer is not None:
+    #             category_intervals = []
+    #             for idx, cat in zip(rule.feature_indices, rule.categories):
+    #                 if idx < 0:
+    #                     continue
+    #                 category_intervals.append(
+    #                     self.discretizer.cat2intervals(np.array([cat]), idx)[0]
+    #                 )
+    #         is_last = i == len(self._rule_list) - 1
+    #         s += rule.describe(feature_names, category_intervals, label="prob") + "\n"
+    #         if len(self._rule_list) > 1 and not is_last:
+    #             s += "\nELSE "
+    #
+    #     if rt_str:
+    #         return s
+    #     print(s)
+
+
+class RuleList(PreProcessMixin, SBRL):
+    def __init__(self, name='rulelist', discretizer: MDLP=None, **kwargs):
+        super(RuleList, self).__init__(name=name, **kwargs)
+        if discretizer is not None:
+            self.add_processor(DiscreteProcessor(discretizer))
+
+    @property
+    def type(self):
+        return 'rule'
+
+    @property
+    def discretizer(self):
+        processor = self.processors[0]
+        assert isinstance(processor, DiscreteProcessor)
+        return processor.discretizer
+
     def describe(self, feature_names=None, rt_str=False):
-        s = "The rule list is:\n\n     "
+        s = "The rule list has {} of rules:\n\n     ".format(self.n_rules)
 
         # n_rules = len(self._rule_indices)
         # feature_names = feature_names if feature_names is not None else self._feature_names
@@ -472,12 +515,14 @@ class SBRL(Classifier):
             category_intervals = None
             if self.discretizer is not None:
                 category_intervals = []
-                for idx, cat in zip(rule.feature_indices, rule.categories):
-                    if idx < 0:
-                        continue
-                    category_intervals.append(
-                        self.discretizer.cat2intervals(np.array([cat]), idx)[0]
-                    )
+                if rule.feature_indices[0] >= 0:
+                    # continue
+                    for idx, cat in zip(rule.feature_indices, rule.categories):
+                        if idx not in self.discretizer.continuous_features:
+                            interval = None
+                        else:
+                            interval = self.discretizer.cat2intervals(np.array([cat]), idx)[0]
+                        category_intervals.append(interval)
             is_last = i == len(self._rule_list) - 1
             s += rule.describe(feature_names, category_intervals, label="prob") + "\n"
             if len(self._rule_list) > 1 and not is_last:
@@ -488,10 +533,10 @@ class SBRL(Classifier):
         print(s)
 
 
-class RuleSurrogate(SBRL, SurrogateMixin):
+class RuleSurrogate(SurrogateMixin, RuleList):
     def __init__(self, **kwargs):
         # SurrogateMixin.__init__(self, name)
-        SBRL.__init__(self, **kwargs)
+        super(RuleSurrogate, self).__init__(**kwargs)
 
 
 if __name__ == '__main__':

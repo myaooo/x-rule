@@ -109,7 +109,7 @@ def load_data(name):
 
 
 sklearn_datasets = {'breast_cancer', 'iris', 'wine'}
-local_datasets = {'diabetes'}
+local_datasets = {'diabetes', 'abalone'}
 
 
 # @add_cache_support()
@@ -129,8 +129,9 @@ def get_dataset(data_name, discrete=False, seed=None, split=None,
     else:
         raise LookupError("Unknown data_name: {}".format(data_name))
 
+    is_categorical = data['is_categorical']
+
     if one_hot:
-        is_categorical = data['is_categorical']
         if verbose:
             print('Converting categorical features to one hot numeric')
         one_hot_encoder = OneHotEncoder(categorical_features=is_categorical).fit(data['data'])
@@ -148,7 +149,8 @@ def get_dataset(data_name, discrete=False, seed=None, split=None,
             print('Discretizing all continuous features using MDLP discretizer')
         discretizer_name = data_name + '-discretizer' + ('' if seed is None else ('-' + str(seed))) + '.pkl'
         discretizer_path = get_path(_cached_path, discretizer_name)
-        discretizer = get_discretizer(x, y, filenames=discretizer_path)
+        discretizer = get_discretizer(x, y, continuous_features=np.logical_not(is_categorical),
+                                      filenames=discretizer_path)
         data['data'] = discretizer.transform(x)
         data['discretizer'] = discretizer
 
@@ -290,9 +292,12 @@ def categorical2pysbrl_data(x: np.ndarray, y: np.ndarray, data_name, supp=0.05, 
 
 
 @add_cache_support(n_files=1)
-def get_discretizer(x, y, seed=None) -> MDLP:
+def get_discretizer(x, y, continuous_features=None, seed=None) -> MDLP:
     discretizer = MDLP(random_state=seed)
-    discretizer.fit(x, y)
+    if continuous_features is not None:
+        if continuous_features.dtype == np.bool:
+            continuous_features = np.arange(len(continuous_features))[continuous_features]
+    discretizer.fit(x, y, continuous_features)
     return discretizer
 
 

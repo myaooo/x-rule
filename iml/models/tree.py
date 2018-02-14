@@ -1,19 +1,23 @@
 import pickle
 
+import numpy as np
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor, export_graphviz
 
 from iml.utils.io_utils import dict2json
 from iml.models import SKModelWrapper, Classifier, Regressor, CLASSIFICATION, REGRESSION
 from iml.models.surrogate import SurrogateMixin
+from iml.models.preprocess import PreProcessMixin, OneHotProcessor, StandardProcessor
 
 
-class Tree(SKModelWrapper, Classifier, Regressor):
+class Tree(PreProcessMixin, SKModelWrapper, Classifier, Regressor):
     """
     A wrapper class that wraps sklearn.tree.DecisionTreeClassifier
     """
 
-    def __init__(self, problem=CLASSIFICATION, name='tree', criterion='gini', splitter='best',
-                 max_depth=None, min_samples_split=2, min_samples_leaf=1, **kwargs):
+    def __init__(self, problem=CLASSIFICATION, name='tree',
+                 criterion='gini', splitter='best',
+                 max_depth=None, min_samples_split=2, min_samples_leaf=1,
+                 one_hot_encoder=None, **kwargs):
         super(Tree, self).__init__(problem=problem, name=name)
         self._problem = problem
         # self._feature_names = None
@@ -29,13 +33,24 @@ class Tree(SKModelWrapper, Classifier, Regressor):
         else:
             raise ValueError("Unrecognized problem type {}".format(problem))
 
-    # @property
-    # def feature_names(self):
-    #     return self._feature_names
-    #
-    # @property
-    # def label_names(self):
-    #     return self._label_names
+        if one_hot_encoder is not None:
+            self.add_processor(OneHotProcessor(one_hot_encoder))
+
+    @property
+    def n_classes(self):
+        return self.model.tree_.max_n_classes
+
+    @property
+    def n_features(self):
+        return self.model.tree_.n_features
+
+    @property
+    def n_nodes(self):
+        return self.model.tree_.node_count
+
+    @property
+    def max_depth(self):
+        return self.model.tree_.max_depth
 
     @property
     def type(self):
@@ -44,10 +59,6 @@ class Tree(SKModelWrapper, Classifier, Regressor):
         elif self._problem == REGRESSION:
             return 'tree-regressor'
         return 'tree'
-
-    @property
-    def model(self):
-        return self._model
 
     def describe(self, feature_names=None):
         tree = self.model.tree_
@@ -70,26 +81,35 @@ class Tree(SKModelWrapper, Classifier, Regressor):
         if filetype == 'dot':
             return export_graphviz(self.model, filename)
         if filetype == 'json':
-            tree = self.model.tree_
-            children_left, children_right, feature, threshold, impurity, value = \
-                [a.tolist() for a in [tree.children_left, tree.children_right,
-                                      tree.feature, tree.threshold,
-                                      tree.impurity, tree.value]]
-
-            def _build(idx):
-                node = {'value': value[idx], 'impurity': impurity[idx]}
-                if children_left[idx] != children_right[idx]:
-                    # if not leave
-                    node['feature'] = feature[idx]
-                    node['threshold'] = threshold[idx]
-                    node['left'] = _build(children_left[idx])
-                    node['right'] = _build(children_right[idx])
-
-                return node
-
-            nodes = _build(0)
+            nodes = self.to_dict()
             return dict2json(nodes, filename)
         raise ValueError('Unsupported value "{}" for argument "type"'.format(filetype))
+
+    def to_dict(self):
+        tree = self.model.tree_
+        children_left, children_right, feature, threshold, impurity, value = \
+            [a.tolist() for a in [tree.children_left, tree.children_right,
+                                  tree.feature, tree.threshold,
+                                  tree.impurity, tree.value]]
+
+        def _build(idx):
+            support = value[idx][0]
+            node = {
+                'value': support,
+                'impurity': impurity[idx],
+                'idx': idx,
+                'output': int(np.argmax(support))
+            }
+            if children_left[idx] != children_right[idx]:
+                # if not leave
+                node['feature'] = feature[idx]
+                node['threshold'] = threshold[idx]
+                node['left'] = _build(children_left[idx])
+                node['right'] = _build(children_right[idx])
+
+            return node
+
+        return _build(0)
 
 
 def load(filename):

@@ -7,7 +7,7 @@ import numpy as np
 from mdlp.discretization import MDLP
 
 from iml.server import get_model, available_models, get_model_data
-from iml.models import NeuralNet, SBRL, RuleSurrogate, Tree, ModelInterface
+from iml.models import NeuralNet, SBRL, RuleSurrogate, Tree, ModelInterface, SurrogateMixin
 from iml.data_processing import get_dataset
 
 
@@ -21,9 +21,22 @@ def nn2json(nn: NeuralNet) -> dict:
     }
 
 
+def tree2json(tree: Tree) -> dict:
+    return {
+        'type': 'tree',
+        'root': tree.to_dict(),
+        'nNodes': tree.n_nodes,
+        'maxDepth': tree.max_depth,
+        'nClasses': tree.n_classes,
+        'nFeatures': tree.n_features,
+    }
+
+
 def rl2json(rl: SBRL) -> dict:
     return {
         'type': 'rule',
+        'nClasses': rl.n_classes,
+        'nFeatures': rl.n_features,
         'rules':
             [{
                 'conditions': [{
@@ -70,6 +83,12 @@ def discretizer2json(discretizer: MDLP, train_data=None) -> List[dict]:
         } for i in range(len(cut_points))]
 
 
+def surrogate2json(model: SurrogateMixin):
+    return {
+        'target': model.target.name
+    }
+
+
 @lru_cache(32, typed=True)
 def model2json(model_name):
     # data = get_dataset(get_model_data(model))
@@ -85,8 +104,12 @@ def model2json(model_name):
         ret_dict['discretizers'] = discretizer
     elif isinstance(model, NeuralNet):
         ret_dict = nn2json(model)
+    elif isinstance(model, Tree):
+        ret_dict = tree2json(model)
     else:
         raise ValueError("Unsupported model of type {}".format(model.__class__))
+    if isinstance(model, SurrogateMixin):
+        ret_dict.update(surrogate2json(model))
     ret_dict['dataset'] = data_name
 
     return ret_dict

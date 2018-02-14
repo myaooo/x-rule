@@ -4,6 +4,7 @@ datasets
 models
 !iml/models
 tmp
+notebooks/
 py-discretize/
 
 # Byte-compiled / optimized / DLL files

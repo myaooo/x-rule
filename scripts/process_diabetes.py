@@ -67,10 +67,10 @@ def standardize(data, features):
     return new_data, xScaler
 
 
-def encode_one_hot(data, categorical_features):
-    encoder = OneHotEncoder(categorical_features=categorical_features).fit(data)
-
-    return encoder.transform(data), encoder
+# def encode_one_hot(data, categorical_features):
+#     encoder = OneHotEncoder(categorical_features=categorical_features).fit(data)
+#
+#     return encoder.transform(data), encoder
 
 
 def main():

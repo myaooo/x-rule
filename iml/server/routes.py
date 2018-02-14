@@ -53,6 +53,17 @@ def data(data_name):
             return jsonify(data_dict)
 
 
+@app.route('/api/support/<string:model_name>', methods=['GET'])
+def support(model_name):
+    data = request.args.get('data')
+    if data == 'train' or data == 'test':
+        pass
+    elif data == 'sample_train' or 'sample_test':
+        pass
+    else:
+        raise ValueError('Unknown data type {}. Should be one of [train, test, sample_train, sample_test]'.format(data))
+
+
 # @app.route('/api/models/<string:model_name>', methods=['GET'])
 # def model_info(model_name):
 #     model = get_model(model_name)

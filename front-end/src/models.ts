@@ -1,3 +1,16 @@
+export interface ModelBase {
+    readonly type: string;
+    readonly dataset: string;
+    readonly nFeatures: number;
+    readonly nClasses: number;
+    [propName: string]: any;
+    // predict(x: Float32Array | Int32Array): Promise<number>;
+    // predictProb(x: Float32Array | Int32Array): Promise<Float32Array>;
+}
+
+export interface Surrogate extends ModelBase {
+    readonly target: string;  // the name of the target model
+}
 
 export interface Condition {
     readonly feature: number;
@@ -9,14 +22,6 @@ export interface Rule {
     readonly conditions: Condition[];
     readonly output: number[];
     support: number[];
-}
-
-export interface ModelBase {
-    readonly type: string;
-    readonly dataset: string;
-    [propName: string]: any;
-    // predict(x: Float32Array | Int32Array): Promise<number>;
-    // predictProb(x: Float32Array | Int32Array): Promise<Float32Array>;
 }
 
 export interface Discretizer {
@@ -35,6 +40,46 @@ export interface RuleModel extends ModelBase {
 
 export function isRuleModel(model: ModelBase): model is RuleModel {
     return model.type === 'rule';
+}
+
+export interface LeafNode {
+    readonly value: number[];
+    readonly impurity: number;
+    collapsed?: boolean;
+    readonly idx: number;
+    readonly output: number;
+}
+
+export interface InternalNode extends LeafNode {
+    readonly left: TreeNode;
+    readonly right: TreeNode;
+    readonly feature: number;
+    readonly threshold: number;
+}
+
+export type TreeNode = InternalNode | LeafNode;
+
+export interface TreeModel extends ModelBase {
+    readonly type: 'tree';
+    readonly root: TreeNode;
+    readonly nNodes: number;
+    readonly maxDepth: number;
+}
+
+export function isLeafNode(node: TreeNode): node is LeafNode {
+    return (<InternalNode> node).left === undefined;
+}
+
+export function isInternalNode(node: TreeNode): node is InternalNode {
+    return (<InternalNode> node).left !== undefined;
+}
+
+export function isTreeModel(model: ModelBase): model is TreeModel {
+    return model.type === 'tree';
+}
+
+export function isSurrogate(model: ModelBase): model is Surrogate {
+    return (<Surrogate> model).target !== undefined;
 }
 
 export type PlainMatrix = number[][];

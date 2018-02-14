@@ -193,6 +193,7 @@ def save_file(obj, filename, *args, **kwargs):
 
     ext = get_ext(filename)
     if ext in _ext_table:
+        before_save(filename)
         return _ext_table[ext][0](obj, filename, *args, **kwargs)
     else:
         raise ValueError("Unsupported file {} with file extension {}".format(filename, ext))
