@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { NodeGroup } from 'react-move';
 
-import { RuleModel, Rule, Condition, DataSet } from '../../models';
+import { RuleModel, Rule, Condition, DataSet, Streams, ConditionalStreams, isConditionalStreams } from '../../models';
 import * as nt from '../../service/num';
 import TextGroup from '../SVGComponents/TextGroup';
 import VerticalFlow from '../SVGComponents/VerticalFlow';
@@ -23,6 +23,7 @@ interface RuleMatrixPropsOptional {
 export interface RuleMatrixProps extends Partial<RuleMatrixPropsOptional> {
   model: RuleModel;
   datasets: DataSet[];
+  streams?: Streams | ConditionalStreams;
 }
 
 export interface RuleMatrixState {
@@ -49,9 +50,9 @@ export default class RuleMatrix extends React.Component<RuleMatrixProps, RuleMat
     const size = newSize || 40;
     return {
       featureWidth: size,
-      featureWidthExpand: size * 3,
+      featureWidthExpand: size * 4,
       ruleHeight: size,
-      ruleHeightExpand: size * 3,
+      ruleHeightExpand: size * 2,
     };
   }
 
@@ -161,9 +162,12 @@ export default class RuleMatrix extends React.Component<RuleMatrixProps, RuleMat
   }
 
   render() {
-    const {model, datasets, transform, width, size} = this.props as RuleMatrixPropsOptional & RuleMatrixProps;
+    const {model, datasets, transform, width, size, streams} = this.props as RuleMatrixPropsOptional & RuleMatrixProps;
     // console.log(rules); // tslint:disable-line
-    const {features, widths, heights, xs, ys} = this.state;
+    const getStreams = streams 
+      ? (isConditionalStreams(streams) ? ((i: number) => streams[i]) : () => streams) 
+      : undefined;
+    const {features, widths, heights, xs, ys, activeFeatures} = this.state;
     const rules = model.rules;
 
     // compute feature2Idx map
@@ -178,7 +182,8 @@ export default class RuleMatrix extends React.Component<RuleMatrixProps, RuleMat
     const midYs = ys.map((y, i) => y + heights[i] / 2);
     const x0 = 150;
     const flowDx = 50;
-    console.log(xs); // tslint:disable-line
+    // console.log(xs); // tslint:disable-line
+    // const getStreams = streams
     return (
       <g transform={transform}>
         <TextGroup
@@ -198,8 +203,9 @@ export default class RuleMatrix extends React.Component<RuleMatrixProps, RuleMat
             // console.log("Render RuleMatrixNodeGroup"); //tslint:disable-line
             return (
             <g transform={`translate(${x0}, 70)`}>
-              {nodes.map(({key, data, state}, i) => {
+              {nodes.map(({key, data, state}) => {
                 const {y} = state;
+                const i = Number(key);
                 // console.log(rules[i]);  // tslint:disable-line
                 return (
                   <RuleRow 
@@ -208,8 +214,10 @@ export default class RuleMatrix extends React.Component<RuleMatrixProps, RuleMat
                     dataset={datasets[0]}
                     supports={model.supports[i]}
                     features={features}
+                    activeFeatures={activeFeatures}
                     feature2Idx={feature2Idx}
                     xs={xs}
+                    streams={getStreams && getStreams(i)}
                     widths={widths} 
                     height={heights[i]}
                     transform={`translate(0, ${y})`}

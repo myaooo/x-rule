@@ -1,4 +1,4 @@
-import { ModelBase, DataSet, DataTypeX } from '../models';
+import { ModelBase, DataSet, DataTypeX, Streams, ConditionalStreams } from '../models';
 
 export interface ModelState {
   readonly model: ModelBase | null;
@@ -12,6 +12,10 @@ export interface ModelState {
 
 export type DataBaseState = {
   [name in DataTypeX]?: DataSet;
+};
+
+export type StreamBaseState = {
+  [name in DataTypeX]?: {streams?: Streams, conditionalStreams?: ConditionalStreams};
 };
 
 // export type ModelBaseState = { [modelName: string]: ModelBase };
@@ -34,33 +38,41 @@ export interface FeatureState {
 
 export interface TreeStyles {
   linkWidth: number;
+  conditional: boolean;
 }
 
 export const initTreeStyles: TreeStyles = {
   linkWidth: 1.0,
+  conditional: false,
 };
 
 export interface RuleStyles {
   size: number;
   width: number;
   mode: string;
+  conditional: boolean;
 }
 
 export const initRuleStyles: RuleStyles = {
   size: 30,
   mode: 'list',
   width: 50,
+  conditional: false,
 };
+
+export const initialStreamBaseState: StreamBaseState = {};
 
 export interface RootState {
   // modelBase: ModelBaseState;
   // selectedModel: string;
   model: ModelState;
   dataBase: DataBaseState;
+  streamBase: StreamBaseState;
   selectedData: DataTypeX[];
   selectedFeatures: FeatureState[];
   treeStyles: TreeStyles;
   ruleStyles: RuleStyles;
+  // conditional: boolean;
 }
 
 // const initialState: State = {

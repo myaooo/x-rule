@@ -2,10 +2,18 @@
 import { Dispatch as ReduxDispatch, Action } from 'redux';
 import { ThunkAction } from 'redux-thunk';
 import { RootState, TreeStyles, RuleStyles } from './state';
-import { ModelBase, PlainData, DataTypeX } from '../models';
+import {
+  ModelBase,
+  PlainData,
+  DataTypeX,
+  ConditionalStreams,
+  Streams,
+  createStreams,
+  createConditionalStreams
+} from '../models';
 
 import dataService from '../service/dataService';
-import { ConditionalStreams, Streams, createStreams, createConditionalStreams } from '../models/stream';
+import { isRuleModel } from '../models/ruleModel';
 
 export type Dispatch = ReduxDispatch<RootState>;
 
@@ -21,7 +29,8 @@ export enum ActionType {
   SELECT_DATASET = 'SELECT_DATASET',
   SELECT_FEATURE = 'SELECT_FEATURE',
   CHANGE_TREE_STYLES = 'CHANGE_TREE_STYLES',
-  CHANGE_RULE_STYLES = 'CHANGE_RULE_STYLES'
+  CHANGE_RULE_STYLES = 'CHANGE_RULE_STYLES',
+  CHANGE_SETTING = 'CHANGE_SETTING',
 }
 
 export interface TypedAction<T> extends Action {
@@ -63,8 +72,7 @@ interface StreamPayload {
   conditional: boolean;
 }
 
-export interface RequestStreamAction extends 
-  TypedAction<ActionType.REQUEST_STREAM>, Readonly<StreamPayload> {}
+export interface RequestStreamAction extends TypedAction<ActionType.REQUEST_STREAM>, Readonly<StreamPayload> {}
 
 export interface ReceiveStreamAction extends TypedAction<ActionType.RECEIVE_STREAM>, Readonly<StreamPayload> {
   readonly streams: Streams | ConditionalStreams;
@@ -106,21 +114,19 @@ export interface ReceiveSupportPayload {
   support: number[][];
 }
 
-export function requestSupport(
-  {modelName, data}: {modelName: string, data: DataTypeX}
-): RequestSupportAction {
+export function requestSupport({ modelName, data }: { modelName: string; data: DataTypeX }): RequestSupportAction {
   return {
     type: ActionType.REQUEST_SUPPORT,
-    modelName, data
+    modelName,
+    data
   };
 }
 
-export function receiveSupport(
-  {modelName, support}: ReceiveSupportPayload
-): ReceiveSupportAction {
+export function receiveSupport({ modelName, support }: ReceiveSupportPayload): ReceiveSupportAction {
   return {
     type: ActionType.RECEIVE_SUPPORT,
-    modelName, support,
+    modelName,
+    support
   };
 }
 
@@ -158,9 +164,7 @@ export function requestStream(payload: StreamPayload): RequestStreamAction {
   };
 }
 
-export function receiveStream(
-  payload: StreamPayload & {streams: Streams | ConditionalStreams}
-): ReceiveStreamAction {
+export function receiveStream(payload: StreamPayload & { streams: Streams | ConditionalStreams }): ReceiveStreamAction {
   return {
     type: ActionType.RECEIVE_STREAM,
     ...payload
@@ -204,7 +208,7 @@ function fetchDataWrapper<ArgType, ReturnType>(
   receiveAction: (ret: ReturnType | null) => Action,
   needFetch: (arg: ArgType, getState: () => RootState) => boolean
 ): ((arg: ArgType) => AsyncAction) {
-// ): ThunkAction<any, RootState, ArgType> {
+  // ): ThunkAction<any, RootState, ArgType> {
   const fetch = (fetchArg: ArgType): Dispatch => {
     return (dispatch: Dispatch): Promise<Action> => {
       dispatch(requestAction(fetchArg));
@@ -241,9 +245,7 @@ export const fetchModelIfNeeded = fetchDataWrapper(
 type DatasetArg = { datasetName: string; dataType: DataTypeX };
 
 export const fetchDatasetIfNeeded = fetchDataWrapper(
-  (
-    { datasetName, dataType }: DatasetArg
-  ): Promise<ReceiveDatasetPayload> => {
+  ({ datasetName, dataType }: DatasetArg): Promise<ReceiveDatasetPayload> => {
     return dataService.getData(datasetName, dataType).then(data => ({
       data,
       datasetName,
@@ -258,50 +260,57 @@ export const fetchDatasetIfNeeded = fetchDataWrapper(
 );
 
 export const fetchSupportIfNeeded = fetchDataWrapper(
-  (
-    { modelName, data }: {modelName: string, data: DataTypeX}
-  ): Promise<ReceiveSupportPayload> => {
+  ({ modelName, data }: { modelName: string; data: DataTypeX }): Promise<ReceiveSupportPayload> => {
     return dataService.getSupport(modelName, data).then(support => ({
-      support, modelName
+      support,
+      modelName
     }));
   },
   requestSupport,
   receiveSupport,
-  () => true,
+  () => true
 );
 
 export const fetchStreamIfNeeded = fetchDataWrapper(
-  (
-    payload: StreamPayload
-  ): Promise<StreamPayload & {streams: Streams | ConditionalStreams}> => {
+  (payload: StreamPayload): Promise<StreamPayload & { streams: Streams | ConditionalStreams }> => {
     const { modelName, dataType, conditional } = payload;
-    return dataService.getStream(modelName, dataType, conditional)
-      .then(data => {
-        if (conditional) 
-          return {
-            streams: createConditionalStreams(data as number[][][][]), ...payload
-          };
+    return dataService.getStream(modelName, dataType, conditional).then(data => {
+      if (conditional)
         return {
-          streams: createStreams(data as number[][][]), ...payload
+          streams: createConditionalStreams(data as number[][][][]),
+          ...payload
         };
-      });
+      return {
+        streams: createStreams(data as number[][][]),
+        ...payload
+      };
+    });
   },
   requestStream,
   receiveStream,
-  () => true,
+  (payload: StreamPayload, getState: () => RootState): boolean => {
+    const streamBase = getState().streamBase[payload.dataType];
+    if (!streamBase) return true;
+    if (payload.conditional) return !streamBase.conditionalStreams;
+    return !streamBase.streams;
+  }
 );
 
 export function selectDatasetAndFetchSupport(dataNames: DataTypeX[]): ThunkAction<void, RootState, {}> {
   return (dispatch: Dispatch, getState: () => RootState) => {
     dispatch(selectDataset(dataNames));
-    const modelState = getState().model;
-    if (modelState.model === null || modelState.isFetching) return;
-    const modelName = modelState.model.name;
+    const state = getState();
+    const modelState = state.model;
+    const model = modelState.model;
+    if (model === null || modelState.isFetching) return;
+    const modelName = model.name;
+    const conditional = Boolean(isRuleModel(model) ? state.ruleStyles.conditional : state.treeStyles.conditional);
 
     // only fetch support for the first data (focus)
     if (dataNames.length > 0) {
       console.log('Fetching support'); // tslint:disable-line
-      dispatch(fetchSupportIfNeeded({modelName, data: dataNames[0]}));
+      dispatch(fetchSupportIfNeeded({ modelName, data: dataNames[0] }));
+      dispatch(fetchStreamIfNeeded({modelName, dataType: dataNames[0], conditional}));
     }
   };
 }

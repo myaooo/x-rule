@@ -6,8 +6,8 @@ import { Rule, Condition } from '../../models';
 import * as nt from '../../service/num';
 import { ColorType, labelColor as defaultLabelColor } from '../Painters/Painter';
 import RowOutput from './RowOutput';
-import { DataSet } from '../../models';
-// import StreamPlot from '../SVGComponents/StreamPlot';
+import { DataSet, Streams, Stream } from '../../models';
+import StreamPlot from '../SVGComponents/StreamPlot';
 
 type RectState = {x: number, y?: number, height: number, width: number};
 class RectNodeGroup extends NodeGroup<Condition, RectState> {}
@@ -23,6 +23,7 @@ export interface RectGlyphProps {
   range?: [number, number];
   supports?: number[];
   transform?: string;
+  style?: React.CSSProperties;
   onClick?: () => void;
 }
 
@@ -47,9 +48,10 @@ export class RectGlyph extends React.PureComponent<RectGlyphProps, any> {
 
         const multiplier = height / (range[1] - range[0]);
         supportElements = (
-          <g className="mc-satisfied"> 
+          <g className="mc-satisfied" > 
             {supports.map((support: number, i: number) => (
-              <rect 
+              <rect
+                key={i} 
                 x={x}
                 y={yScaler(supportCumulated[i])}
                 width={rangeWidth} 
@@ -71,6 +73,29 @@ export class RectGlyph extends React.PureComponent<RectGlyphProps, any> {
   }
 }
 
+export interface ConditionViewProps extends RectGlyphProps {
+  stream?: Stream;
+  interval?: [number, number];
+  streamColor?: ColorType;
+}
+
+export class ConditionView extends React.PureComponent<ConditionViewProps, any> {
+  render() {
+    const {stream, streamColor, interval, ...rest} = this.props;
+    // if (!stream) return (<RectGlyph {...rest} />);
+    const { style, supports, color, range, ...streamRest } = rest;
+    return (
+      <React.Fragment>
+        {/* <Animate show={true} start={{opacity: 0.0}} > */}
+          <RectGlyph {...rest} style={stream ? {display: 'none'} : {}}/>
+        {/* </Animate> */}
+        {stream && interval &&
+        <StreamPlot data={stream} color={streamColor} range={interval} {...streamRest}/>}
+      </React.Fragment>
+    );
+  }
+}
+
 interface OptionalProps {
   outputWidth: number;
   height: number;
@@ -83,6 +108,8 @@ export interface RuleRowProps extends Partial<OptionalProps> {
   dataset?: DataSet;
   features: number[];
   feature2Idx: number[];
+  streams?: Streams;
+  activeFeatures?: Set<number>;
   // outputs?: number[];
   supports?: number[];
   xs: number[];
@@ -131,8 +158,9 @@ export default class RuleRow extends React.Component<RuleRowProps, RuleRowState>
     }
   }
   render() {
-    const { feature2Idx, widths, height, transform, rule, onClick, dataset, xs, labelColor, supports } 
+    const { feature2Idx, widths, height, transform, rule, onClick, dataset, xs, labelColor, supports, streams } 
       = this.props as OptionalProps & RuleRowProps;
+    const { activeFeatures } = this.props;
     const rowWidth = this.state.rowWidth;
     // const xs = [0, ...(nt.cumsum(widths))];
     const getConditionTargetState = (c: Condition) => (
@@ -144,6 +172,20 @@ export default class RuleRow extends React.Component<RuleRowProps, RuleRowState>
       });
     // const conditionFeatures = rule.conditions.map((c) => c.feature);
     const supportsScaled = (supports && dataset) ? nt.muls(supports, 1 / dataset.data.length) : undefined;
+
+    const cat2Interval = dataset ? ((f: number, c: number): [number, number] => {
+      const intervals = dataset.discretizers[f].intervals;
+      const range = dataset.ranges[f];
+      const w = range[1] - range[0];
+      if (intervals) {
+        let low = intervals[c][0];
+        let high = intervals[c][1];
+        low = low === null ? 0 : (low - range[0]) / w;
+        high = high === null ? 1 : (high - range[0]) / w;
+        return [low, high];
+      }
+      return [c - 0.5, c + 0.5];
+    }) : undefined;
     return (
       <g transform={transform}>
         { rule.conditions[0].feature !== -1 && 
@@ -167,14 +209,19 @@ export default class RuleRow extends React.Component<RuleRowProps, RuleRowState>
                   range = [r0, r1] as [number, number];
                 }
                 const trans = `translate(${x},0)`;
+                const stream = (activeFeatures && activeFeatures.has(data.feature) && streams) 
+                  ? streams[data.feature] : undefined;
+                const interval = cat2Interval && cat2Interval(data.feature, data.category);
                 return (
-                  <RectGlyph 
+                  <ConditionView 
                     key={key} 
                     onClick={onClick && (() => onClick(data.feature))}
                     range={range}
+                    interval={interval}
                     transform={trans}
                     supports={supportsScaled}
                     color={labelColor}
+                    stream={stream}
                     {...rest}
                   />
                 );

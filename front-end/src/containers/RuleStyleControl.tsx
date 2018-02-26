@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Action } from 'redux';
 import { connect } from 'react-redux';
-import { Slider, Row, Col, Radio } from 'antd';
+import { Slider, Row, Col, Radio, Switch } from 'antd';
 import { RootState, Dispatch, changeRuleStyles, RuleStyles } from '../store';
 
 const RadioButton = Radio.Button;
@@ -29,6 +29,7 @@ class RuleStyleControl extends React.Component<RuleStyleControlProps, any> {
     const {changeStyles} = this.props;
     return (
       <div style={{ paddingLeft: 12 }}>
+
          <Row>
           <Col span={10}>
             <span>Width: </span>
@@ -43,6 +44,7 @@ class RuleStyleControl extends React.Component<RuleStyleControlProps, any> {
             />
           </Col>
         </Row>
+
         <Row>
           <Col span={10}>
             <span>Size: </span>
@@ -57,6 +59,7 @@ class RuleStyleControl extends React.Component<RuleStyleControlProps, any> {
             />
           </Col>
         </Row>
+
         <Row style={{marginTop: 8}}>
           <Col span={10}>
             <span>Mode: </span>
@@ -70,6 +73,19 @@ class RuleStyleControl extends React.Component<RuleStyleControlProps, any> {
               <RadioButton value="list">List</RadioButton>
               <RadioButton value="matrix">Matrix</RadioButton>
             </RadioGroup>
+          </Col>
+        </Row>
+
+        <Row style={{marginTop: 8}}>
+          <Col span={10}>
+            <span>Conditional: </span>
+          </Col>
+          <Col span={14}>
+            <Switch 
+              checked={this.props.styles.conditional}
+              onChange={(conditional) => changeStyles({conditional})}
+              size="small"
+            />
           </Col>
         </Row>
         {/* </Slider> */}

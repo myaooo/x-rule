@@ -12,17 +12,19 @@ import {
   TreeStyles,
   getTreeStyles
 } from '../store';
-import { RuleModel, DataSet, ModelBase, isRuleModel, isTreeModel } from '../models';
+import { RuleModel, DataSet, ModelBase, isRuleModel, isTreeModel, ConditionalStreams, Streams } from '../models';
 import { countFeatureFreq } from '../service/utils';
 import Tree from '../components/Tree';
 import RuleList from '../containers/RuleList';
 import FeatureList from '../containers/FeatureList';
 import Legend from '../components/Legend';
+import { getStreams } from '../store/selectors';
 
 export interface ModelViewStateProp {
   model: RuleModel | ModelBase | null;
   modelIsFetching: boolean;
-  data: (DataSet | undefined)[];
+  data: (DataSet)[];
+  streams?: Streams | ConditionalStreams;
   treeStyles: TreeStyles;
 }
 
@@ -32,6 +34,7 @@ const mapStateToProps = (state: RootState): ModelViewStateProp => {
     modelIsFetching: getModelIsFetching(state),
     data: getSelectedData(state),
     treeStyles: getTreeStyles(state),
+    streams: getStreams(state),
   };
 };
 
@@ -67,7 +70,7 @@ class ModelView extends React.Component<ModelViewProp, any> {
   //   d3.select(this.svgRef).attr('width', width).attr('height', height);
   // }
   render(): React.ReactNode {
-    const { modelIsFetching, model, data, modelName, treeStyles } = this.props;
+    const { modelIsFetching, model, data, modelName, treeStyles, streams } = this.props;
     if (model === null) {
       if (modelIsFetching)
         return (<div> Loading model {modelName}... </div>);
@@ -78,7 +81,7 @@ class ModelView extends React.Component<ModelViewProp, any> {
     const featureWidth = 160;
     const availableData = data[0] || data[1];
     const transform = `translate(${featureWidth}, 40)`;
-    const modelProps = {data, width: width - featureWidth - 20, height: height - 60, transform};
+    const modelProps = {data, width: width - featureWidth - 20, height: height - 60, transform, streams};
     const featureNames = availableData 
       ? availableData.featureNames 
       : Array.from({length: model.nFeatures}, (_, i) => `X${i}`);
@@ -86,6 +89,7 @@ class ModelView extends React.Component<ModelViewProp, any> {
       ? availableData.labelNames
       : Array.from({length: model.nClasses}, (_, i) => `L${i}`);
     // let modelElement = (<div> Loading Dataset...</div>);
+    // console.log(streams); // tslint:disable-line
     return (
       <Card>
         <svg ref={(ref: SVGSVGElement) => this.svgRef = ref} width={width} height={height}>

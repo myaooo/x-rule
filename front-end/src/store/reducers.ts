@@ -1,5 +1,5 @@
 import { combineReducers } from 'redux';
-import { isRuleModel, isTreeModel, RuleList, DataSet, DataTypeX } from '../models';
+import { isRuleModel, isTreeModel, RuleList, DataSet, DataTypeX, ConditionalStreams, Streams } from '../models';
 import {
   ModelState,
   DataBaseState,
@@ -13,7 +13,7 @@ import {
 } from './state';
 import { collapseInit } from '../service/utils';
 import { ReceiveStreamAction } from './actions';
-import { ConditionalStreams, Streams } from '../models/stream';
+import { initialStreamBaseState, StreamBaseState } from './state';
 
 import {
   ReceiveSupportAction,
@@ -74,7 +74,7 @@ function modelStateReducer(
 
 function dataBaseReducer(
   state: DataBaseState = initialDataBaseState,
-  action: ReceiveDatasetAction | ReceiveStreamAction
+  action: ReceiveDatasetAction
 ): DataBaseState {
   switch (action.type) {
     case ActionType.RECEIVE_DATASET:
@@ -82,19 +82,26 @@ function dataBaseReducer(
       newState[action.dataType] = new DataSet(action.data);
       return { ...state, ...newState };
 
-    case ActionType.RECEIVE_STREAM:
-      const newState2: DataBaseState = {};
-      const dataset = state[action.dataType];
-      if (dataset) {
-        if (action.conditional) {
-          dataset.conditionalStreams = action.streams as ConditionalStreams;
-        } else {
-          dataset.streams = action.streams as Streams;
-        }
-        newState2[action.dataType] = dataset;
-        return { ...state, ...newState2 };
-      }
+    default:
       return state;
+  }
+}
+
+function streamBaseReducer( 
+  state: StreamBaseState = initialStreamBaseState,
+  action: ReceiveStreamAction
+): StreamBaseState {
+  switch (action.type) {
+    case ActionType.RECEIVE_STREAM:
+      const streamBase: StreamBaseState[DataTypeX] = {...(state[action.dataType])};
+      if (action.conditional) {
+        streamBase.conditionalStreams = action.streams as ConditionalStreams;
+      } else {
+        streamBase.streams = action.streams as Streams;
+      }
+      const newState: StreamBaseState = {};
+      newState[action.dataType] = streamBase;
+      return { ...state, ...newState };
 
     default:
       return state;
@@ -163,6 +170,7 @@ function ruleStyleReducer(state: RuleStyles = initRuleStyles, action: ChangeRule
 export const rootReducer = combineReducers<RootState>({
   model: modelStateReducer,
   dataBase: dataBaseReducer,
+  streamBase: streamBaseReducer,
   selectedData: selectDatasetReducer,
   selectedFeatures: selectedFeaturesReducer,
   treeStyles: treeStyleReducer,
