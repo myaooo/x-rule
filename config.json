@@ -15,8 +15,72 @@
       "dataset": "iris"
     },
     {
+      "model": "abalone-rule",
+      "dataset": "abalone"
+    },
+    {
+      "model": "breast_cancer-tree",
+      "dataset": "breast_cancer"
+    },
+    {
+      "model": "wine-tree",
+      "dataset": "wine"
+    },
+    {
+      "model": "abalone-tree",
+      "dataset": "abalone"
+    },
+    {
+      "model": "iris-tree",
+      "dataset": "iris"
+    },
+    {
+      "model": "tree-surrogate-abalone-nn-30-30-30-30",
+      "dataset": "abalone"
+    },
+    {
+      "model": "tree-surrogate-breast_cancer-nn-20",
+      "dataset": "breast_cancer"
+    },
+    {
+      "model": "tree-surrogate-iris-nn-20",
+      "dataset": "iris"
+    },
+    {
+      "model": "tree-surrogate-wine-nn-20",
+      "dataset": "wine"
+    },
+    {
+      "model": "rule-surrogate-abalone-nn-30-30-30-30",
+      "dataset": "abalone"
+    },
+    {
+      "model": "rule-surrogate-breast_cancer-nn-20",
+      "dataset": "breast_cancer"
+    },
+    {
+      "model": "rule-surrogate-iris-nn-20",
+      "dataset": "iris"
+    },
+    {
+      "model": "rule-surrogate-wine-nn-20",
+      "dataset": "wine"
+    },
+        {
+      "model": "rule-surrogate-thoracic-nn-30-30",
+      "dataset": "thoracic"
+    },
+    {
       "model": "breast_cancer-nn-20",
       "dataset": "breast_cancer"
+    },
+    {
+      "model": "iris-nn-20",
+      "dataset": "iris"
+    },
+        {
+      "model": "wine-nn-20",
+      "dataset": "wine"
     }
   ]
 }

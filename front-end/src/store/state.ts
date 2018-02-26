@@ -1,4 +1,4 @@
-import { ModelBase, PlainData } from '../models';
+import { ModelBase, DataSet, DataTypeX } from '../models';
 
 export interface ModelState {
   readonly model: ModelBase | null;
@@ -10,15 +10,11 @@ export interface ModelState {
 //   readonly isFetching: boolean;
 // }
 
-export type SelectedDataType = 'train' | 'test';
+export type DataBaseState = {
+  [name in DataTypeX]?: DataSet;
+};
 
-export interface DataBaseState {
-  // [name: SelectedDataType]: PlainData;
-  train?: PlainData;
-  test?: PlainData;
-}
-
-export type ModelBaseState = { [modelName: string]: ModelBase };
+// export type ModelBaseState = { [modelName: string]: ModelBase };
 
 export enum FeatureStatus {
   DEFAULT = 0,
@@ -44,14 +40,27 @@ export const initTreeStyles: TreeStyles = {
   linkWidth: 1.0,
 };
 
+export interface RuleStyles {
+  size: number;
+  width: number;
+  mode: string;
+}
+
+export const initRuleStyles: RuleStyles = {
+  size: 30,
+  mode: 'list',
+  width: 50,
+};
+
 export interface RootState {
   // modelBase: ModelBaseState;
   // selectedModel: string;
   model: ModelState;
   dataBase: DataBaseState;
-  selectedData: SelectedDataType[];
+  selectedData: DataTypeX[];
   selectedFeatures: FeatureState[];
   treeStyles: TreeStyles;
+  ruleStyles: RuleStyles;
 }
 
 // const initialState: State = {

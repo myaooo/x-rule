@@ -11,4 +11,5 @@
     "editor.insertSpaces": true,
     "editor.tabSize": 2
   },
+  "python.pythonPath": "/Users/mingyao/iml/bin/python",
 }

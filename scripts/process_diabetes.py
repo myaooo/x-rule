@@ -30,7 +30,7 @@ def process_labels(df, label):
     return label_encoder.transform(label_series), label_encoder.classes_.tolist()
 
 
-def process_data(df, droped_cols, numeric_features):
+def process_data(df, droped_cols):
     data_df = df.drop(columns=droped_cols)
 
     num_data_df = data_df[numeric_features]
@@ -51,12 +51,16 @@ def process_data(df, droped_cols, numeric_features):
     cat_data = np.array(cat_data_list).T
     print(cat_data.shape, num_data.shape)
 
-    data = np.hstack([num_data, cat_data.astype(np.float)])
+    data = np.hstack([cat_data.astype(np.float), num_data])
     feature_names = list(num_data_df.columns) + categorical_features
-    descriptions = {feature_name: encoder.classes_.tolist() for feature_name, encoder in zip(categorical_features, encoders)}
-    is_categorical = [0] * len(numeric_features) + [1] * len(categorical_features)
+    # descriptions = {feature_name: encoder.classes_.tolist()
+    #                 for feature_name, encoder in zip(categorical_features, encoders)}
+    is_categorical = [True] * len(categorical_features) + [False] * len(numeric_features)
     is_categorical = np.array(is_categorical, dtype=bool)
-    return data, feature_names, is_categorical, descriptions
+    categories = [None] * len(is_categorical)
+    for i, encoder in enumerate(encoders):
+        categories[i] = encoder.classes_.tolist()
+    return data, feature_names, is_categorical, categories
 
 
 def standardize(data, features):
@@ -78,7 +82,7 @@ def main():
     print("Feature names:", list(df.columns))
 
     target, target_names = process_labels(df, label_column)
-    data, feature_names, is_categorical, descriptions = process_data(df, columns_to_drop, numeric_features)
+    data, feature_names, is_categorical, categories = process_data(df, columns_to_drop)
 
     dataset = {
         'data': data,
@@ -86,7 +90,7 @@ def main():
         'target_names': target_names,
         'feature_names': feature_names,
         'is_categorical': is_categorical,
-        'descriptions': descriptions,
+        'categories': categories,
     }
     save_data(dataset, 'diabetes')
     dataset = load_data('diabetes')

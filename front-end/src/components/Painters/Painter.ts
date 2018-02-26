@@ -1,5 +1,5 @@
 import * as d3 from 'd3';
-
+import * as d3ScaleChromatic from 'd3-scale-chromatic';
 // export interface Painter<DataType> {
 //   // new (data: DataType, styles: StyleType, params: ParamType): Painter<DataType, StyleType, ParamType>
 //   update<GElement extends d3.BaseType>(
@@ -26,6 +26,8 @@ export interface Painter<DataType, ParamsType> {
 
 export type ColorType = (i: number) => string;
 
-export const defaultColor: ColorType = d3.scaleOrdinal<number, string>(d3.schemeCategory10);
+export const defaultColor: ColorType = d3.scaleOrdinal<number, string>(d3ScaleChromatic.schemeSet1 as string[]);
+
+export const labelColor: ColorType = d3.scaleOrdinal<number, string>(d3.schemeCategory10);
 
 export const defaultDuration = 400;

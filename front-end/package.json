@@ -6,12 +6,15 @@
     "antd": "^3.2.0",
     "axios": "^0.17.1",
     "d3": "^4.12.2",
+    "d3-scale-chromatic": "^1.2.0",
+    "numjs": "^0.15.1",
     "react": "^16.2.0",
     "react-app-rewired": "^1.4.1",
     "react-dom": "^16.2.0",
+    "react-move": "^2.7.0",
     "react-redux": "^5.0.6",
     "react-router-dom": "^4.2.2",
-    "react-scripts-ts": "2.8.0",
+    "react-scripts-ts": "^2.13.0",
     "redux": "^3.7.2",
     "redux-logger": "^3.0.6",
     "redux-thunk": "^2.2.0",
@@ -25,6 +28,7 @@
   },
   "devDependencies": {
     "@types/d3": "^4.12.0",
+    "@types/d3-scale-chromatic": "^1.2.0",
     "@types/jest": "^22.0.1",
     "@types/node": "^9.3.0",
     "@types/react": "^16.0.34",
@@ -32,11 +36,11 @@
     "@types/react-redux": "^5.0.14",
     "@types/react-router-dom": "^4.2.3",
     "@types/redux-logger": "^3.0.5",
-    "@types/redux-thunk": "^2.1.0",
     "react-app-rewire-less": "^2.1.0",
     "react-scripts": "^1.1.0",
     "redux-devtools": "^3.4.1",
-    "ts-import-plugin": "^1.4.3"
+    "ts-import-plugin": "^1.4.3",
+    "typescript": "^2.7.2"
   },
   "theme": "./theme.js"
 }

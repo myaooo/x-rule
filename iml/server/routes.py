@@ -1,7 +1,8 @@
 from flask import request, abort, send_from_directory, safe_join, jsonify
 
-from iml.server import app, get_model, available_models
+from iml.server import app, get_model, available_models, get_model_data
 from iml.server.jsonify import model2json, data2json
+from iml.server.helpers import model_metric, get_support, get_stream
 
 
 @app.route('/static/js/<path:path>')
@@ -19,51 +20,90 @@ def send_fonts(path):
     return send_from_directory(safe_join(app.config['STATIC_FOLDER'], 'fonts'), path)
 
 
+@app.route('/service-worker.js')
+def worker_js():
+    return send_from_directory(app.config['FRONT_END_ROOT'], 'service-worker.js')
+
+
 @app.route('/')
 def index():
-    return 'Hello World!'
+    return send_from_directory(app.config['FRONT_END_ROOT'], 'index.html')
+
+
+@app.route('/api/model', methods=['GET'])
+def models():
+    # model_name = request.args.get('name')
+    # if model_name is None:
+    return jsonify(available_models())
+    # else:
+    #     model_json = model2json(model_name)
+    #     if model_json is None:
+    #         abort(404)
+    #     else:
+    #         return model_json
 
 
 @app.route('/api/model/<string:model_name>', methods=['GET'])
 def model_info(model_name):
     # model_name = request.args.get('name')
-    if model_name is None:
-        return jsonify(available_models())
+    # if model_name is None:
+    #     return jsonify(available_models())
+    # else:
+    model_json = model2json(model_name)
+    if model_json is None:
+        abort(404)
     else:
-        model_dict = model2json(model_name)
-        if model_dict is None:
-            abort(404)
-        else:
-            return jsonify(model_dict)
+        return model_json
 
 
 @app.route('/api/data/<string:data_name>', methods=['GET'])
 def data(data_name):
-    is_train = not (request.args.get('isTrain') == 'false')
+    data_type = request.args.get('data', 'train')
+    # is_train = not (request.args.get('isTrain') == 'false')
     bins = request.args.get('bins')
     # if bins is None:
     #     bins = 15
     if data_name is None:
         abort(404)
     else:
-        data_dict = data2json(data_name, is_train, bins)
-        if data_dict is None:
+        data_json = data2json(data_name, data_type, bins)
+        if data_json is None:
             abort(404)
         else:
-            return jsonify(data_dict)
+            return data_json
+
+
+@app.route('/api/metric/<string:model_name>', methods=['GET'])
+def metric(model_name):
+    data = request.args.get('data', 'test')
+
+    ret_json = model_metric(model_name, data)
+    if ret_json is None:
+        abort(404)
+    else:
+        return ret_json
 
 
 @app.route('/api/support/<string:model_name>', methods=['GET'])
 def support(model_name):
-    data = request.args.get('data')
-    if data == 'train' or data == 'test':
-        pass
-    elif data == 'sample_train' or 'sample_test':
-        pass
+    data_type = request.args.get('data')
+    ret_json = get_support(model_name, data_type)
+    if ret_json is None:
+        abort(404)
     else:
-        raise ValueError('Unknown data type {}. Should be one of [train, test, sample_train, sample_test]'.format(data))
+        return ret_json
 
 
+@app.route('/api/stream/<string:model_name>', methods=['GET'])
+def stream(model_name):
+    data_type = request.args.get('data', 'train')
+    # per_class = request.args.get('class', 'true') == 'true'
+    conditional = request.args.get('conditional', 'true') == 'true'
+    ret_json = get_stream(model_name, data_type, conditional)
+    if ret_json is None:
+        abort(404)
+    else:
+        return ret_json
 # @app.route('/api/models/<string:model_name>', methods=['GET'])
 # def model_info(model_name):
 #     model = get_model(model_name)
@@ -77,4 +117,4 @@ def predict():
     if name is None:
         abort(404)
     else:
-        get_model(name).predict()
+        return get_model(name).predict(data)

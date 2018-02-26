@@ -1,17 +1,22 @@
 import { createSelector } from 'reselect';
-import { ModelBase, PlainData } from '../models';
-import { RootState, SelectedDataType, TreeStyles, FeatureState, FeatureStatus } from './state';
+import { ModelBase, DataSet, DataTypeX } from '../models';
+import { RootState, TreeStyles, FeatureState, FeatureStatus } from './state';
 import { DataBaseState } from './index';
 
 export const getModel = (state: RootState): ModelBase | null => state.model.model;
 export const getModelIsFetching = (state: RootState): boolean => state.model.isFetching;
-export const getSelectedDataNames = (state: RootState): SelectedDataType[] => state.selectedData;
-export const getSelectedData = (state: RootState): (PlainData | undefined)[] => {
-  return state.selectedData.map((dataName: SelectedDataType) => state.dataBase[dataName]);
+export const getSelectedDataNames = (state: RootState): DataTypeX[] => state.selectedData;
+export const getSelectedData = (state: RootState): (DataSet | undefined)[] => {
+  const ret: (DataSet | undefined)[] = [];
+  for (let data of state.selectedData) {
+    if (data in state.dataBase) ret.push(state.dataBase[data]);
+  }
+  return ret;
+  // return state.selectedData.map((dataName: DataTypeX) => state.dataBase[dataName]);
 };
 export const getData = (state: RootState): DataBaseState => state.dataBase;
-export const getTrainData = (state: RootState): PlainData | undefined => state.dataBase.train;
-export const getTestData = (state: RootState): PlainData | undefined => state.dataBase.test;
+export const getTrainData = (state: RootState): DataSet | undefined => state.dataBase.train;
+export const getTestData = (state: RootState): DataSet | undefined => state.dataBase.test;
 
 // export const getActivatedFeatures = (state: RootState): number[] => {
 //   return state.selectedFeatures

@@ -12,6 +12,7 @@ import { FeatureStatus } from '../../store';
 
 export interface RuleViewProps {
   rule: Rule;
+  support: number[];
   featureNames?: (i: number) => string;
   labelNames?: (i: number) => string;
   hists?: (i: number) => Histogram[];
@@ -56,7 +57,9 @@ export default class RuleView extends React.Component<RuleViewProps, RuleViewSta
       selectFeature({idx, deselect: featureStatus(idx) === FeatureStatus.SELECT});
   }
   render() {
-    const { rule, featureNames, mins, maxs, categoryIntervals, featureStatus, hists, categoryRatios } = this.props;
+    const { rule, support, featureNames, mins, maxs, 
+      categoryIntervals, featureStatus, hists, categoryRatios 
+    } = this.props;
     const { transform, interval, nConditions, logicString, labelNames } = this.props;
     const { collapsed, onClickCollapse } = this.props;
     const outputWidth = 120;
@@ -75,7 +78,7 @@ export default class RuleView extends React.Component<RuleViewProps, RuleViewSta
         interval={5}
         transform={`translate(${outputX},${0})`}
         labels={labelNames}
-        support={rule.support}
+        support={support}
         maxSupport={500}
       />
     );

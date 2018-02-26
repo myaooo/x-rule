@@ -2,11 +2,12 @@ import { Card, Divider, Collapse } from 'antd';
 // import { Menu, Icon } from 'antd';
 import * as React from 'react';
 import { connect } from 'react-redux';
-import { RuleModel, ModelBase, isTreeModel } from '../models';
+import { RuleModel, ModelBase, isTreeModel, isRuleModel } from '../models';
 import { RootState, getModel } from '../store';
 import DataSelector from './DataSelector';
 import './SideBar.css';
 import TreeStyleControl from './TreeStyleControl';
+import RuleStyleControl from './RuleStyleControl';
 import ModelInfo from '../components/ModelInfo';
 
 const { Panel } = Collapse;
@@ -67,6 +68,12 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
             {model !== null && isTreeModel(model) && 
               <Panel header={collapsed ? 'S' : 'Styles'} key={(i++).toString()}>
                 <TreeStyleControl/>
+                {/* <DataSelector key={(i++).toString()} datasetName={model.dataset}/> */}
+              </Panel>
+            }
+            {model !== null && isRuleModel(model) && 
+              <Panel header={collapsed ? 'S' : 'Styles'} key={(i++).toString()}>
+                <RuleStyleControl/>
                 {/* <DataSelector key={(i++).toString()} datasetName={model.dataset}/> */}
               </Panel>
             }

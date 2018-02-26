@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ModelBase, isTreeModel, isSurrogate } from '../models';
+import { ModelBase, isTreeModel, isSurrogate, isRuleModel } from '../models';
 // import { Divider } from 'antd';
 
 export interface ModelInfoProps {
@@ -13,6 +13,12 @@ export default class ModelInfo extends React.Component<ModelInfoProps, any> {
     if (isTreeModel(model)) {
       infos.push(['#nodes', model.nNodes.toString()]);
       infos.push(['max depth', model.maxDepth.toString()]);
+    }
+    
+    if (isRuleModel(model)) {
+      infos.push(['#rules', model.rules.length.toString()]);
+      // infos.push(['#nodes', model.nNodes.toString()]);
+      // infos.push(['max depth', model.maxDepth.toString()]);
     }
     if (isSurrogate(model)) {
       infos[0][1] += '-surrogate';

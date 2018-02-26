@@ -1,12 +1,14 @@
 import os
-from logging import getLogger
+import time
+import logging
 
 from iml import Config
 from iml.models import ModelInterface, load_model, FILE_EXTENSION
 from iml.utils.io_utils import get_ext, file_exists, get_path, json2dict
 
 
-logger = getLogger(__name__)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def model_name2file(model_name):
@@ -33,9 +35,12 @@ class ModelCache:
 
     def load_model(self, model_name):
         filename = model_name2file(model_name)
+        print('Loading model {} from {}'.format(model_name, filename))
+        start = time.time()
         model = load_model(filename)
         if isinstance(model, ModelInterface):
             self.cache[model_name] = model
+            print('Model {} loaded. Total time {:.4f}s'.format(model_name, time.time() - start))
             return model
         else:
             raise RuntimeError("Mal-format! Cannot load model file {}!".format(filename))
@@ -44,6 +49,17 @@ class ModelCache:
         if model_name in self.cache:
             return self.cache[model_name]
         return self.load_model(model_name)
+
+    def get_model_data(self, model_name: str):
+        if model_name in self.model2dataset:
+            return self.model2dataset[model_name]
+        # try:
+        print("Try find model data name by parsing the model_name")
+        specs = model_name.split('-')
+        if specs[1] == 'surrogate':
+            return specs[2]
+        else:
+            return specs[0]
 
 
 _cache = ModelCache().init()
@@ -58,7 +74,7 @@ def available_models():
 
 
 def get_model_data(model_name):
-    return _cache.model2dataset[model_name]
+    return _cache.get_model_data(model_name)
 
 
 def register_model_dataset(model_name, dataset):

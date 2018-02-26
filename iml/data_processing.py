@@ -73,8 +73,8 @@ def add_cache_support(n_files=None):
     return decorate
 
 
-_csv_files = ['target', 'data', 'is_categorical']
-_json_files = ['feature_names', 'target_names', 'descriptions']
+_csv_files = ['target', 'data']
+_json_files = ['feature_names', 'target_names', 'categories', 'is_categorical', 'is_binary']
 
 
 def save_data(data, name):
@@ -87,7 +87,7 @@ def save_data(data, name):
         before_save(file_path)
         save_file(data[field], file_path)
 
-    descriptor = {key: data[key] for key in _json_files}
+    descriptor = {key: data[key] for key in _json_files if key in data}
     save_file(descriptor, get_path(dataset_path, 'spec.json'))
 
 
@@ -99,7 +99,7 @@ def load_data(name):
         file_path = get_path(dataset_path, filename)
         dataset[field] = load_file(file_path)
 
-    for field in ['target', 'is_categorical']:
+    for field in ['target']:
         dataset[field] = dataset[field].reshape((-1))
 
     descriptor = load_file(get_path(dataset_path, 'spec.json'))
@@ -108,13 +108,13 @@ def load_data(name):
     return dataset
 
 
-sklearn_datasets = {'breast_cancer', 'iris', 'wine'}
-local_datasets = {'diabetes', 'abalone'}
+sklearn_datasets = {'breast_cancer': {}, 'iris': {}, 'wine': {}}
+local_datasets = {'diabetes': {}, 'abalone': {}, 'thoracic': {'min_depth': 3}, 'bank_marketing': {}, 'credit_card': {}}
 
 
 # @add_cache_support()
 @functools.lru_cache(16)
-def get_dataset(data_name, discrete=False, seed=None, split=None,
+def get_dataset(data_name, discrete=False, seed=None, split=False,
                 train_size=0.75, shuffle=True, one_hot=True, verbose=1):
     if data_name in sklearn_datasets:
         if data_name == 'breast_cancer':
@@ -124,34 +124,41 @@ def get_dataset(data_name, discrete=False, seed=None, split=None,
         else:  # data_name == 'wine':
             data = load_wine()
         data['is_categorical'] = np.array([False] * data['data'].shape[1])
+        opts = sklearn_datasets[data_name]
     elif data_name in local_datasets:
         data = load_data(data_name)
+        opts = local_datasets[data_name]
+
     else:
         raise LookupError("Unknown data_name: {}".format(data_name))
 
     is_categorical = data['is_categorical']
 
-    if one_hot:
-        if verbose:
-            print('Converting categorical features to one hot numeric')
-        one_hot_encoder = OneHotEncoder(categorical_features=is_categorical).fit(data['data'])
-        data['one_hot_encoder'] = one_hot_encoder
-        if verbose:
-            print('Total number of categorical features:', np.sum(is_categorical))
-            if hasattr(one_hot_encoder, 'n_values_'):
-                print('One hot value numbers:', one_hot_encoder.n_values_)
-
     x = data['data']
     y = data['target']
     # feature_names = data['feature_names']
+
+    if one_hot:
+        if verbose:
+            print('Converting categorical features to one hot numeric')
+        one_hot_features = is_categorical
+        if 'is_binary' in data:  # We don't want to one hot already binary data
+            one_hot_features = np.logical_and(is_categorical, np.logical_not(data['is_binary']))
+        one_hot_encoder = OneHotEncoder(categorical_features=one_hot_features).fit(data['data'])
+        data['one_hot_encoder'] = one_hot_encoder
+        if verbose:
+            print('Total number of categorical features:', np.sum(one_hot_features))
+            if hasattr(one_hot_encoder, 'n_values_'):
+                print('One hot value numbers:', one_hot_encoder.n_values_)
     if discrete:
         if verbose:
             print('Discretizing all continuous features using MDLP discretizer')
         discretizer_name = data_name + '-discretizer' + ('' if seed is None else ('-' + str(seed))) + '.pkl'
         discretizer_path = get_path(_cached_path, discretizer_name)
+        min_depth = 0 if 'min_depth' not in opts else opts['min_depth']
         discretizer = get_discretizer(x, y, continuous_features=np.logical_not(is_categorical),
-                                      filenames=discretizer_path)
-        data['data'] = discretizer.transform(x)
+                                      filenames=discretizer_path, min_depth=min_depth)
+        # data['data'] = discretizer.transform(x)
         data['discretizer'] = discretizer
 
     if split:
@@ -166,6 +173,10 @@ def get_dataset(data_name, discrete=False, seed=None, split=None,
             'test_y': test_y,
         })
 
+    mins = np.min(x, axis=0)
+    maxs = np.max(x, axis=0)
+    ranges = np.vstack([mins, maxs]).T
+    data['ranges'] = ranges
     # hacker for some feature_names are arrays
     for key in ['feature_names', 'target_names']:
         if isinstance(data[key], np.ndarray):
@@ -292,8 +303,8 @@ def categorical2pysbrl_data(x: np.ndarray, y: np.ndarray, data_name, supp=0.05, 
 
 
 @add_cache_support(n_files=1)
-def get_discretizer(x, y, continuous_features=None, seed=None) -> MDLP:
-    discretizer = MDLP(random_state=seed)
+def get_discretizer(x, y, continuous_features=None, seed=None, min_depth=0) -> MDLP:
+    discretizer = MDLP(random_state=seed, min_depth=min_depth)
     if continuous_features is not None:
         if continuous_features.dtype == np.bool:
             continuous_features = np.arange(len(continuous_features))[continuous_features]
@@ -301,4 +312,22 @@ def get_discretizer(x, y, continuous_features=None, seed=None) -> MDLP:
     return discretizer
 
 
-
+def sample_balance(x, y, min_ratio=0.5):
+    labels, labels_counts = np.unique(y, return_counts=True)
+    data = []
+    target = []
+    max_count = np.max(labels_counts)
+    for label, counts in zip(labels, labels_counts):
+        logic = y == label
+        _x = x[logic]
+        _y = y[logic]
+        n_repeat = int(np.ceil(max_count * min_ratio / counts))
+        if n_repeat < 1:
+            n_repeat = 1
+        data.append(np.tile(_x, (n_repeat, 1)))
+        target.append(np.tile(_y, (n_repeat,)))
+    data = np.vstack(data)
+    target = np.hstack(target)
+    indices = np.arange(len(target))
+    np.random.shuffle(indices)
+    return data[indices], target[indices]

@@ -9,8 +9,9 @@ from mdlp.discretization import MDLP
 from pysbrl import train_sbrl
 
 from iml.models import Classifier, SurrogateMixin
+from iml.utils.io_utils import get_path
 from iml.models.preprocess import PreProcessMixin, DiscreteProcessor
-from iml.data_processing import categorical2pysbrl_data
+from iml.data_processing import categorical2pysbrl_data, get_discretizer
 
 # numpy2ri.activate()
 #
@@ -53,13 +54,18 @@ class Rule:
                 _feature_names = ["X" + str(idx) for idx in self.feature_indices]
             else:
                 _feature_names = [feature_names[idx] for idx in self.feature_indices]
-            if category_intervals is None:
-                categories = [" = " + str(category) for category in self.categories]
-            else:
-                categories = []
-                for interval in category_intervals:
-                    assert len(interval) == 2
+            # if category_intervals is None:
+            #     categories = [" = " + str(category) for category in self.categories]
+            # else:
+            categories = []
+            for interval, cat in zip(category_intervals, self.categories):
+                if interval is None:
+                    categories.append(" = " + str(cat))
+                elif len(interval) == 2:
                     categories.append(" in " + str(interval))
+                else:
+                    raise ValueError("interval must be a [number, number] or None")
+
             s = "IF "
             # conditions
             conditions = ["({}{})".format(feature, category) for feature, category in zip(_feature_names, categories)]
@@ -72,12 +78,14 @@ class Rule:
             s += " [" + "/".join(support) + "]"
         return s
 
-    def is_satisfy(self, x_cat):
+    def is_satisfy(self, x_cat, per_condition=False) -> Union[np.ndarray, List[np.ndarray]]:
         satisfied = []
         if self.feature_indices[0] == -1 and len(self.feature_indices) == 1:
             return np.ones(x_cat.shape[0], dtype=bool)
         for idx, cat in zip(self.feature_indices, self.categories):
             satisfied.append(x_cat[:, idx] == cat)
+        if per_condition:
+            return satisfied
         return reduce(np.logical_and, satisfied)
 
 
@@ -291,7 +299,7 @@ class SBRL(Classifier):
     # r_sbrl = importr('sbrl')
 
     def __init__(self, name='sbrl', rule_minlen=1, rule_maxlen=2,
-                 min_support=0.02, _lambda=50, eta=1, iters=10000, nchain=30):
+                 min_support=0.01, _lambda=50, eta=1, iters=30000, nchain=30):
         super(SBRL, self).__init__(name)
         self._r_model = None
         self.rule_minlen = rule_minlen
@@ -379,10 +387,16 @@ class SBRL(Classifier):
         for rule, support in zip(self._rule_list, support_summary):
             rule.support = support
 
-    def compute_support(self, x, y):
+    def compute_support(self, x, y) -> np.ndarray:
+        """
+        Calculate the support for the rules
+        :param x:
+        :param y:
+        :return:
+        """
         n_classes = self.n_classes
         n_rules = self.n_rules
-        _, supports = self._predict(x, rt_support=True)
+        supports = self.decision_support(x)
         support_summary = np.zeros((n_rules, n_classes), dtype=np.int)
         for i, support in enumerate(supports):
             support_labels = y[support]
@@ -391,7 +405,7 @@ class SBRL(Classifier):
         return support_summary
 
     def evaluate(self, x, y, stage='train') -> Tuple[float, float]:
-        y_prob, supports = self.predict_prob(x, rt_support=True)
+        y_prob = self.predict_prob(x)
         y_pred = np.argmax(y_prob, axis=1)
         # Avoid recalculation
         acc = self.accuracy(y, y_pred)
@@ -420,11 +434,35 @@ class SBRL(Classifier):
             categories.append(int(raw_rule[(idx+1):]))
         return Rule(feature_indices, categories, prob, support=support)
 
-    def _predict_prob(self, x, rt_support: bool=False):
+    def decision_support(self, x, per_condition=False) -> Union[List[np.ndarray], List[List[np.ndarray]]]:
+        """
+        compute the decision support of the rule list on x
+        :param x: x should be already transformed
+        :param per_condition: whether to return support per condition
+        :return:
+            if per_condition is false, return a list of n_rules np.ndarray of shape [n_instances,] of type bool
+            if per_condition is true, return a list of satisfied list,
+                each satisfied list contains n_condition np.ndarray of shape [n_instances,] of type bool
+        """
+        un_satisfied = np.ones([x.shape[0]], dtype=bool)
+        supports = []
+        for rule in self._rule_list:
+            is_satisfied = rule.is_satisfy(x, per_condition)
+            if per_condition:
+                is_satisfied = [np.logical_and(_satisfied, un_satisfied) for _satisfied in is_satisfied]
+                satisfied = reduce(np.logical_and, is_satisfied)
+            else:
+                is_satisfied = np.logical_and(is_satisfied, un_satisfied)
+                satisfied = is_satisfied
+            # marking new satisfied instances as satisfied
+            un_satisfied = np.logical_xor(satisfied, un_satisfied)
+            supports.append(is_satisfied)
+        return supports
+
+    def _predict_prob(self, x):
         """
 
         :param x: an instance of pandas.DataFrame object, representing the data to be making predictions on.
-        :param rt_support: Whether to return the support of each rules. Default to False
         :return: `prob` if `rt_support` is `False`, `(prob, supports)` if `rt_support` is `True`.
             `prob` is a 2D array with shape `(n_instances, n_classes)`.
             `supports` is a list of (n_classes,) 1D arrays denoting the support.
@@ -434,34 +472,25 @@ class SBRL(Classifier):
         n_classes = self._rule_probs.shape[1]
         y = np.empty((_x.shape[0], n_classes), dtype=np.double)
         un_satisfied = np.ones([_x.shape[0]], dtype=bool)
-        supports = []
         for rule in self._rule_list:
-            satisfied = np.logical_and(rule.is_satisfy(_x), un_satisfied)
+            is_satisfied = rule.is_satisfy(_x)
+            satisfied = np.logical_and(is_satisfied, un_satisfied)
             y[satisfied] = rule.output
             # marking new satisfied instances as satisfied
             un_satisfied = np.logical_xor(satisfied, un_satisfied)
-            if rt_support:
-                supports.append(satisfied)
-        if rt_support:
-            return y, supports
         return y
 
     def predict_prob(self, x, **kwargs):
-        return self._predict_prob(x, **kwargs)
+        return self._predict_prob(x)
 
-    def _predict(self, x, rt_support=False):
-        if rt_support:
-            y_prob, support = self._predict_prob(x, rt_support)
-        else:
-            y_prob = self._predict_prob(x)
+    def _predict(self, x):
+        y_prob = self._predict_prob(x)
         # print(y_prob[:50])
         y_pred = np.argmax(y_prob, axis=1)
-        if rt_support:
-            return y_pred, support
         return y_pred
 
     def predict(self, x, **kwargs):
-        return self._predict(x, **kwargs)
+        return self._predict(x)
 
     # def describe(self, feature_names=None, rt_str=False):
     #     s = "The rule list is:\n\n     "
@@ -504,6 +533,25 @@ class RuleList(PreProcessMixin, SBRL):
         processor = self.processors[0]
         assert isinstance(processor, DiscreteProcessor)
         return processor.discretizer
+
+    # def refit_discretizer(self, x, y, continuous_features, min_depth=0, seed=None, verbose=False):
+    #     if verbose:
+    #         print('Discretizing all continuous features using MDLP discretizer')
+    #     discretizer_name = self.name + '-discretizer' + ('' if seed is None else ('-' + str(seed))) + '.pkl'
+    #     discretizer_path = get_path('tmp', discretizer_name)
+    #     # min_depth = 0 if 'min_depth' not in opts else opts['min_depth']
+    #     discretizer = get_discretizer(x, y, continuous_features=continuous_features,
+    #                                   filenames=discretizer_path, min_depth=min_depth)
+
+    def compute_support(self, x, y, transform=False) -> np.ndarray:
+        if transform:
+            x, y = self.transform(x, y)
+        return super(RuleList, self).compute_support(x, y)
+
+    def decision_support(self, x, per_condition=False, transform=False):
+        if transform:
+            x = self.transform(x)
+        return super(RuleList, self).decision_support(x, per_condition)
 
     def describe(self, feature_names=None, rt_str=False):
         s = "The rule list has {} of rules:\n\n     ".format(self.n_rules)

@@ -54,14 +54,16 @@ def main():
 
     sex, sex_names = process_categorical(raw, 'sex')
     data[:, 0] = sex
-
+    categories = [None] * len(is_categorical)
+    categories[0] = sex_names
     dataset = {
         'target': target,
         'target_names': target_names,
         'is_categorical': is_categorical,
+        'is_binary': [False] * len(is_categorical),
         'data': data,
         'feature_names': header[:-1],
-        'descriptions': {'sex': sex_names}
+        'categories': categories
     }
     save_data(dataset, 'abalone')
 

@@ -2,7 +2,7 @@ import * as d3 from 'd3';
 
 import { TreeNode, isInternalNode, InternalNode } from '../../models';
 import * as utils from '../../service/utils';
-import { Painter, ColorType, defaultColor, defaultDuration } from '../Painters';
+import { Painter, ColorType, labelColor, defaultDuration } from '../Painters';
 
 interface D3Node extends d3.HierarchyNode<TreeNode> {
   _children?: D3Node[];
@@ -47,7 +47,7 @@ class NodePainter implements Painter<D3PointNode[], NodePainterParams> {
     fontSize: 12,
     duration: 400,
     nodeSize: [120, 180],
-    color: defaultColor,
+    color: labelColor,
     featureName: (i: number): string => `X${i}`,
   };
   private nodes: D3PointNode[];
@@ -164,6 +164,7 @@ class NodePainter implements Painter<D3PointNode[], NodePainterParams> {
       const tmp: (number | null)[] = [null, null];
       if (rank === 0) tmp[1] = parent.threshold;
       else tmp[0] = parent.threshold;
+      console.log(parent); // tslint:disable-line
       const { tspan, title } = utils.condition2String(featureName(parent.feature), tmp);
       d.tspan = tspan;
       d.title = title;
@@ -196,6 +197,7 @@ class NodePainter implements Painter<D3PointNode[], NodePainterParams> {
     nodeExited.select('text').style('fill-opacity', 1e-6);
   }
 }
+
 interface LinkPainterOptionalParams {
   duration: number;
   nodeSize: [number, number];
@@ -213,7 +215,7 @@ class LinkPainter implements Painter<D3PointNode[], LinkPainterParams> {
     duration: 400,
     nodeSize: [120, 180],
     margin: {bottom: 50},
-    color: defaultColor,
+    color: labelColor,
     linkWidthMultiplier: 1,
   };
   private links: D3PointNode[];
@@ -357,7 +359,7 @@ export class TreePainter implements Painter<D3Node, DrawTreeParams> {
     margin: { top: 5, right: 10, left: 10, bottom: 30 },
     duration: 400,
     fontSize: 12,
-    color: defaultColor,
+    color: labelColor,
     linkWidth: 1,
   };
   private treeMap: d3.TreeLayout<TreeNode>;

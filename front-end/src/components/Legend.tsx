@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as d3 from 'd3';
-import { ColorType, defaultColor } from './Painters';
+import { ColorType, labelColor } from './Painters';
 import './Legend.css';
 
 interface OptionalProps {
@@ -22,7 +22,7 @@ export default class Legend extends React.Component<LegendProps, LegendState> {
   public static defaultProps: OptionalProps = {
     labelSize: 10,
     fontSize: 12,
-    color: defaultColor,
+    color: labelColor,
     duration: 400,
     transform: '',
   };

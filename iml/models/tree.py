@@ -1,5 +1,4 @@
-import pickle
-
+from scipy.sparse import csr_matrix
 import numpy as np
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor, export_graphviz
 
@@ -111,12 +110,29 @@ class Tree(PreProcessMixin, SKModelWrapper, Classifier, Regressor):
 
         return _build(0)
 
+    def decision_support(self, x: np.ndarray, transform=False) -> csr_matrix:
+        if transform:
+            x = self.transform(x)
+        return self.model.decision_path(x).astype(np.bool)
+
+    def compute_support(self, x: np.ndarray, y: np.ndarray, transform=False):
+        if transform:
+            x, y = self.transform(x, y)
+        decision_paths = self.model.decision_path(x).astype(np.bool)  # type: csr_matrix
+        supports = np.zeros((self.n_nodes, self.n_classes), dtype=np.int)
+        decision_mat = decision_paths.toarray()
+        for idx, col in enumerate(decision_mat.T):
+            labels = y[col]
+            labels, counts = np.unique(labels, return_counts=True)
+            supports[idx, labels] = counts
+        return supports
+
 
 def load(filename):
     return Tree.load(filename)
 
 
-class TreeSurrogate(Tree, SurrogateMixin):
+class TreeSurrogate(SurrogateMixin, Tree):
     def __init__(self, **kwargs):
         # print(kwargs)
         super(TreeSurrogate, self).__init__(**kwargs)

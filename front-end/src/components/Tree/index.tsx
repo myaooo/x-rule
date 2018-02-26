@@ -1,7 +1,7 @@
 import * as React from 'react';
 import * as d3 from 'd3';
 
-import { TreeModel, PlainData } from '../../models';
+import { TreeModel, DataSet } from '../../models';
 import './index.css';
 import { TreePainter, createHierarchy } from './Painter';
 import { TreeStyles } from '../../store';
@@ -35,7 +35,7 @@ interface OptionalProps {
 export interface TreeViewProps extends Partial<OptionalProps> {
   styles?: TreeStyles;
   model: TreeModel;
-  data: (PlainData | undefined)[];
+  data: (DataSet | undefined)[];
 }
 
 interface TreeViewState {

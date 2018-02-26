@@ -1,18 +1,31 @@
 import { combineReducers } from 'redux';
-import { 
-  ModelState, DataBaseState, SelectedDataType, FeatureState, TreeStyles, initTreeStyles, FeatureStatus 
+import { isRuleModel, isTreeModel, RuleList, DataSet, DataTypeX } from '../models';
+import {
+  ModelState,
+  DataBaseState,
+  FeatureState,
+  TreeStyles,
+  initTreeStyles,
+  FeatureStatus,
+  RuleStyles,
+  initRuleStyles,
+  RootState
 } from './state';
+import { collapseInit } from '../service/utils';
+import { ReceiveStreamAction } from './actions';
+import { ConditionalStreams, Streams } from '../models/stream';
 
 import {
+  ReceiveSupportAction,
   ActionType,
   RequestModelAction,
   ReceiveModelAction,
-  RequestDatasetAction,
+  // RequestDatasetAction,
   ReceiveDatasetAction,
   SelectDatasetAction,
   SelectFeatureAction,
   ChangeTreeStylesAction,
-  // Actions,
+  ChangeRuleStylesAction
 } from './actions';
 
 export const initialModelState: ModelState = {
@@ -28,17 +41,31 @@ export const initialFeaturesState: FeatureState[] = [];
 
 function modelStateReducer(
   state: ModelState = initialModelState,
-  action: RequestModelAction | ReceiveModelAction
+  action: RequestModelAction | ReceiveModelAction | ReceiveSupportAction
 ): ModelState {
   switch (action.type) {
     case ActionType.REQUEST_MODEL:
-      console.log("start Fetching...");  // tslint:disable-line
+      // console.log("start Fetching...");  // tslint:disable-line
       return { ...state, isFetching: true };
     case ActionType.RECEIVE_MODEL:
-      console.log("receiving model...");  // tslint:disable-line
+      // console.log("receiving model...");  // tslint:disable-line
+      let model = action.model;
+      if (model !== null) {
+        if (isRuleModel(model)) model = new RuleList(model);
+        if (isTreeModel(model)) collapseInit(model.root);
+      }
       return {
         isFetching: false,
-        model: action.model
+        model
+      };
+    case ActionType.RECEIVE_SUPPORT:
+      const aModel = state.model;
+      if (aModel instanceof RuleList) {
+        aModel.support(action.support);
+      }
+      return {
+        isFetching: false,
+        model: aModel
       };
     default:
       return state;
@@ -47,29 +74,34 @@ function modelStateReducer(
 
 function dataBaseReducer(
   state: DataBaseState = initialDataBaseState,
-  action: RequestDatasetAction | ReceiveDatasetAction
+  action: ReceiveDatasetAction | ReceiveStreamAction
 ): DataBaseState {
   switch (action.type) {
-    case ActionType.REQUEST_DATASET:
-      return state;
-    // const dataset = {};
-    // dataset[action.isTrain ? 'train' : 'test'] = null;
-
-    // return { ...state, ...dataset };
     case ActionType.RECEIVE_DATASET:
       const newState: DataBaseState = {};
-      if (action.isTrain) {
-        newState.train = action.data;
-      } else {
-        newState.test = action.data;
+      newState[action.dataType] = new DataSet(action.data);
+      return { ...state, ...newState };
+
+    case ActionType.RECEIVE_STREAM:
+      const newState2: DataBaseState = {};
+      const dataset = state[action.dataType];
+      if (dataset) {
+        if (action.conditional) {
+          dataset.conditionalStreams = action.streams as ConditionalStreams;
+        } else {
+          dataset.streams = action.streams as Streams;
+        }
+        newState2[action.dataType] = dataset;
+        return { ...state, ...newState2 };
       }
-      return {...state, ...newState};
+      return state;
+
     default:
       return state;
   }
 }
 
-function selectDatasetReducer(state: SelectedDataType[] = [], action: SelectDatasetAction): SelectedDataType[] {
+function selectDatasetReducer(state: DataTypeX[] = [], action: SelectDatasetAction): DataTypeX[] {
   switch (action.type) {
     case ActionType.SELECT_DATASET:
       return action.dataNames;
@@ -79,7 +111,7 @@ function selectDatasetReducer(state: SelectedDataType[] = [], action: SelectData
 }
 
 function selectedFeaturesReducer(
-  state: FeatureState[] = initialFeaturesState, 
+  state: FeatureState[] = initialFeaturesState,
   action: SelectFeatureAction
 ): FeatureState[] {
   switch (action.type) {
@@ -90,13 +122,12 @@ function selectedFeaturesReducer(
         const feature = state[idx];
         feature.status--;
         if (feature.status < FeatureStatus.HOVER) {
-          return [...(state.slice(0, idx)), ...(state.slice(idx + 1))];
+          return [...state.slice(0, idx), ...state.slice(idx + 1)];
         }
         return state;
       } else {
         const idx = state.findIndex((f: FeatureState) => f.idx === action.idx);
-        if (idx === -1) 
-          return [...state, {idx: action.idx, status: FeatureStatus.HOVER}];
+        if (idx === -1) return [...state, { idx: action.idx, status: FeatureStatus.HOVER }];
         else if (state[idx].status < FeatureStatus.SELECT) {
           state[idx].status++;
         }
@@ -110,7 +141,16 @@ function selectedFeaturesReducer(
 function treeStyleReducer(state: TreeStyles = initTreeStyles, action: ChangeTreeStylesAction): TreeStyles {
   switch (action.type) {
     case ActionType.CHANGE_TREE_STYLES:
-      return {...state, ...action.newStyles};
+      return { ...state, ...action.newStyles };
+    default:
+      return state;
+  }
+}
+
+function ruleStyleReducer(state: RuleStyles = initRuleStyles, action: ChangeRuleStylesAction): RuleStyles {
+  switch (action.type) {
+    case ActionType.CHANGE_RULE_STYLES:
+      return { ...state, ...action.newStyles };
     default:
       return state;
   }
@@ -120,10 +160,11 @@ function treeStyleReducer(state: TreeStyles = initTreeStyles, action: ChangeTree
 //   action:
 // )
 
-export const rootReducer = combineReducers({
+export const rootReducer = combineReducers<RootState>({
   model: modelStateReducer,
   dataBase: dataBaseReducer,
   selectedData: selectDatasetReducer,
   selectedFeatures: selectedFeaturesReducer,
   treeStyles: treeStyleReducer,
+  ruleStyles: ruleStyleReducer
 });

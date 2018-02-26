@@ -84,7 +84,8 @@ class DiscreteProcessor(PreProcessBase):
     def fit(self, x: np.ndarray, y: np.ndarray, continuous_features=None):
         if self.discretizer.cut_points_ is not None:
             print("Warning: discretizer has already been fitted. skipped fitting")
-        self.discretizer.fit(x, y, continuous_features)
+        else:
+            self.discretizer.fit(x, y, continuous_features)
         continuous_features = self.discretizer.continuous_features
         self.is_numeical_ = np.zeros(len(self.discretizer.cut_points_), dtype=np.bool)
         self.is_numeical_[continuous_features] = True
@@ -126,10 +127,9 @@ class PreProcessMixin(ModelBase, PreProcessBase):
         super(PreProcessMixin, self).train(_x, _y)
 
     def predict_prob(self, x, transform=True, **kwargs):
-        if not transform:
-            super(PreProcessMixin, self).predict_prob(x, **kwargs)
-        _x = self.transform(x)
-        return super(PreProcessMixin, self).predict_prob(_x, **kwargs)
+        if transform:
+            x = self.transform(x)
+        return super(PreProcessMixin, self).predict_prob(x, **kwargs)
 
     def predict(self, x, transform=True, **kwargs):
         if not transform:

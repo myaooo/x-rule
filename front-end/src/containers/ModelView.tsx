@@ -12,7 +12,7 @@ import {
   TreeStyles,
   getTreeStyles
 } from '../store';
-import { RuleModel, PlainData, ModelBase, isRuleModel, isTreeModel } from '../models';
+import { RuleModel, DataSet, ModelBase, isRuleModel, isTreeModel } from '../models';
 import { countFeatureFreq } from '../service/utils';
 import Tree from '../components/Tree';
 import RuleList from '../containers/RuleList';
@@ -22,7 +22,7 @@ import Legend from '../components/Legend';
 export interface ModelViewStateProp {
   model: RuleModel | ModelBase | null;
   modelIsFetching: boolean;
-  data: (PlainData | undefined)[];
+  data: (DataSet | undefined)[];
   treeStyles: TreeStyles;
 }
 
@@ -74,7 +74,7 @@ class ModelView extends React.Component<ModelViewProp, any> {
       return (<div>Cannot load model {modelName}</div>);
     }
     const width = 1200;
-    const height = 1200;
+    const height = 2500;
     const featureWidth = 160;
     const availableData = data[0] || data[1];
     const transform = `translate(${featureWidth}, 40)`;

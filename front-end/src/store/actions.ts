@@ -1,61 +1,90 @@
 // Action Types
 import { Dispatch as ReduxDispatch, Action } from 'redux';
 import { ThunkAction } from 'redux-thunk';
-import { RootState, SelectedDataType, TreeStyles } from './state';
-import { ModelBase, PlainData, isTreeModel } from '../models';
+import { RootState, TreeStyles, RuleStyles } from './state';
+import { ModelBase, PlainData, DataTypeX } from '../models';
 
 import dataService from '../service/dataService';
-import { collapseInit } from '../service/utils';
+import { ConditionalStreams, Streams, createStreams, createConditionalStreams } from '../models/stream';
 
 export type Dispatch = ReduxDispatch<RootState>;
 
 export enum ActionType {
   REQUEST_MODEL = 'REQUEST_MODEL',
   RECEIVE_MODEL = 'RECEIVE_MODEL',
+  REQUEST_SUPPORT = 'REQUEST_SUPPORT',
+  RECEIVE_SUPPORT = 'RECEIVE_SUPPORT',
   REQUEST_DATASET = 'REQUEST_DATASET',
   RECEIVE_DATASET = 'RECEIVE_DATASET',
+  REQUEST_STREAM = 'REQUEST_STREAM',
+  RECEIVE_STREAM = 'RECEIVE_STREAM',
   SELECT_DATASET = 'SELECT_DATASET',
   SELECT_FEATURE = 'SELECT_FEATURE',
-  CHANGE_TREE_STYLES = 'CHANGE_TREE_STYLES'
+  CHANGE_TREE_STYLES = 'CHANGE_TREE_STYLES',
+  CHANGE_RULE_STYLES = 'CHANGE_RULE_STYLES'
 }
 
-export interface RequestModelAction extends Action {
-  readonly type: ActionType.REQUEST_MODEL;
+export interface TypedAction<T> extends Action {
+  readonly type: T;
+}
+
+export interface RequestModelAction extends TypedAction<ActionType.REQUEST_MODEL> {
   readonly modelName: string;
 }
 
-export interface ReceiveModelAction extends Action {
-  readonly type: ActionType.RECEIVE_MODEL;
+export interface ReceiveModelAction extends TypedAction<ActionType.RECEIVE_MODEL> {
   readonly model: ModelBase | null;
 }
 
-export interface RequestDatasetAction extends Action {
-  readonly type: ActionType.REQUEST_DATASET;
-  readonly datasetName: string;
-  readonly isTrain: boolean;
+export interface RequestSupportAction extends TypedAction<ActionType.REQUEST_SUPPORT> {
+  readonly modelName: string;
+  readonly data: DataTypeX;
 }
 
-export interface ReceiveDatasetAction extends Action {
-  readonly type: ActionType.RECEIVE_DATASET;
+export interface ReceiveSupportAction extends TypedAction<ActionType.RECEIVE_SUPPORT> {
+  readonly support: number[][];
+  readonly modelName: string;
+}
+
+export interface RequestDatasetAction extends TypedAction<ActionType.REQUEST_DATASET> {
+  readonly datasetName: string;
+  readonly dataType: DataTypeX;
+}
+
+export interface ReceiveDatasetAction extends TypedAction<ActionType.RECEIVE_DATASET> {
   readonly datasetName: string;
   readonly data: PlainData;
-  readonly isTrain: boolean;
+  readonly dataType: DataTypeX;
 }
 
-export interface SelectDatasetAction extends Action {
-  readonly type: ActionType.SELECT_DATASET;
-  readonly dataNames: SelectedDataType[];
+interface StreamPayload {
+  modelName: string;
+  dataType: DataTypeX;
+  conditional: boolean;
 }
 
-export interface SelectFeatureAction extends Action {
-  readonly type: ActionType.SELECT_FEATURE;
+export interface RequestStreamAction extends 
+  TypedAction<ActionType.REQUEST_STREAM>, Readonly<StreamPayload> {}
+
+export interface ReceiveStreamAction extends TypedAction<ActionType.RECEIVE_STREAM>, Readonly<StreamPayload> {
+  readonly streams: Streams | ConditionalStreams;
+}
+
+export interface SelectDatasetAction extends TypedAction<ActionType.SELECT_DATASET> {
+  readonly dataNames: DataTypeX[];
+}
+
+export interface SelectFeatureAction extends TypedAction<ActionType.SELECT_FEATURE> {
   readonly deselect: boolean;
   readonly idx: number;
 }
 
-export interface ChangeTreeStylesAction extends Action {
-  readonly type: ActionType.CHANGE_TREE_STYLES;
+export interface ChangeTreeStylesAction extends TypedAction<ActionType.CHANGE_TREE_STYLES> {
   readonly newStyles: Partial<TreeStyles>;
+}
+
+export interface ChangeRuleStylesAction extends TypedAction<ActionType.CHANGE_RULE_STYLES> {
+  readonly newStyles: Partial<RuleStyles>;
 }
 
 export function requestModel(modelName: string): RequestModelAction {
@@ -66,46 +95,79 @@ export function requestModel(modelName: string): RequestModelAction {
 }
 
 export function receiveModel(model: ModelBase | null): ReceiveModelAction {
-  if (model !== null && isTreeModel(model))
-    collapseInit(model.root);
   return {
     type: ActionType.RECEIVE_MODEL,
     model
   };
 }
 
+export interface ReceiveSupportPayload {
+  modelName: string;
+  support: number[][];
+}
+
+export function requestSupport(
+  {modelName, data}: {modelName: string, data: DataTypeX}
+): RequestSupportAction {
+  return {
+    type: ActionType.REQUEST_SUPPORT,
+    modelName, data
+  };
+}
+
+export function receiveSupport(
+  {modelName, support}: ReceiveSupportPayload
+): ReceiveSupportAction {
+  return {
+    type: ActionType.RECEIVE_SUPPORT,
+    modelName, support,
+  };
+}
+
 export function requestDataset({
   datasetName,
-  isTrain
+  dataType
 }: {
   datasetName: string;
-  isTrain: boolean;
+  dataType: DataTypeX;
 }): RequestDatasetAction {
   return {
     type: ActionType.REQUEST_DATASET,
     datasetName,
-    isTrain
+    dataType
   };
 }
 
-export function receiveDataset({
-  datasetName,
-  data,
-  isTrain
-}: {
+export interface ReceiveDatasetPayload {
   datasetName: string;
   data: PlainData;
-  isTrain: boolean;
-}): ReceiveDatasetAction {
+  dataType: DataTypeX;
+}
+
+export function receiveDataset(payload: ReceiveDatasetPayload): ReceiveDatasetAction {
   return {
     type: ActionType.RECEIVE_DATASET,
-    datasetName,
-    data,
-    isTrain
+    ...payload
   };
 }
 
-export function selectDataset(dataNames: SelectedDataType[]): SelectDatasetAction {
+export function requestStream(payload: StreamPayload): RequestStreamAction {
+  return {
+    type: ActionType.REQUEST_STREAM,
+    ...payload
+  };
+}
+
+export function receiveStream(
+  payload: StreamPayload & {streams: Streams | ConditionalStreams}
+): ReceiveStreamAction {
+  return {
+    type: ActionType.RECEIVE_STREAM,
+    ...payload
+  };
+}
+
+export function selectDataset(dataNames: DataTypeX[]): SelectDatasetAction {
   return {
     type: ActionType.SELECT_DATASET,
     dataNames
@@ -127,6 +189,13 @@ export function changeTreeStyles(newStyles: Partial<TreeStyles>): ChangeTreeStyl
   };
 }
 
+export function changeRuleStyles(newStyles: Partial<RuleStyles>): ChangeRuleStylesAction {
+  return {
+    type: ActionType.CHANGE_RULE_STYLES,
+    newStyles
+  };
+}
+
 type AsyncAction = ThunkAction<any, RootState, {}>;
 
 function fetchDataWrapper<ArgType, ReturnType>(
@@ -135,8 +204,9 @@ function fetchDataWrapper<ArgType, ReturnType>(
   receiveAction: (ret: ReturnType | null) => Action,
   needFetch: (arg: ArgType, getState: () => RootState) => boolean
 ): ((arg: ArgType) => AsyncAction) {
+// ): ThunkAction<any, RootState, ArgType> {
   const fetch = (fetchArg: ArgType): Dispatch => {
-    return (dispatch: Dispatch) => {
+    return (dispatch: Dispatch): Promise<Action> => {
       dispatch(requestAction(fetchArg));
       return fetchFn(fetchArg).then((returnData: ReturnType | undefined) => {
         if (returnData) return dispatch(receiveAction(returnData));
@@ -164,22 +234,79 @@ export const fetchModelIfNeeded = fetchDataWrapper(
   }
 );
 
-type DatasetArg = { datasetName: string; isTrain: boolean };
+// export const fetchSupportIfNeeded = fetchDataWrapper(
+//   data
+// );
+
+type DatasetArg = { datasetName: string; dataType: DataTypeX };
 
 export const fetchDatasetIfNeeded = fetchDataWrapper(
-  ({ datasetName, isTrain }: DatasetArg): Promise<{ datasetName: string; data: PlainData; isTrain: boolean }> => {
-    return dataService.getData(datasetName, isTrain).then(data => ({
+  (
+    { datasetName, dataType }: DatasetArg
+  ): Promise<ReceiveDatasetPayload> => {
+    return dataService.getData(datasetName, dataType).then(data => ({
       data,
       datasetName,
-      isTrain
+      dataType
     }));
   },
   requestDataset,
   receiveDataset,
-  ({ datasetName, isTrain }: DatasetArg, getState: () => RootState): boolean => {
-    return !((isTrain ? 'train' : 'test') in getState().dataBase);
+  ({ datasetName, dataType }: DatasetArg, getState: () => RootState): boolean => {
+    return !(dataType in getState().dataBase);
   }
 );
+
+export const fetchSupportIfNeeded = fetchDataWrapper(
+  (
+    { modelName, data }: {modelName: string, data: DataTypeX}
+  ): Promise<ReceiveSupportPayload> => {
+    return dataService.getSupport(modelName, data).then(support => ({
+      support, modelName
+    }));
+  },
+  requestSupport,
+  receiveSupport,
+  () => true,
+);
+
+export const fetchStreamIfNeeded = fetchDataWrapper(
+  (
+    payload: StreamPayload
+  ): Promise<StreamPayload & {streams: Streams | ConditionalStreams}> => {
+    const { modelName, dataType, conditional } = payload;
+    return dataService.getStream(modelName, dataType, conditional)
+      .then(data => {
+        if (conditional) 
+          return {
+            streams: createConditionalStreams(data as number[][][][]), ...payload
+          };
+        return {
+          streams: createStreams(data as number[][][]), ...payload
+        };
+      });
+  },
+  requestStream,
+  receiveStream,
+  () => true,
+);
+
+export function selectDatasetAndFetchSupport(dataNames: DataTypeX[]): ThunkAction<void, RootState, {}> {
+  return (dispatch: Dispatch, getState: () => RootState) => {
+    dispatch(selectDataset(dataNames));
+    const modelState = getState().model;
+    if (modelState.model === null || modelState.isFetching) return;
+    const modelName = modelState.model.name;
+
+    // only fetch support for the first data (focus)
+    if (dataNames.length > 0) {
+      console.log('Fetching support'); // tslint:disable-line
+      dispatch(fetchSupportIfNeeded({modelName, data: dataNames[0]}));
+    }
+  };
+}
+
+// export const fetchDatasetAndSelect = (datasetName,)
 
 export type Actions =
   | RequestModelAction
@@ -188,4 +315,5 @@ export type Actions =
   | ReceiveDatasetAction
   | SelectFeatureAction
   | SelectDatasetAction
-  | ChangeTreeStylesAction;
+  | ChangeTreeStylesAction
+  | ChangeRuleStylesAction;

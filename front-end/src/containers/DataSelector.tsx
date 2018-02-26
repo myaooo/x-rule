@@ -3,20 +3,19 @@ import { connect } from 'react-redux';
 import { Tag } from 'antd';
 import {
   Dispatch,
-  SelectDatasetAction,
-  SelectedDataType,
+  selectDatasetAndFetchSupport,
   fetchDatasetIfNeeded,
-  selectDataset,
   getSelectedDataNames,
   DataBaseState,
   RootState,
   getData,
 } from '../store';
 import './DataSelector.css';
+import { DataTypeX } from '../models';
 
 const { CheckableTag } = Tag;
 
-type DatasetType = SelectedDataType;
+type DatasetType = DataTypeX;
 
 const dataNames = ['train', 'test'] as DatasetType[];
 
@@ -32,16 +31,16 @@ const mapStateToProps = (state: RootState): DataSelectorStateProp => {
   };
 };
 export interface DataSelectorDispatchProp {
-  selectData: (names: DatasetType[]) => SelectDatasetAction;
-  loadData: (datasetName: string, isTrain: boolean) => Dispatch;
+  selectData: (names: DatasetType[]) => void;
+  loadData: (datasetName: string, dataType: DataTypeX) => void;
 }
 
 const mapDispatchToProps = (dispatch: Dispatch, ownProps: any): DataSelectorDispatchProp => {
   return {
     // loadModel: bindActionCreators(getModel, dispatch),
-    selectData: (names: DatasetType[]): SelectDatasetAction => dispatch(selectDataset(names)),
-    loadData: (datasetName: string, isTrain: boolean): Dispatch =>
-      dispatch(fetchDatasetIfNeeded({ datasetName, isTrain }))
+    selectData: (names: DatasetType[]): void => dispatch(selectDatasetAndFetchSupport(names)),
+    loadData: (datasetName: string, dataType: DataTypeX): void =>
+      dispatch(fetchDatasetIfNeeded({ datasetName, dataType }))
   };
 };
 
@@ -60,8 +59,8 @@ class DataSelector extends React.Component <DataSelectorProps, DataSelectorState
     this.onChange = this.onChange.bind(this);
   }
   componentDidMount() {
-    this.props.loadData(this.props.datasetName, true);
-    this.props.loadData(this.props.datasetName, false);
+    // this.props.loadData(this.props.datasetName, 'train');
+    // this.props.loadData(this.props.datasetName, 'test');
   }
   render() {
     return (
@@ -82,6 +81,7 @@ class DataSelector extends React.Component <DataSelectorProps, DataSelectorState
   }
 
   onChange = (dataName: DatasetType, checked: boolean) => {
+    this.props.loadData(this.props.datasetName, dataName);
     // do shallow copy
     const selectedDataNames = new Set(this.props.selectedDataNames);
     if (checked) selectedDataNames.add(dataName);

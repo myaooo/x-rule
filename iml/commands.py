@@ -32,12 +32,16 @@ def main(args=None):
     #                     help='set this flag to force re-seed db')
     parser.add_argument('--debug', '-d', dest='debug', action='store_const', const=True, default=False,
                         help='set this flag to set debug mode for flask app')
+    parser.add_argument('--threaded', '-t', dest='threaded', action='store_const', const=True, default=False,
+                        help='set this flag to use multi-thread functions of flask app')
     args = parser.parse_args(args)
 
     if args.method == 'start':
         Config.mode('development')
         CORS(app)
-        app.run(debug=args.debug)
+        app.run(debug=args.debug, threaded=args.threaded)
+        # print("Started")
+
         # start(env='production' if args.prod else 'development')
     # elif args.method == 'seeddb':
     #     seed_db(args.force)
