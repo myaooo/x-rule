@@ -38,25 +38,33 @@ export interface FeatureState {
 
 export interface TreeStyles {
   linkWidth: number;
-  conditional: boolean;
+  // conditional: boolean;
 }
 
 export const initTreeStyles: TreeStyles = {
   linkWidth: 1.0,
-  conditional: false,
+  // conditional: false,
 };
 
 export interface RuleStyles {
   size: number;
   width: number;
   mode: string;
-  conditional: boolean;
+  // conditional: boolean;
 }
 
 export const initRuleStyles: RuleStyles = {
   size: 30,
   mode: 'list',
   width: 50,
+  // conditional: false,
+};
+
+export interface Settings {
+  conditional: boolean;
+}
+
+export const initialSettings: Settings = {
   conditional: false,
 };
 
@@ -72,6 +80,7 @@ export interface RootState {
   selectedFeatures: FeatureState[];
   treeStyles: TreeStyles;
   ruleStyles: RuleStyles;
+  settings: Settings;
   // conditional: boolean;
 }
 

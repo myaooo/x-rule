@@ -124,10 +124,10 @@ def compute_streams(model: Union[RuleList, Tree], x, y, ranges, conditional=True
         return _compute_streams(x, idx_by_label, ranges, bins)
 
     if isinstance(model, RuleList):
-        decision_supports = model.decision_support(x, transform=True)
+        decision_paths = model.decision_path(x, transform=True)
         streams = []
         # supports per rule: a bool array of shape [n_instances,]
-        for support in decision_supports:
+        for support in decision_paths:
             local_idx_by_label = [np.logical_and(support, idx) for idx in idx_by_label]
             streams.append(_compute_streams(x, local_idx_by_label, ranges, bins))
         return streams

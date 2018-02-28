@@ -251,7 +251,7 @@ class SurrogateMixin(ModelBase):
         self.target = target
         self.data_distribution = create_sampler(instances, constraints)
         train_x = self.data_distribution(n_samples)
-        train_y = target.predict(train_x)
+        train_y = target.predict(train_x).astype(np.int)
         self.train(train_x, train_y, **kwargs)
         self.evaluate(train_x, train_y, stage='train')
         self.self_test(int(n_samples * 0.2), cache=cache)

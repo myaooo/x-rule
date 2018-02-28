@@ -1,7 +1,7 @@
 // Action Types
 import { Dispatch as ReduxDispatch, Action } from 'redux';
 import { ThunkAction } from 'redux-thunk';
-import { RootState, TreeStyles, RuleStyles } from './state';
+import { RootState, TreeStyles, RuleStyles, Settings } from './state';
 import {
   ModelBase,
   PlainData,
@@ -9,11 +9,11 @@ import {
   ConditionalStreams,
   Streams,
   createStreams,
-  createConditionalStreams
+  createConditionalStreams,
 } from '../models';
 
 import dataService from '../service/dataService';
-import { isRuleModel } from '../models/ruleModel';
+import { isConditional } from './selectors';
 
 export type Dispatch = ReduxDispatch<RootState>;
 
@@ -30,7 +30,7 @@ export enum ActionType {
   SELECT_FEATURE = 'SELECT_FEATURE',
   CHANGE_TREE_STYLES = 'CHANGE_TREE_STYLES',
   CHANGE_RULE_STYLES = 'CHANGE_RULE_STYLES',
-  CHANGE_SETTING = 'CHANGE_SETTING',
+  CHANGE_SETTINGS = 'CHANGE_SETTINGS',
 }
 
 export interface TypedAction<T> extends Action {
@@ -93,6 +93,10 @@ export interface ChangeTreeStylesAction extends TypedAction<ActionType.CHANGE_TR
 
 export interface ChangeRuleStylesAction extends TypedAction<ActionType.CHANGE_RULE_STYLES> {
   readonly newStyles: Partial<RuleStyles>;
+}
+
+export interface ChangeSettingsAction extends TypedAction<ActionType.CHANGE_SETTINGS> {
+  readonly newSettings: Partial<Settings>;
 }
 
 export function requestModel(modelName: string): RequestModelAction {
@@ -200,7 +204,14 @@ export function changeRuleStyles(newStyles: Partial<RuleStyles>): ChangeRuleStyl
   };
 }
 
-type AsyncAction = ThunkAction<any, RootState, {}>;
+export function changeSettings(newSettings: Partial<Settings>): ChangeSettingsAction {
+  return {
+    type: ActionType.CHANGE_SETTINGS,
+    newSettings
+  };
+}
+
+export type AsyncAction = ThunkAction<any, RootState, {}>;
 
 function fetchDataWrapper<ArgType, ReturnType>(
   fetchFn: (arg: ArgType) => Promise<ReturnType>,
@@ -304,12 +315,32 @@ export function selectDatasetAndFetchSupport(dataNames: DataTypeX[]): ThunkActio
     const model = modelState.model;
     if (model === null || modelState.isFetching) return;
     const modelName = model.name;
-    const conditional = Boolean(isRuleModel(model) ? state.ruleStyles.conditional : state.treeStyles.conditional);
+    const conditional = isConditional(state);
 
     // only fetch support for the first data (focus)
     if (dataNames.length > 0) {
       console.log('Fetching support'); // tslint:disable-line
       dispatch(fetchSupportIfNeeded({ modelName, data: dataNames[0] }));
+      dispatch(fetchStreamIfNeeded({modelName, dataType: dataNames[0], conditional}));
+    }
+  };
+}
+
+export function changeSettingsAndFetchData(newSettings: Partial<Settings>): ThunkAction<void, RootState, {}> {
+  return (dispatch: Dispatch, getState: () => RootState) => {
+    dispatch(changeSettings(newSettings));
+    const state = getState();
+    const modelState = state.model;
+    const dataNames = state.selectedData;
+    const model = modelState.model;
+    if (model === null || modelState.isFetching) return;
+    const modelName = model.name;
+    const conditional = newSettings.conditional === undefined ? isConditional(state) : newSettings.conditional;
+
+    // only fetch support for the first data (focus)
+    if (dataNames.length > 0) {
+      console.log('Fetching stream'); // tslint:disable-line
+      // dispatch(fetchSupportIfNeeded({ modelName, data: dataNames[0] }));
       dispatch(fetchStreamIfNeeded({modelName, dataType: dataNames[0], conditional}));
     }
   };

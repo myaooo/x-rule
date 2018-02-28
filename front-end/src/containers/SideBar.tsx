@@ -9,6 +9,7 @@ import './SideBar.css';
 import TreeStyleControl from './TreeStyleControl';
 import RuleStyleControl from './RuleStyleControl';
 import ModelInfo from '../components/ModelInfo';
+import SettingsControl from './SettingsControl';
 
 const { Panel } = Collapse;
 
@@ -75,6 +76,11 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
               <Panel header={collapsed ? 'S' : 'Styles'} key={(i++).toString()}>
                 <RuleStyleControl/>
                 {/* <DataSelector key={(i++).toString()} datasetName={model.dataset}/> */}
+              </Panel>
+            }
+            {model !== null && 
+              <Panel header={collapsed ? 'S' : `Settings`} key={(i++).toString()}>
+                <SettingsControl/>
               </Panel>
             }
           </Collapse>

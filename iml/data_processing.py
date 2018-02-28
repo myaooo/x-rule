@@ -109,7 +109,8 @@ def load_data(name):
 
 
 sklearn_datasets = {'breast_cancer': {}, 'iris': {}, 'wine': {}}
-local_datasets = {'diabetes': {}, 'abalone': {}, 'thoracic': {'min_depth': 3}, 'bank_marketing': {}, 'credit_card': {}}
+local_datasets = {'diabetes': {}, 'abalone': {}, 'thoracic': {'min_depth': 3},
+                  'bank_marketing': {}, 'credit_card': {}, 'adult': {}}
 
 
 # @add_cache_support()
@@ -163,7 +164,7 @@ def get_dataset(data_name, discrete=False, seed=None, split=False,
 
     if split:
         names = [get_path(_datasets_path, data_name + suffix)
-                 for suffix in ['/train_x.npy', '/train_y.npy', '/test_x.npy', '/test_y.npy']
+                 for suffix in ['/train_x.npy', '/test_x.npy', '/train_y.npy', '/test_y.npy']
                  ]
         train_x, test_x, train_y, test_y = get_split(x, y, train_size=train_size, shuffle=shuffle, filenames=names)
         data.update({

@@ -459,6 +459,23 @@ class SBRL(Classifier):
             supports.append(is_satisfied)
         return supports
 
+    def decision_path(self, x) -> np.ndarray:
+        """
+        compute the decision path of the rule list on x
+        :param x: x should be already transformed
+        :return:
+            return a np.ndarray of shape [n_rules, n_instances] of type bool,
+            representing whether an instance has
+        """
+        un_satisfied = np.ones([x.shape[0]], dtype=np.bool)
+        paths = np.zeros((self.n_rules, x.shape[0]), dtype=np.bool)
+        for i, rule in enumerate(self._rule_list):
+            satisfied = rule.is_satisfy(x)
+            # marking new satisfied instances as satisfied
+            paths[i, :] = un_satisfied
+            un_satisfied = np.logical_xor(satisfied, un_satisfied)
+        return paths
+
     def _predict_prob(self, x):
         """
 
@@ -552,6 +569,11 @@ class RuleList(PreProcessMixin, SBRL):
         if transform:
             x = self.transform(x)
         return super(RuleList, self).decision_support(x, per_condition)
+
+    def decision_path(self, x, transform=False):
+        if transform:
+            x = self.transform(x)
+        return super(RuleList, self).decision_path(x)
 
     def describe(self, feature_names=None, rt_str=False):
         s = "The rule list has {} of rules:\n\n     ".format(self.n_rules)

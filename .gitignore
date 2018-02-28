@@ -3,6 +3,7 @@ datasets
 *.mdl
 models
 !iml/models
+!front-end/**/models
 tmp
 notebooks/
 py-discretize/

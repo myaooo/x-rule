@@ -2,7 +2,6 @@ import { createSelector } from 'reselect';
 import { ModelBase, DataSet, DataTypeX, Streams, ConditionalStreams } from '../models';
 import { RootState, TreeStyles, RuleStyles, FeatureState, FeatureStatus } from './state';
 import { DataBaseState } from './index';
-import { isRuleModel } from '../models/ruleModel';
 
 export const getModel = (state: RootState): ModelBase | null => state.model.model;
 export const getModelIsFetching = (state: RootState): boolean => state.model.isFetching;
@@ -34,8 +33,7 @@ export const getRuleStyles = (state: RootState): RuleStyles => (state.ruleStyles
 export const getTreeStyles = (state: RootState): TreeStyles => (state.treeStyles);
 
 export const isConditional = (state: RootState): boolean => {
-  const model = getModel(state);
-  return (model && isRuleModel(model)) ? getRuleStyles(state).conditional : getTreeStyles(state).conditional;
+  return state.settings.conditional;
 };
 
 export const getStreams = (state: RootState): Streams | ConditionalStreams | undefined => {

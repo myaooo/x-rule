@@ -9,7 +9,9 @@ import {
   FeatureStatus,
   RuleStyles,
   initRuleStyles,
-  RootState
+  RootState,
+  Settings,
+  initialSettings
 } from './state';
 import { collapseInit } from '../service/utils';
 import { ReceiveStreamAction } from './actions';
@@ -25,7 +27,8 @@ import {
   SelectDatasetAction,
   SelectFeatureAction,
   ChangeTreeStylesAction,
-  ChangeRuleStylesAction
+  ChangeRuleStylesAction,
+  ChangeSettingsAction
 } from './actions';
 
 export const initialModelState: ModelState = {
@@ -145,7 +148,7 @@ function selectedFeaturesReducer(
   }
 }
 
-function treeStyleReducer(state: TreeStyles = initTreeStyles, action: ChangeTreeStylesAction): TreeStyles {
+function treeStylesReducer(state: TreeStyles = initTreeStyles, action: ChangeTreeStylesAction): TreeStyles {
   switch (action.type) {
     case ActionType.CHANGE_TREE_STYLES:
       return { ...state, ...action.newStyles };
@@ -154,10 +157,19 @@ function treeStyleReducer(state: TreeStyles = initTreeStyles, action: ChangeTree
   }
 }
 
-function ruleStyleReducer(state: RuleStyles = initRuleStyles, action: ChangeRuleStylesAction): RuleStyles {
+function ruleStylesReducer(state: RuleStyles = initRuleStyles, action: ChangeRuleStylesAction): RuleStyles {
   switch (action.type) {
     case ActionType.CHANGE_RULE_STYLES:
       return { ...state, ...action.newStyles };
+    default:
+      return state;
+  }
+}
+
+function settingsReducer(state: Settings = initialSettings, action: ChangeSettingsAction): Settings {
+  switch (action.type) {
+    case ActionType.CHANGE_SETTINGS:
+      return { ...state, ...action.newSettings };
     default:
       return state;
   }
@@ -173,6 +185,7 @@ export const rootReducer = combineReducers<RootState>({
   streamBase: streamBaseReducer,
   selectedData: selectDatasetReducer,
   selectedFeatures: selectedFeaturesReducer,
-  treeStyles: treeStyleReducer,
-  ruleStyles: ruleStyleReducer
+  treeStyles: treeStylesReducer,
+  ruleStyles: ruleStylesReducer,
+  settings: settingsReducer,
 });

@@ -82,6 +82,7 @@ def discretizer2json(discretizer: MDLP, data=None) -> List[dict]:
                 unique_cats, _counts = np.unique(col, return_counts=True)
                 unique_cats = unique_cats.astype(np.int)
                 n_cats = int(np.max(unique_cats)) + 1
+            n_cats = max(np.max(unique_cats) + 1, n_cats)
             counts = np.zeros(shape=(n_cats,))
             counts[unique_cats] = _counts
             # sorted_idx = np.argsort(unique_cats)

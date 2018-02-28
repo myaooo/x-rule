@@ -130,11 +130,11 @@ class Classifier(ModelBase):
     def evaluate(self, x, y, stage='train'):
         acc = self.accuracy(y, self.predict(x))
         loss = self.log_loss(y, self.predict_prob(x))
-        auc = roc_auc_score(y, self.predict_prob(x), average=None)
+        # auc = roc_auc_score(y, self.predict_prob(x), average=None)
         prefix = 'Training'
         if stage == 'test':
             prefix = 'Testing'
-        print(prefix + " accuracy: {:.5f}; loss: {:.5f}; auc:".format(acc, loss), auc)
+        print(prefix + " accuracy: {:.5f}; loss: {:.5f}".format(acc, loss))
         return acc, loss
 
     def predict_prob(self, x):
