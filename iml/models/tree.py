@@ -110,18 +110,23 @@ class Tree(PreProcessMixin, SKModelWrapper, Classifier, Regressor):
 
         return _build(0)
 
+    def decision_path(self, x, transform=False):
+        if transform:
+            x = self.transform(x)
+        return self.model.decision_path(x).astype(np.bool).tranpose()
+
     def decision_support(self, x: np.ndarray, transform=False) -> csr_matrix:
         if transform:
             x = self.transform(x)
-        return self.model.decision_path(x).astype(np.bool)
+        return self.model.decision_path(x).astype(np.bool).tranpose()
 
     def compute_support(self, x: np.ndarray, y: np.ndarray, transform=False):
         if transform:
             x, y = self.transform(x, y)
         decision_paths = self.model.decision_path(x).astype(np.bool)  # type: csr_matrix
+        decision_mat = decision_paths.tranpose().toarray()
         supports = np.zeros((self.n_nodes, self.n_classes), dtype=np.int)
-        decision_mat = decision_paths.toarray()
-        for idx, col in enumerate(decision_mat.T):
+        for idx, col in enumerate(decision_mat):
             labels = y[col]
             labels, counts = np.unique(labels, return_counts=True)
             supports[idx, labels] = counts

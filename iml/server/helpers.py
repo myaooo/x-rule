@@ -2,13 +2,22 @@ from typing import Union, List
 from functools import lru_cache
 
 import numpy as np
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.metrics import confusion_matrix, roc_auc_score
+from sklearn.metrics import confusion_matrix
 from flask import jsonify
 
-from iml.models import RuleList, Tree, ModelBase
+from iml.models import RuleList, Tree, ModelBase, SurrogateMixin
+from iml.models.metrics import auc_score
 from iml.data_processing import get_dataset
 from iml.server.model_cache import get_model, get_model_data
+
+
+def get_surrogate_data(model, data_type):
+    if isinstance(model, SurrogateMixin):
+        x = model.load_cache(data_type == 'sample train')
+        y = model.target.predict(x).astype(np.int)
+    else:
+        raise ValueError("Model {} is not a surrogate, cannot load data with type {}".format(model.name, data_type))
+    return x, y
 
 
 @lru_cache(32)
@@ -35,7 +44,7 @@ def model_metric(model_name, data):
     # if y_pred.shape[1] == 2:
     #     auc = roc_auc_score(y, y_pred[:, 1])
     # else:
-    auc = roc_auc_score(label2binary(y), y_pred, average=None)
+    auc = auc_score(y, y_pred, average=None)
     ret = {
         'confusionMatrix': conf_mat,
         'auc': auc
@@ -44,43 +53,72 @@ def model_metric(model_name, data):
 
 
 @lru_cache(32)
-def get_support(model_name, data_type):
+def get_support(model_name, data_type, support_type='simple'):
     model = get_model(model_name)
     if data_type == 'train' or data_type == 'test':
         dataset = get_dataset(get_model_data(model_name), split=True)
         x = dataset[data_type + '_x']
         y = dataset[data_type + '_y']
-    # elif data_type == 'sample_train' or 'sample_test':
-    #     pass
+    elif data_type == 'sample train' or 'sample test':
+        x, y = get_surrogate_data(model, data_type)
     else:
         raise ValueError('Unknown data type {}. Should be one of [train, test, sample_train, sample_test]'.format(data_type))
-    supports = compute_support(model, x, y)
+    if support_type == 'simple':
+        supports = compute_support(model, x, y)
+    elif support_type == 'mat':
+        supports = compute_support_matrix(model, x, y)
+    else:
+        raise ValueError("Unknown support_type {}. Should be one of [simple, mat].".format(support_type))
     return jsonify(supports)
 
 
 def compute_support(model: ModelBase, x: np.ndarray, y: np.ndarray):
-    if isinstance(model, RuleList):
+    if isinstance(model, RuleList) or isinstance(model, Tree):
         # Return a matrix of shape (n_rules, n_classes)
-        return model.compute_support(x, y, transform=True)
-    if isinstance(model, Tree):
-        return model.compute_support(x, y, transform=True)
-    return None
+        supports = model.compute_support(x, y, transform=True).astype(np.float)
+        supports /= x.shape[0]
+        return supports
+        # ret = {'truth': model.compute_support(x, y, transform=True)}
+        # if isinstance(model, SurrogateMixin):
+        #     y_target = model.target.predict(x).astype(np.int)
+        #     ret['target'] = model.compute_support(x, y_target, transform=True)
+        # return ret
+    # elif isinstance(model, Tree):
+    #     ret['truth'] = model.compute_support(x, y, transform=True)
+    else:
+        raise ValueError("Cannot calculate support for model {} of type {}".format(model, model.type))
 
 
-def label2binary(y):
-    return OneHotEncoder().fit_transform(y.reshape([-1, 1])).toarray()
+def compute_support_matrix(model: ModelBase, x: np.ndarray, y: np.ndarray):
+    if isinstance(model, SurrogateMixin) and (isinstance(model, RuleList) or isinstance(model, Tree)):
+        # n_rules x n_instances
+        decision_supports = model.decision_support(x, transform=True)
+        n_classes = model.n_classes
+        matrices = np.empty((len(decision_supports), n_classes, n_classes), dtype=np.float)
+        y_target = model.target.predict(x)
+        for i, decision_support in enumerate(decision_supports):
+            _y = y[decision_support]
+            _y_target = y_target[decision_support]
+            if len(_y):
+                mat = confusion_matrix(_y, _y_target, list(range(n_classes)))
+            else:
+                mat = np.zeros((n_classes, n_classes), dtype=np.float)
+            matrices[i, :, :] = mat
+        return matrices / len(y)
+    else:
+        raise ValueError("Cannot calculate support for model {} of type {}".format(model, model.type))
 
 
 @lru_cache(32)
 def get_stream(model_name, data_type, conditional=True):
     model = get_model(model_name)
+    dataset = get_dataset(get_model_data(model_name), split=True)
+    ranges = dataset['ranges']
     if data_type == 'train' or data_type == 'test':
-        dataset = get_dataset(get_model_data(model_name), split=True)
         x = dataset[data_type + '_x']
         y = dataset[data_type + '_y']
-        ranges = dataset['ranges']
-    # elif data_type == 'sample_train' or 'sample_test':
-    #     pass
+    elif data_type == 'sample train' or 'sample test':
+        x, y = get_surrogate_data(model, data_type)
     else:
         raise ValueError('Unknown data type {}. Should be one of [train, test, sample_train, sample_test]'.format(data_type))
     streams = compute_streams(model, x, y, ranges, conditional)

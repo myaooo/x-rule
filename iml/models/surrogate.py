@@ -3,6 +3,7 @@ from collections import defaultdict
 
 import numpy as np
 from numpy.random import multivariate_normal
+from scipy import stats
 
 from iml.models import ModelBase, ModelInterface
 from iml.utils.io_utils import save_file, get_path, load_file
@@ -53,8 +54,8 @@ def sigma2cov(sigmas: Union[int, List[int], np.ndarray], n: Optional[int]) -> np
     return sigmas
 
 
-def gaussian_mixture(means: ArrayLike,
-                     covs: ArrayLike,
+def gaussian_mixture(means: np.ndarray,
+                     cov: np.ndarray,
                      weights: Optional[np.ndarray] = None
                      ) -> Callable[[int], np.ndarray]:
     # sample_fns = [
@@ -66,32 +67,31 @@ def gaussian_mixture(means: ArrayLike,
         weights.fill(1/len(means))
     n_features = len(means[0])
 
+    # def sample(n: int) -> np.ndarray:
+    #     results = []
+    #     if n < len(means):
+    #         n_samples = np.random.choice(len(means), size=n, p=weights)
+    #         for i in n_samples.tolist():
+    #             results.append(multivariate_normal(means[i], sigma2cov(covs[i], n_features)))
+    #         return np.array(results)
+    #     else:
+    #         n_samples = np.random.multinomial(n, weights).reshape(-1)
+    #         for idx, num in enumerate(n_samples):
+    #             if num == 0:
+    #                 continue
+    #             results.append(multivariate_normal(means[idx], sigma2cov(covs[idx], n_features), num))
+    #         return np.vstack(results)
+
     def sample(n: int) -> np.ndarray:
-        results = []
-        if n < len(means):
-            n_samples = np.random.choice(len(means), size=n, p=weights)
-            for i in n_samples.tolist():
-                results.append(multivariate_normal(means[i], sigma2cov(covs[i], n_features)))
-            return np.array(results)
-        else:
-            n_samples = np.random.multinomial(n, weights).reshape(-1)
-            for idx, num in enumerate(n_samples):
-                if num == 0:
-                    continue
-                results.append(multivariate_normal(means[idx], sigma2cov(covs[idx], n_features), num))
-            return np.vstack(results)
+        norm = multivariate_normal(np.zeros((n_features, ), dtype=np.float), cov, n)
+        indices = np.random.choice(len(means), size=n, p=weights)
+        return norm + means[indices]
 
     return sample
-    # print(sample_fns[0].cov)
-    # return Mixture(sample_fns, weights)
 
 
-# def gaussian_mixture_sample(n: int,
-#                             means: ArrayLike,
-#                             covs: ArrayLike,
-#                             weights: Optional[np.ndarray] = None
-#                             ) -> List[np.ndarray]:
-#     return gaussian_mixture(means, covs, weights).sample(n)
+def scotts_factor(n, d):
+    return n ** (-1./(d+4))
 
 
 INTEGER = 'integer'
@@ -210,6 +210,10 @@ def create_sampler(instances: np.ndarray, constraints, verbose=False) -> Callabl
         return keys, probs, key2instances
     cat_keys, cat_probs, cat2instances = _build_cache()
 
+    # Try stats.gaussian_kde
+    glb_kde = stats.gaussian_kde(instances[:, is_numeric].T)
+    cov = glb_kde.covariance
+
     def sample(n: int) -> np.ndarray:
         samples = []
         sample_nums = np.random.multinomial(n, cat_probs)
@@ -217,8 +221,7 @@ def create_sampler(instances: np.ndarray, constraints, verbose=False) -> Callabl
             if num == 0:
                 continue
             sample_buffer = np.empty((num, n_features), dtype=np.float)
-            sampler = gaussian_mixture(cat2instances[idx][:, is_numeric], [sigmas] * len(cat2instances[idx]))
-            sample_buffer[:, is_numeric] = sampler(num)
+            sample_buffer[:, is_numeric] = gaussian_mixture(cat2instances[idx][:, is_numeric], cov)(num)
             categorical_part = np.frombuffer(cat_keys[idx], dtype=np.int8)
             sample_buffer[:, is_categorical] = np.tile(categorical_part, (num, 1)).astype(np.float)
 

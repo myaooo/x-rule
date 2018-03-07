@@ -1,7 +1,7 @@
 from flask import request, abort, send_from_directory, safe_join, jsonify
 
 from iml.server import app, get_model, available_models, get_model_data
-from iml.server.jsonify import model2json, data2json
+from iml.server.jsonify import model2json, model_data2json
 from iml.server.helpers import model_metric, get_support, get_stream
 
 
@@ -20,13 +20,15 @@ def send_fonts(path):
     return send_from_directory(safe_join(app.config['STATIC_FOLDER'], 'fonts'), path)
 
 
-@app.route('/service-worker.js')
-def worker_js():
-    return send_from_directory(app.config['FRONT_END_ROOT'], 'service-worker.js')
-
-
 @app.route('/')
 def index():
+    return send_from_directory(app.config['FRONT_END_ROOT'], 'index.html')
+
+
+@app.route('/<string:model>', methods=['GET'])
+def send_index(model):
+    if model == 'service-worker.js':
+        return send_from_directory(app.config['FRONT_END_ROOT'], 'service-worker.js')
     return send_from_directory(app.config['FRONT_END_ROOT'], 'index.html')
 
 
@@ -56,21 +58,35 @@ def model_info(model_name):
         return model_json
 
 
-@app.route('/api/data/<string:data_name>', methods=['GET'])
-def data(data_name):
+@app.route('/api/model_data/<string:model_name>', methods=['GET'])
+def model_data(model_name):
     data_type = request.args.get('data', 'train')
-    # is_train = not (request.args.get('isTrain') == 'false')
-    bins = request.args.get('bins')
-    # if bins is None:
-    #     bins = 15
-    if data_name is None:
+    bins = request.args.get('bins', None)
+    if model_name is None:
         abort(404)
     else:
-        data_json = data2json(data_name, data_type, bins)
+        data_json = model_data2json(model_name, data_type, bins)
         if data_json is None:
             abort(404)
         else:
             return data_json
+
+
+# @app.route('/api/data/<string:data_name>', methods=['GET'])
+# def data(data_name):
+#     data_type = request.args.get('data', 'train')
+#     # is_train = not (request.args.get('isTrain') == 'false')
+#     bins = request.args.get('bins')
+#     # if bins is None:
+#     #     bins = 15
+#     if data_name is None:
+#         abort(404)
+#     else:
+#         data_json = data2json(data_name, data_type, bins)
+#         if data_json is None:
+#             abort(404)
+#         else:
+#             return data_json
 
 
 @app.route('/api/metric/<string:model_name>', methods=['GET'])
@@ -86,8 +102,9 @@ def metric(model_name):
 
 @app.route('/api/support/<string:model_name>', methods=['GET'])
 def support(model_name):
-    data_type = request.args.get('data')
-    ret_json = get_support(model_name, data_type)
+    data_type = request.args.get('data', 'train')
+    support_type = request.args.get('support', 'simple')
+    ret_json = get_support(model_name, data_type, support_type)
     if ret_json is None:
         abort(404)
     else:

@@ -42,7 +42,7 @@ is_categorical = [True, False, False, False, False,
 
 
 # labels = ['']
-bins = [1, 6, 11, 16, 21, 30]
+bins = [1, 8, 11, 15, 30]
 labels = ["[{},{})".format(bins[i], bins[i+1]) for i in range(len(bins) - 1)]
 
 
@@ -73,6 +73,8 @@ def process_labels(df, label):
     # label_encoder = LabelEncoder().fit(label_series)
     # return label_encoder.transform(label_series), label_encoder.classes_.tolist()
     target = np.digitize(label_series, bins) - 1
+    uniq, counts = np.unique(target, return_counts=True)
+    print(counts)
     return target, labels
 
 

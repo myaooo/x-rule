@@ -125,6 +125,7 @@ def get_dataset(data_name, discrete=False, seed=None, split=False,
         else:  # data_name == 'wine':
             data = load_wine()
         data['is_categorical'] = np.array([False] * data['data'].shape[1])
+        data['categories'] = [None] * data['data'].shape[1]
         opts = sklearn_datasets[data_name]
     elif data_name in local_datasets:
         data = load_data(data_name)

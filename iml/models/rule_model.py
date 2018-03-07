@@ -6,6 +6,7 @@ from functools import reduce
 import numpy as np
 
 from mdlp.discretization import MDLP
+# import pysbrl
 from pysbrl import train_sbrl
 
 from iml.models import Classifier, SurrogateMixin
@@ -434,7 +435,7 @@ class SBRL(Classifier):
             categories.append(int(raw_rule[(idx+1):]))
         return Rule(feature_indices, categories, prob, support=support)
 
-    def decision_support(self, x, per_condition=False) -> Union[List[np.ndarray], List[List[np.ndarray]]]:
+    def decision_support(self, x, per_condition=False) -> np.ndarray:
         """
         compute the decision support of the rule list on x
         :param x: x should be already transformed
@@ -444,9 +445,9 @@ class SBRL(Classifier):
             if per_condition is true, return a list of satisfied list,
                 each satisfied list contains n_condition np.ndarray of shape [n_instances,] of type bool
         """
-        un_satisfied = np.ones([x.shape[0]], dtype=bool)
-        supports = []
-        for rule in self._rule_list:
+        un_satisfied = np.ones([x.shape[0]], dtype=np.bool)
+        supports = np.zeros((self.n_rules, x.shape[0]), dtype=np.bool)
+        for i, rule in enumerate(self._rule_list):
             is_satisfied = rule.is_satisfy(x, per_condition)
             if per_condition:
                 is_satisfied = [np.logical_and(_satisfied, un_satisfied) for _satisfied in is_satisfied]
@@ -456,7 +457,7 @@ class SBRL(Classifier):
                 satisfied = is_satisfied
             # marking new satisfied instances as satisfied
             un_satisfied = np.logical_xor(satisfied, un_satisfied)
-            supports.append(is_satisfied)
+            supports[i, :] = is_satisfied
         return supports
 
     def decision_path(self, x) -> np.ndarray:

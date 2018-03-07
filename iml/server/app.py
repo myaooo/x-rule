@@ -18,4 +18,6 @@ app = Flask(__name__)
 
 app.config['FRONT_END_ROOT'] = get_path('front-end/build', absolute=True)
 app.config['STATIC_FOLDER'] = get_path('front-end/build/static', absolute=True)
+
+# This will make life easier when we have np.ndarray in the object to be jsonified
 app.json_encoder = NumpyEncoder
