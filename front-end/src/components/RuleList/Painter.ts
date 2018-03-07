@@ -266,7 +266,7 @@ class FlowPainter implements Painter<RuleX[], FlowPainterParams> {
     width: 100,
     height: 50,
     duration: defaultDuration,
-    dy: -50,
+    dy: -30,
     dx: -40,
     color: labelColor
     // fontSize: 12,
@@ -419,7 +419,7 @@ class FlowPainter implements Painter<RuleX[], FlowPainterParams> {
       .duration(duration)
       .attr('d', (d: FlowData) => {
         // const s = {x: d.shift, y: 0};
-        return `M ${d.shift} ${d.y} H ${-dx - 3} v ${d.width} H ${d.shift + d.width} z`;
+        return `M ${d.shift} ${d.y} H ${-dx - 3} v ${d.height} H ${d.shift + d.width} z`;
         // const t = {x: -dx, y: d.height};
         // return `M ${d.shift} ${d.y} H ${-dx - 3} v ${-d.width} H ${d.shift + d.width} z`;
       });
@@ -527,6 +527,8 @@ class RulePainter implements Painter<RuleX[], RulePainterParams> {
       const collapsed = r.collapsed;
       this.conditions[i].forEach((c: ConditionX, j: number) => {
         const interval = categoryInterval ? categoryInterval(c.feature, c.category) : c.category;
+        // console.log(interval); // tslint:disable-line
+        // console.log(c); // tslint:disable-line
         const { tspan, title } = utils.condition2String(
           featureName(c.feature),
           interval,
@@ -710,11 +712,15 @@ export class RuleListPainter implements Painter<RuleModel, RuleListPainterParams
     if (model === this.model) {
       this.rules.forEach((rule: RuleX, i: number): void => {
         rule.support = model.supports[i];
+        rule.totalSupport = utils.sum(model.supports[i]);
         // totalSupport = 
       });
+      this.rulePainter.data(this.rules);
+      this.flowPainter.data(this.rules);
       return this;
     }
     console.log('Changing the model data'); // tslint:disable-line
+    this.model = model;
     this.rules = model.rules.map((rule: Rule, i: number): RuleX => ({
       ...rule,
       support: model.supports[i],
@@ -755,7 +761,7 @@ export class RuleListPainter implements Painter<RuleModel, RuleListPainterParams
       featureName = (i: number): string => data[0].featureNames[i];
       hists = (f: number): Histogram[] => data.map((d) => d.hists[f]);
       const discretizers = data[0].discretizers;
-      categoryInterval = (feature: number, cat: number) => {
+      categoryInterval = (feature: number, cat: number): number | [number | null, number | null] => {
         if (feature === -1) return 0;
         const intervals = discretizers[feature].intervals;
         if (intervals === null) return cat;

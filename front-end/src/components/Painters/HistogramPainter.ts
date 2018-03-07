@@ -95,9 +95,9 @@ export class HistPainter implements Painter<Histogram[], Partial<HistPainterPara
     const histUpdate = histEnter.merge(hist);
 
     histUpdate.transition().duration(400)
-      .attr('x', (d: Bar) => xScale(d[0]))
+      .attr('x', (d: Bar) => xScale(d[0]) + 2)
       .attr('y', (d: Bar) => yScale(d[1]))
-      .attr('width', (d: Bar) => xScale(d[2]) - xScale(0) - 1)
+      .attr('width', (d: Bar) => xScale(d[2]) - xScale(0) - 4)
       .attr('height', (d: Bar) => hScale(d[1]));
 
     // Brush

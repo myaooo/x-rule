@@ -190,7 +190,7 @@ export default class RuleMatrix extends React.Component<RuleMatrixProps, RuleMat
           texts={selectedFeatureNames}
           xs={textXs}
           rotate={-50}
-          transform={`translate(${x0}, 65)`}
+          transform={`translate(${x0}, 75)`}
         />
         <RuleMatrixNodeGroup 
           data={heights} 
@@ -202,7 +202,7 @@ export default class RuleMatrix extends React.Component<RuleMatrixProps, RuleMat
           {(nodes) => {
             // console.log("Render RuleMatrixNodeGroup"); //tslint:disable-line
             return (
-            <g transform={`translate(${x0}, 70)`}>
+            <g transform={`translate(${x0}, 80)`}>
               {nodes.map(({key, data, state}) => {
                 const {y} = state;
                 const i = Number(key);
@@ -232,7 +232,7 @@ export default class RuleMatrix extends React.Component<RuleMatrixProps, RuleMat
         <VerticalFlow 
           supports={model.supports} 
           ys={midYs} 
-          transform={`translate(${x0 - flowDx}, 70)`} 
+          transform={`translate(${x0 - flowDx}, 80)`} 
           dx={flowDx} 
           dy={size}
           width={width}

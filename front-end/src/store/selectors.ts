@@ -13,6 +13,7 @@ export const getSelectedData = (state: RootState): (DataSet)[] => {
     const dataset = db[data];
     if (dataset) ret.push(dataset);
   }
+  // console.log(ret); // tslint:disable-line
   return ret;
   // return state.selectedData.map((dataName: DataTypeX) => state.dataBase[dataName]);
 };
