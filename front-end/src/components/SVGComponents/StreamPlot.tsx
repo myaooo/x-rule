@@ -56,7 +56,7 @@ export default class StreamPlot extends React.PureComponent<StreamPlotProps, Str
     const { data, range, width, height, color, display, margin, ...rest } 
       = this.props as StreamPlotProps & OptionalProps;
 
-    const chartWidth = width - margin.left + margin.right;
+    // const chartWidth = width - margin.left + margin.right;
     // const chartHeight = height - margin.top + margin.bottom;
     const processed = process(data);
     const stack = d3.stack<Section, number>().keys(d3.range(data.length)).offset(d3.stackOffsetWiggle);
@@ -84,8 +84,8 @@ export default class StreamPlot extends React.PureComponent<StreamPlotProps, Str
         ))}
         {range && 
         <rect 
-          x={margin.left + chartWidth * range[0]}
-          width={chartWidth * (range[1] - range[0])} 
+          x={xScaler(range[0])}
+          width={xScaler(range[1]) - xScaler(range[0])} 
           height={height} 
           style={{fillOpacity: 0.1}}
         />}

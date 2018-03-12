@@ -1,0 +1,12 @@
+.hist {
+  fill-opacity: 0.4;
+}
+
+.hist-active {
+  fill-opacity: 0.8;
+}
+
+.hist-brush {
+  fill-opacity: 0.1;
+  fill: #777;
+}

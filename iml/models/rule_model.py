@@ -37,6 +37,9 @@ class Rule:
         self.output = output  # The probability distribution
         self.support = support
 
+    def is_default(self):
+        return len(self.feature_indices) == 0
+
     def describe(self, feature_names=None, category_intervals=None, label='label'):
         pred_label = np.argmax(self.output)
         if label == 'label':
@@ -47,7 +50,7 @@ class Rule:
             raise ValueError("Unknown label {}".format(label))
         output = "{}: ".format(label) + output
 
-        default = self.feature_indices[0] == -1
+        default = self.is_default()
         if default:
             s = "DEFAULT " + output
         else:
@@ -81,7 +84,7 @@ class Rule:
 
     def is_satisfy(self, x_cat, per_condition=False) -> Union[np.ndarray, List[np.ndarray]]:
         satisfied = []
-        if self.feature_indices[0] == -1 and len(self.feature_indices) == 1:
+        if self.is_default():
             return np.ones(x_cat.shape[0], dtype=bool)
         for idx, cat in zip(self.feature_indices, self.categories):
             satisfied.append(x_cat[:, idx] == cat)
@@ -422,7 +425,7 @@ class SBRL(Classifier):
     @staticmethod
     def _rule_name2rule(rule_name, prob, support=None):
         if rule_name == 'default':
-            return Rule([-1], [-1], prob, support)
+            return Rule([], [], prob, support)
 
         raw_rules = rule_name[1:-1].split(',')
         feature_indices = []

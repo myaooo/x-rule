@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { Layout } from 'antd';
+import { Layout, Row, Col } from 'antd';
 import './App.css';
 import ModelView from './ModelView';
 import SideBar from './SideBar';
+import DataInput from './DataInput';
 
 const { Sider } = Layout;
 
@@ -40,14 +41,21 @@ class App extends React.Component<AppProps, AppState> {
           >
             <SideBar collapsed={this.state.collapsed}/>
           </Sider>
-          {/* <h1>Rule Inspector </h1> */}
-          {/* <Row gutter={16} type="flex" justify="space-around"> */}
-            {/* <Col span={1}/> */}
-            {/* <Col span={6}> */}
-              
-            {/* </Col> */}
-            {/* <Col span={24}> */}
+          <Col>
+            <Row>
+              <DataInput/>
+            </Row>
+            {/* <h1>Rule Inspector </h1> */}
+            {/* <Row gutter={16} type="flex" justify="space-around"> */}
+              {/* <Col span={1}/> */}
+              {/* <Col span={6}> */}
+                
+              {/* </Col> */}
+              {/* <Col span={24}> */}
+            <Row>
               <ModelView modelName={match.params.modelName} />
+            </Row>
+          </Col>
             {/* </Col> */}
               {/* <Col span={1}/> */}
           {/* </Row> */}

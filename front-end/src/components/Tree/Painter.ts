@@ -2,6 +2,7 @@ import * as d3 from 'd3';
 
 import { TreeNode, isInternalNode, InternalNode } from '../../models';
 import * as utils from '../../service/utils';
+import * as nt from '../../service/num';
 import { Painter, ColorType, labelColor, defaultDuration } from '../Painters';
 
 interface D3Node extends d3.HierarchyNode<TreeNode> {
@@ -291,7 +292,7 @@ class LinkPainter implements Painter<D3PointNode[], LinkPainterParams> {
     const links = linkUpdate
       .selectAll('path.link')
       .data((d: D3PointNode): Support[] => {
-        const sum = utils.sum(d.data.value);
+        const sum = nt.sum(d.data.value);
         let accumulate = 0;
         return d.data.value.map((v: number) => {
           accumulate += v;
@@ -451,7 +452,7 @@ export class TreePainter implements Painter<D3Node, DrawTreeParams> {
       color,
       source,
       nodeSize: nodeSize, 
-      linkWidthMultiplier: nodeSize[0] * linkWidth / 2 / utils.sum(nodes[0].data.value),
+      linkWidthMultiplier: nodeSize[0] * linkWidth / 2 / nt.sum(nodes[0].data.value),
     };
     if (!this.linkPainter) this.linkPainter = new LinkPainter();
     this.linkPainter.update(linkParams).data(links).render(selector);

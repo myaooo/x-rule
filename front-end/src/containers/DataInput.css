@@ -1,0 +1,16 @@
+.scrolling-wrapper {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  height: 200px;
+  /* width: 80%; */
+}
+
+.scrolling-wrapper>.card {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+}
+
+.ant-slider-mark {
+  font-size: 11px !important;
+}

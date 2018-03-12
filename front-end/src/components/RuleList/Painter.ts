@@ -276,8 +276,8 @@ class FlowPainter implements Painter<RuleX[], FlowPainterParams> {
   private rules: RuleX[];
   // private totalFlows: number[];
   private flows: number[];
-  private reserves: Int32Array[];
-  private reserveSums: Int32Array;
+  private reserves: Float32Array[];
+  private reserveSums: Float32Array;
 
   public update(params: FlowPainterParams) {
     this.params = { ...FlowPainter.defaultParams, ...this.params, ...params };
@@ -285,12 +285,12 @@ class FlowPainter implements Painter<RuleX[], FlowPainterParams> {
   }
   public data(rules: RuleX[]) {
     this.rules = rules;
-    this.flows = rules.map((r: RuleX) => utils.sum(r.support));
+    this.flows = rules.map((r: RuleX) => nt.sum(r.support));
 
-    let reserves: Int32Array[] = rules[0].support.map((_, i) => new Int32Array(rules.map(rule => rule.support[i])));
-    this.reserves = reserves.map((reserve: Int32Array) => nt.cumsum(reserve.reverse()).reverse());
-    this.reserveSums = new Int32Array(this.reserves[0].length);
-    this.reserves.forEach((reserve: Int32Array) => nt.add(this.reserveSums, reserve, false));
+    let reserves: Float32Array[] = rules[0].support.map((_, i) => new Float32Array(rules.map(rule => rule.support[i])));
+    this.reserves = reserves.map((reserve: Float32Array) => nt.cumsum(reserve.reverse()).reverse());
+    this.reserveSums = new Float32Array(this.reserves[0].length);
+    this.reserves.forEach((reserve: Float32Array) => nt.add(this.reserveSums, reserve, false));
     // console.log(this.reserves); // tslint:disable-line
     // console.log(this.reserveSums); // tslint:disable-line
     return this;
@@ -553,15 +553,15 @@ class RulePainter implements Painter<RuleX[], RulePainterParams> {
     this.conditionPainter
       .update({ interval, hists, width: conditionWidth })
       .render(ruleUpdate);
-    const maxSupport = Math.max(...this.rules.map(r => nt.sum(r.support)));
+    const maxSupport = Math.max(...this.rules.map(r => r.totalSupport));
     const outputHeight = 20;
     this.outputPainter
       .data((r: RuleX, i: number): OutputData[] => {
         // if (i === this.rules.length - 1) return [];
         let x = (conditionWidth + interval) * r.conditions.length - 40;
-        const multiplier = outputWidth / maxSupport * nt.sum(r.support);
+        const multiplier = outputWidth / maxSupport;
         const y = (r.height - outputHeight) / 2;
-        return r.output.map((o: number): OutputData => {
+        return r.support.map((o: number): OutputData => {
           const width = o * multiplier;
           const ret = {
             x,
@@ -712,7 +712,7 @@ export class RuleListPainter implements Painter<RuleModel, RuleListPainterParams
     if (model === this.model) {
       this.rules.forEach((rule: RuleX, i: number): void => {
         rule.support = model.supports[i];
-        rule.totalSupport = utils.sum(model.supports[i]);
+        rule.totalSupport = nt.sum(model.supports[i]);
         // totalSupport = 
       });
       this.rulePainter.data(this.rules);
@@ -724,7 +724,7 @@ export class RuleListPainter implements Painter<RuleModel, RuleListPainterParams
     this.rules = model.rules.map((rule: Rule, i: number): RuleX => ({
       ...rule,
       support: model.supports[i],
-      totalSupport: utils.sum(model.supports[i]),
+      totalSupport: nt.sum(model.supports[i]),
       x: 0, y: 0, height: 0, collapsed: true
     }));
     this.rulePainter.data(this.rules);
@@ -771,9 +771,11 @@ export class RuleListPainter implements Painter<RuleModel, RuleListPainterParams
       categoryRatio = (feature: number, cat: number): [number, number] => {
         // console.log(feature); // tslint:disable-line
         if (feature === -1) return [0, 1];
-        const ratios = discretizers[feature].ratios;
-        let prevSum = utils.sum(ratios.slice(0, cat));
-        return [prevSum, prevSum + ratios[cat]];
+        const ratios = data[0].ratios[feature];
+        let prevSum = nt.sum(ratios.slice(0, cat));
+        let ratioCat = ratios[cat] === undefined ? 0 : ratios[cat];
+        // console.log(prevSum, prevSum + ratios[cat]); // tslint:disable-line
+        return [prevSum, prevSum + ratioCat];
       };
       // labelNames = ((i: number): string => data[0].labelNames[i]);
     }

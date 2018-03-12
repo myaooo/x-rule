@@ -36,8 +36,22 @@ function getModel(model: string): Promise<ModelBase> {
     });
 }
 
-function getData(dataName: string, data: DataType | SurrogateDataType = 'train'): Promise<PlainData> {
-  const url = `${api}/data/${dataName}`;
+// function getData(dataName: string, data: DataType | SurrogateDataType = 'train'): Promise<PlainData> {
+//   const url = `${api}/data/${dataName}`;
+//   const params = {data};
+//   return axios
+//     .get(url, { params })
+//     .then(response => {
+//       if (response.status === 200) return response.data;
+//       throw response;
+//     })
+//     .catch(error => {
+//       console.log(error);  // tslint:disable-line
+//     });
+// }
+
+function getModelData(modelName: string, data: DataType | SurrogateDataType = 'train'): Promise<PlainData> {
+  const url = `${api}/model_data/${modelName}`;
   const params = {data};
   return axios
     .get(url, { params })
@@ -82,10 +96,28 @@ function getStream(
     });
 }
 
+function getSupportMat(
+  modelName: string, data: DataTypeX = 'train'
+): Promise<number[][][]> {
+  const url = `${api}/support/${modelName}`;
+  const params = {data, support: 'mat'};
+  return axios
+    .get(url, { params })
+    .then(response => {
+      if (response.status === 200) return response.data;
+      throw response;
+    })
+    .catch(error => {
+      console.log(error);  // tslint:disable-line
+    });
+}
+
 export default {
   getModelList,
   getModel,
-  getData,
+  // getData,
+  getModelData,
   getSupport,
+  getSupportMat,
   getStream,
 };

@@ -8,6 +8,7 @@
     "d3": "^4.12.2",
     "d3-scale-chromatic": "^1.2.0",
     "numjs": "^0.15.1",
+    "patternfills": "^0.4.1",
     "react": "^16.2.0",
     "react-app-rewired": "^1.4.1",
     "react-dom": "^16.2.0",

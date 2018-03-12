@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Action } from 'redux';
 import * as d3 from 'd3';
-import { Rule, RuleModel, DataSet, Streams, ConditionalStreams } from '../../models';
+import { Rule, RuleModel, RuleList, DataSet, Streams, ConditionalStreams } from '../../models';
 import './index.css';
 import RuleView from './RuleView';
 import { collapsedHeight, expandedHeight } from './ConditionView';
@@ -77,7 +77,9 @@ class RuleListView extends React.Component<RuleListProps, RuleListState> {
     if (styles === undefined || styles.mode === 'list') {
       return <g ref={(ref: SVGGElement) => (this.ref = ref)} transform={transform}/>;
     }
-    return <RuleMatrix model={model} datasets={data || []} streams={streams} transform={transform} {...styles}/>;
+    if (model instanceof RuleList)
+      return <RuleMatrix model={model} datasets={data || []} streams={streams} transform={transform} {...styles}/>;
+    return <text>The model must be an instance of RuleList to enable RuleMatrix mode!</text>;
   }
   renderBackUp() {
     const { model, data, width, selectFeature, transform, featureStatus, interval } = this.props;

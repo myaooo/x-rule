@@ -2,9 +2,12 @@ import * as React from 'react';
 import { connect } from 'react-redux';
 import { Row, Col, Switch } from 'antd';
 import { RootState, Dispatch, changeSettingsAndFetchData, Settings } from '../store';
+import { DataSet } from '../models/data';
+import { getSelectedData } from '../store/selectors';
 
 export interface SettingsStateProps {
   settings: Settings;
+  dataSets: DataSet[];
 }
 
 export interface SettingsDispatchProps {
@@ -23,18 +26,32 @@ class SettingsControl extends React.Component<SettingsControlProps, any> {
   // }
   render() {
     const {updateSettings} = this.props;
+    const hasData = !this.props.dataSets.length;
+    const common = {
+      size: 'small' as 'small', disabled: hasData
+    };
     return (
       <div style={{ paddingLeft: 12 }}>
 
         <Row style={{marginTop: 8}}>
-          <Col span={10}>
+          <Col span={14}>
             <span>Conditional: </span>
           </Col>
-          <Col span={14}>
+          <Col span={10}>
             <Switch 
               checked={this.props.settings.conditional}
               onChange={(conditional) => updateSettings({conditional})}
-              size="small"
+              {...common}
+            />
+          </Col>
+          <Col span={14}>
+            <span>Detail Output: </span>
+          </Col>
+          <Col span={10}>
+            <Switch 
+              checked={this.props.settings.supportMat}
+              onChange={(supportMat) => updateSettings({supportMat})}
+              {...common}
             />
           </Col>
         </Row>
@@ -47,6 +64,7 @@ class SettingsControl extends React.Component<SettingsControlProps, any> {
 const mapStateToProps = (state: RootState): SettingsStateProps => {
   return {
     settings: state.settings,
+    dataSets: getSelectedData(state),
   };
 };
 

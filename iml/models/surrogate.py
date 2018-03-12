@@ -102,9 +102,8 @@ data_type = {INTEGER, CONTINUOUS, CATEGORICAL}
 
 
 class IntegerConstraint:
-    def __init__(self, sigma, _range=None):
+    def __init__(self, _range=None):
         self._range = _range
-        self.sigma = sigma
 
     def regularize(self, arr: np.ndarray):
         assert len(arr.shape) == 1
@@ -129,8 +128,7 @@ class CategoricalConstraint:
 
 
 class ContinuousConstraint:
-    def __init__(self, sigma, _range=None):
-        self.sigma = sigma
+    def __init__(self, _range=None):
         self._range = _range
 
     def regularize(self, arr: np.ndarray):
@@ -147,20 +145,20 @@ class ContinuousConstraint:
 
 def create_constraint(feature_type, **kwargs):
     if feature_type == INTEGER:
-        return IntegerConstraint(sigma=kwargs['sigma'], _range=kwargs['_range'])
+        return IntegerConstraint(_range=kwargs['_range'])
     elif feature_type == CONTINUOUS:
-        return ContinuousConstraint(sigma=kwargs['sigma'], _range=kwargs['_range'])
+        return ContinuousConstraint(_range=kwargs['_range'])
     elif feature_type == CATEGORICAL:
         return CategoricalConstraint()
     else:
         raise ValueError("Unknown feature_type {}".format(feature_type))
 
 
-def create_constraints(is_categorical: np.ndarray, is_continuous: np.ndarray, sigmas, ranges):
+def create_constraints(is_categorical: np.ndarray, is_continuous: np.ndarray, ranges):
     constraints = []
     for i in range(len(is_categorical)):
         feature_type = CATEGORICAL if is_categorical[i] else CONTINUOUS if is_continuous[i] else INTEGER
-        constraints.append(create_constraint(feature_type, sigma=sigmas[i], _range=ranges[i]))
+        constraints.append(create_constraint(feature_type, _range=ranges[i]))
     return constraints
 
 
@@ -181,7 +179,7 @@ def create_sampler(instances: np.ndarray, constraints, verbose=False) -> Callabl
     is_integer = [True if constraint.type == INTEGER else False for constraint in constraints]
     is_continuous = [True if constraint.type == CONTINUOUS else False for constraint in constraints]
     is_numeric = np.logical_or(is_integer, is_continuous)
-    sigmas = np.array([constraint.sigma for constraint in constraints if constraint.type != CATEGORICAL])
+    # sigmas = np.array([constraint.sigma for constraint in constraints if constraint.type != CATEGORICAL])
 
     n_features = len(is_categorical)
     n_samples = len(instances)
@@ -245,6 +243,9 @@ class SurrogateMixin(ModelBase):
         self.target = None  # type: Optional[ModelBase]
         self.data_distribution = None
         self._n_samples = None
+        self.train_fidelity = None
+        self.test_fidelity = None
+        self.self_test_fidelity = None
 
     def surrogate(self, target: ModelInterface, instances: np.ndarray,
                   constraints: list, sampling_rate: float=5, cache=True,
@@ -287,16 +288,21 @@ class SurrogateMixin(ModelBase):
         x = self.data_distribution(n_sample)
         fidelity = self.fidelity(x)
         print("Self test fidelity: {:.5f}".format(fidelity))
+        self.self_test_fidelity = fidelity
         if cache:
             self.cache_sample(x, is_train=False)
 
     def evaluate(self, x, y, stage='train'):
         prefix = 'Training'
-        if stage == 'test':
-            prefix = 'Testing'
+
         y_pred = self.predict(x)
         fidelity = self.fidelity(x)
         score = self.score(y, y_pred)
+        if stage == 'test':
+            prefix = 'Testing'
+            self.train_fidelity = fidelity
+        else:
+            self.test_fidelity = fidelity
         print(prefix + " fidelity: {:.5f}; score: {:.5f}".format(fidelity, score))
 
     @property

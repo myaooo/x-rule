@@ -1,20 +1,11 @@
 import * as React from 'react';
-import { NodeGroup } from 'react-move';
+// import { NodeGroup } from 'react-move';
 import { ColorType, defaultDuration, labelColor } from '../Painters';
 // import { Rule } from '../../models';
 import * as nt from '../../service/num';
 import './VerticalFlow.css';
 import RectGroup from './RectGroup';
 import PathGroup from './PathGroup';
-
-// interface RuleX extends Rule {
-//   x: number;
-//   y: number;
-//   height: number;
-//   support: number[];
-//   totalSupport: number;
-//   collapsed?: boolean;
-// }
 
 type Point = {x: number, y: number};
 const originPoint = {x: 0, y: 0};
@@ -35,12 +26,6 @@ const flowCurve = (d?: {s: Point, t: Point}): string => {
 };
 
 class PathGroupT extends PathGroup<{s: Point, t: Point, width: number}> {}
-
-interface FlowState {
-  y: number;
-}
-
-class FlowNodeGroup extends NodeGroup<number, FlowState> {}
 
 interface OptionalProps {
   width: number;
@@ -116,73 +101,121 @@ export default class VerticalFlow extends React.PureComponent<VerticalFlowProps,
     const heights = ys.map((y, i) => i > 0 ? y - ys[i - 1] : height);
     return (
       <g transform={transform}>
-        <FlowNodeGroup
-          data={ys}
-          keyAccessor={(d, i) => i.toString()}
-          start={(d, i) => ({ y: d - heights[i] - dy})}
-          enter={(d, i) => ({ y: [d - heights[i] - dy]})}
-          update={(d, i) => ({ y: [d - heights[i] - dy]})}
-        >
-          {(nodes) => (
-            <g className="v-reserves" transform={`translate(${-width}, 0)`}>
-              {nodes.map(({key, data, state}) => {
-                const {y} = state;
-                const i = Number(key);
-                // console.log(i); // tslint:disable-line 
-                const widths = reserves[i].map((r) => r * multiplier);
-                const hs = new Array(widths.length).fill(heights[i]);
-                const xs = [0, ...(nt.cumsum(widths.slice(0, -1)))];
-                return (
-                  <RectGroup
-                    key={key}
-                    widths={widths}
-                    xs={xs}
-                    heights={hs}
-                    transform={`translate(0,${y})`}
-                    fill={color}
-                  />
-                );
-              })}
-            </g>
-          )}
-        </FlowNodeGroup>
-        <FlowNodeGroup
-          data={ys}
-          keyAccessor={(d, i) => i.toString()}
-          start={(d, i) => ({ y: d, height: heights[i]})}
-          enter={(d, i) => ({ y: [d]})}
-          update={(d, i) => ({ y: [d]})}
-        >
-          {(nodes) => (
-            <g className="v-flows" transform={`translate(${-width}, 0)`}>
-              {nodes.map(({key, state}) => {
-                const y = state.y;
-                const k = Number(key);
-                let x0 = ((k === reserves.length - 1) ? 0 : reserveSums[k + 1]) * multiplier;
-                let y1 = nt.sum(flows[k]) * multiplier / 2;
-                const data = flows[k].map((f: number, i: number) => {
-                  const pathWidth = f * multiplier;
-                  const s = {x: x0 + pathWidth / 2, y: -dy};
-                  const t = {x: dx + width, y: y1 - pathWidth / 2};
-                  x0 += pathWidth;
-                  y1 -= pathWidth;
-                  return {s, t, width: pathWidth};
-                });
-                return (
-                  <PathGroupT
-                    key={key}
-                    data={data}
-                    d={flowCurve}
-                    strokeWidth={(d, i) => d.width}
-                    stroke={(d, i) => color(i)}
-                    transform={`translate(0,${y})`}
-                  />
-                );
-              })}
-            </g>
-          )}
-        </FlowNodeGroup>
+        <g className="v-reserves" transform={`translate(${-width}, 0)`}>
+          {ys.map((_y, i: number) => {
+            // console.log(i); // tslint:disable-line 
+            const y = _y - heights[i] - dy;
+            const widths = reserves[i].map((r) => r * multiplier);
+            const hs = new Array(widths.length).fill(heights[i]);
+            const xs = [0, ...(nt.cumsum(widths.slice(0, -1)))];
+            return (
+              <RectGroup
+                key={i}
+                widths={widths}
+                xs={xs}
+                heights={hs}
+                transform={`translate(0,${y})`}
+                fill={color}
+              />
+            );
+          })}
+        </g>
+        <g className="v-flows" transform={`translate(${-width}, 0)`}>
+          {ys.map((y, k: number) => {
+            // const y = _y - heights[k] - dy;
+            let x0 = ((k === reserves.length - 1) ? 0 : reserveSums[k + 1]) * multiplier;
+            let y1 = nt.sum(flows[k]) * multiplier / 2;
+            const data = flows[k].map((f: number, i: number) => {
+              const pathWidth = f * multiplier;
+              const s = {x: x0 + pathWidth / 2, y: -dy};
+              const t = {x: dx + width, y: y1 - pathWidth / 2};
+              x0 += pathWidth;
+              y1 -= pathWidth;
+              return {s, t, width: pathWidth};
+            });
+            return (
+              <PathGroupT
+                key={k}
+                data={data}
+                d={flowCurve}
+                strokeWidth={(d, i) => d.width}
+                stroke={(d, i) => color(i)}
+                transform={`translate(0,${y})`}
+              />
+            );
+          })}
+        </g>
       </g>
     );
+    // return (
+    //   <g transform={transform}>
+    //     <FlowNodeGroup
+    //       data={ys}
+    //       keyAccessor={(d, i) => i.toString()}
+    //       start={(d, i) => ({ y: d - heights[i] - dy})}
+    //       enter={(d, i) => ({ y: [d - heights[i] - dy]})}
+    //       update={(d, i) => ({ y: [d - heights[i] - dy]})}
+    //     >
+    //       {(nodes) => (
+    //         <g className="v-reserves" transform={`translate(${-width}, 0)`}>
+    //           {nodes.map(({key, data, state}) => {
+    //             const {y} = state;
+    //             const i = Number(key);
+    //             // console.log(i); // tslint:disable-line 
+    //             const widths = reserves[i].map((r) => r * multiplier);
+    //             const hs = new Array(widths.length).fill(heights[i]);
+    //             const xs = [0, ...(nt.cumsum(widths.slice(0, -1)))];
+    //             return (
+    //               <RectGroup
+    //                 key={key}
+    //                 widths={widths}
+    //                 xs={xs}
+    //                 heights={hs}
+    //                 transform={`translate(0,${y})`}
+    //                 fill={color}
+    //               />
+    //             );
+    //           })}
+    //         </g>
+    //       )}
+    //     </FlowNodeGroup>
+    //     <FlowNodeGroup
+    //       data={ys}
+    //       keyAccessor={(d, i) => i.toString()}
+    //       start={(d, i) => ({ y: d, height: heights[i]})}
+    //       enter={(d, i) => ({ y: [d]})}
+    //       update={(d, i) => ({ y: [d]})}
+    //     >
+    //       {(nodes) => (
+    //         <g className="v-flows" transform={`translate(${-width}, 0)`}>
+    //           {nodes.map(({key, state}) => {
+    //             const y = state.y;
+    //             const k = Number(key);
+    //             let x0 = ((k === reserves.length - 1) ? 0 : reserveSums[k + 1]) * multiplier;
+    //             let y1 = nt.sum(flows[k]) * multiplier / 2;
+    //             const data = flows[k].map((f: number, i: number) => {
+    //               const pathWidth = f * multiplier;
+    //               const s = {x: x0 + pathWidth / 2, y: -dy};
+    //               const t = {x: dx + width, y: y1 - pathWidth / 2};
+    //               x0 += pathWidth;
+    //               y1 -= pathWidth;
+    //               return {s, t, width: pathWidth};
+    //             });
+    //             return (
+    //               <PathGroupT
+    //                 key={key}
+    //                 data={data}
+    //                 d={flowCurve}
+    //                 strokeWidth={(d, i) => d.width}
+    //                 stroke={(d, i) => color(i)}
+    //                 transform={`translate(0,${y})`}
+    //               />
+    //             );
+    //           })}
+    //         </g>
+    //       )}
+    //     </FlowNodeGroup>
+    //   </g>
+    // );
   }
 }

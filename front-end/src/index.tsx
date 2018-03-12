@@ -1,9 +1,9 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import {
-  BrowserRouter as Router,
+  // BrowserRouter as Router,
   Route,
-  // HashRouter as Router
+  HashRouter as Router
 } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { createStore } from './store';
@@ -16,7 +16,7 @@ const store = createStore();
 
 ReactDOM.render(
   <Provider store={store}>
-    <Router>
+    <Router hashType="noslash">
       <div>
         <Route exact={true} path="/" component={ModelList}/>
         <Route path="/:modelName" component={App}/>

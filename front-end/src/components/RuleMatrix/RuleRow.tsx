@@ -5,7 +5,7 @@ import { NodeGroup } from 'react-move';
 import { Rule, Condition } from '../../models';
 import * as nt from '../../service/num';
 import { ColorType, labelColor as defaultLabelColor } from '../Painters/Painter';
-import RowOutput from './RowOutput';
+// import RowOutput from './RowOutput';
 import { DataSet, Streams, Stream } from '../../models';
 import StreamPlot from '../SVGComponents/StreamPlot';
 
@@ -136,20 +136,21 @@ export default class RuleRow extends React.Component<RuleRowProps, RuleRowState>
       rowWidth,
     };
   }
-  renderOutput() {
-    const {rule, outputWidth, height, labelColor} = this.props as RuleRowProps & OptionalProps;
-    const outputX = this.state.rowWidth + 5;
-    return (
-      <RowOutput 
-        outputs={rule.output}
-        height={height / 4}
-        outputWidth={outputWidth}
-        transform={`translate(${outputX}, 0)`}
-        color={labelColor}
-        className="matrix-outputs"
-      />
-    );
-  }
+  // renderOutput() {
+  //   const {rule, outputWidth, height, labelColor, supports} = this.props as RuleRowProps & OptionalProps;
+  //   const outputX = this.state.rowWidth + 5;
+  //   return (
+  //     <RowOutput 
+  //       outputs={rule.output}
+  //       supports={supports}
+  //       height={height / 4}
+  //       supportWidth={outputWidth}
+  //       transform={`translate(${outputX}, 0)`}
+  //       color={labelColor}
+  //       className="matrix-outputs"
+  //     />
+  //   );
+  // }
   componentWillReceiveProps(nextProps: RuleRowProps) {
     const {xs, widths} = nextProps;
     if (widths !== this.props.widths || xs !== this.props.xs) {
@@ -171,7 +172,7 @@ export default class RuleRow extends React.Component<RuleRowProps, RuleRowState>
         // timing: {delay: 0, duration: duration - 100},
       });
     // const conditionFeatures = rule.conditions.map((c) => c.feature);
-    const supportsScaled = (supports && dataset) ? nt.muls(supports, 1 / dataset.data.length) : undefined;
+    // const supportsScaled = (supports && dataset) ? nt.muls(supports, 1 / dataset.data.length) : undefined;
 
     const cat2Interval = dataset ? ((f: number, c: number): [number, number] => {
       const intervals = dataset.discretizers[f].intervals;
@@ -203,7 +204,7 @@ export default class RuleRow extends React.Component<RuleRowProps, RuleRowState>
                 const {x, ...rest} = state; 
                 let range = undefined;
                 if (dataset) {
-                  const ratios = dataset.discretizers[data.feature].ratios;
+                  const ratios = dataset.ratios[data.feature];
                   const r0 = nt.sum(ratios.slice(0, data.category));
                   const r1 = r0 + ratios[data.category];
                   range = [r0, r1] as [number, number];
@@ -219,7 +220,7 @@ export default class RuleRow extends React.Component<RuleRowProps, RuleRowState>
                     range={range}
                     interval={interval}
                     transform={trans}
-                    supports={supportsScaled}
+                    supports={supports}
                     color={labelColor}
                     stream={stream}
                     {...rest}
@@ -231,7 +232,7 @@ export default class RuleRow extends React.Component<RuleRowProps, RuleRowState>
         </RectNodeGroup>
         }
         <rect width={rowWidth} height={height} className="matrix-bg"/>
-        {this.renderOutput()}
+        {/* {this.renderOutput()} */}
         
       </g>
     );

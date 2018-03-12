@@ -10,6 +10,7 @@ import {
   Streams,
   createStreams,
   createConditionalStreams,
+  SupportType,
 } from '../models';
 
 import dataService from '../service/dataService';
@@ -51,17 +52,17 @@ export interface RequestSupportAction extends TypedAction<ActionType.REQUEST_SUP
 }
 
 export interface ReceiveSupportAction extends TypedAction<ActionType.RECEIVE_SUPPORT> {
-  readonly support: number[][];
+  readonly support: SupportType;
   readonly modelName: string;
 }
 
 export interface RequestDatasetAction extends TypedAction<ActionType.REQUEST_DATASET> {
-  readonly datasetName: string;
+  readonly modelName: string;
   readonly dataType: DataTypeX;
 }
 
 export interface ReceiveDatasetAction extends TypedAction<ActionType.RECEIVE_DATASET> {
-  readonly datasetName: string;
+  readonly modelName: string;
   readonly data: PlainData;
   readonly dataType: DataTypeX;
 }
@@ -115,7 +116,7 @@ export function receiveModel(model: ModelBase | null): ReceiveModelAction {
 
 export interface ReceiveSupportPayload {
   modelName: string;
-  support: number[][];
+  support: SupportType;
 }
 
 export function requestSupport({ modelName, data }: { modelName: string; data: DataTypeX }): RequestSupportAction {
@@ -135,21 +136,21 @@ export function receiveSupport({ modelName, support }: ReceiveSupportPayload): R
 }
 
 export function requestDataset({
-  datasetName,
+  modelName,
   dataType
 }: {
-  datasetName: string;
+  modelName: string;
   dataType: DataTypeX;
 }): RequestDatasetAction {
   return {
     type: ActionType.REQUEST_DATASET,
-    datasetName,
+    modelName,
     dataType
   };
 }
 
 export interface ReceiveDatasetPayload {
-  datasetName: string;
+  modelName: string;
   data: PlainData;
   dataType: DataTypeX;
 }
@@ -214,16 +215,16 @@ export function changeSettings(newSettings: Partial<Settings>): ChangeSettingsAc
 export type AsyncAction = ThunkAction<any, RootState, {}>;
 
 function fetchDataWrapper<ArgType, ReturnType>(
-  fetchFn: (arg: ArgType) => Promise<ReturnType>,
+  fetchFn: (arg: ArgType, getState: () => RootState) => Promise<ReturnType>,
   requestAction: (arg: ArgType) => Action,
   receiveAction: (ret: ReturnType | null) => Action,
   needFetch: (arg: ArgType, getState: () => RootState) => boolean
 ): ((arg: ArgType) => AsyncAction) {
   // ): ThunkAction<any, RootState, ArgType> {
-  const fetch = (fetchArg: ArgType): Dispatch => {
+  const fetch = (fetchArg: ArgType, getState: () => RootState): Dispatch => {
     return (dispatch: Dispatch): Promise<Action> => {
       dispatch(requestAction(fetchArg));
-      return fetchFn(fetchArg).then((returnData: ReturnType | undefined) => {
+      return fetchFn(fetchArg, getState).then((returnData: ReturnType | undefined) => {
         if (returnData) return dispatch(receiveAction(returnData));
         return dispatch(receiveAction(null));
       });
@@ -232,7 +233,7 @@ function fetchDataWrapper<ArgType, ReturnType>(
   return (arg: ArgType) => {
     return (dispatch: Dispatch, getState: () => RootState) => {
       if (needFetch(arg, getState)) {
-        return dispatch(fetch(arg));
+        return dispatch(fetch(arg, getState));
       }
       return;
     };
@@ -245,7 +246,7 @@ export const fetchModelIfNeeded = fetchDataWrapper(
   receiveModel,
   (modelName: string, getState: () => RootState) => {
     const modelState = getState().model;
-    return modelState.model === null || modelState.isFetching;
+    return modelState.model === null || (!modelState.isFetching);
   }
 );
 
@@ -253,30 +254,41 @@ export const fetchModelIfNeeded = fetchDataWrapper(
 //   data
 // );
 
-type DatasetArg = { datasetName: string; dataType: DataTypeX };
+type DatasetArg = { modelName: string; dataType: DataTypeX };
+
+function fetchModelData({ modelName, dataType }: DatasetArg): Promise<ReceiveDatasetPayload> {
+  return dataService.getModelData(modelName, dataType).then(data => ({
+    data,
+    modelName,
+    dataType
+  }));
+}
 
 export const fetchDatasetIfNeeded = fetchDataWrapper(
-  ({ datasetName, dataType }: DatasetArg): Promise<ReceiveDatasetPayload> => {
-    return dataService.getData(datasetName, dataType).then(data => ({
-      data,
-      datasetName,
-      dataType
-    }));
-  },
+  fetchModelData,
   requestDataset,
   receiveDataset,
-  ({ datasetName, dataType }: DatasetArg, getState: () => RootState): boolean => {
+  ({ modelName, dataType }: DatasetArg, getState: () => RootState): boolean => {
     return !(dataType in getState().dataBase);
   }
 );
 
-export const fetchSupportIfNeeded = fetchDataWrapper(
-  ({ modelName, data }: { modelName: string; data: DataTypeX }): Promise<ReceiveSupportPayload> => {
-    return dataService.getSupport(modelName, data).then(support => ({
+type FetchSupportArg = {modelName: string; data: DataTypeX};
+
+function fetchSupport(
+  { modelName, data }: FetchSupportArg, getState: () => RootState
+): Promise<ReceiveSupportPayload> {
+  const fetcher: (modelName: string, data: DataTypeX) => Promise<SupportType> 
+    = getState().settings.supportMat ? dataService.getSupportMat : dataService.getSupport;
+  return fetcher(modelName, data)
+    .then((support: SupportType) => ({
       support,
       modelName
     }));
-  },
+}
+
+export const fetchSupportIfNeeded = fetchDataWrapper(
+  fetchSupport,
   requestSupport,
   receiveSupport,
   () => true
@@ -340,7 +352,7 @@ export function changeSettingsAndFetchData(newSettings: Partial<Settings>): Thun
     // only fetch support for the first data (focus)
     if (dataNames.length > 0) {
       console.log('Fetching stream'); // tslint:disable-line
-      // dispatch(fetchSupportIfNeeded({ modelName, data: dataNames[0] }));
+      dispatch(fetchSupportIfNeeded({ modelName, data: dataNames[0] }));
       dispatch(fetchStreamIfNeeded({modelName, dataType: dataNames[0], conditional}));
     }
   };

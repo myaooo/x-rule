@@ -1,6 +1,6 @@
 from flask import request, abort, send_from_directory, safe_join, jsonify
 
-from iml.server import app, get_model, available_models, get_model_data
+from iml.server import app, get_model, available_models, HashableList
 from iml.server.jsonify import model2json, model_data2json
 from iml.server.helpers import model_metric, get_support, get_stream
 
@@ -61,7 +61,7 @@ def model_info(model_name):
 @app.route('/api/model_data/<string:model_name>', methods=['GET'])
 def model_data(model_name):
     data_type = request.args.get('data', 'train')
-    bins = request.args.get('bins', None)
+    bins = int(request.args.get('bins', '20'))
     if model_name is None:
         abort(404)
     else:
@@ -116,11 +116,27 @@ def stream(model_name):
     data_type = request.args.get('data', 'train')
     # per_class = request.args.get('class', 'true') == 'true'
     conditional = request.args.get('conditional', 'true') == 'true'
-    ret_json = get_stream(model_name, data_type, conditional)
+    bins = int(request.args.get('bins', '20'))
+    ret_json = get_stream(model_name, data_type, conditional=conditional, bins=bins)
     if ret_json is None:
         abort(404)
     else:
         return ret_json
+
+
+@app.route('/api/query/<string:model_name>', methods=['POST'])
+def query(model_name):
+    data_type = request.args.get('data', 'train')
+    bins = int(request.args.get('bins', '20'))
+    query_json = HashableList(request.get_json())
+    if model_name is None:
+        abort(404)
+    else:
+        data_json = model_data2json(model_name, data_type, bins, query_json)
+        if data_json is None:
+            abort(404)
+        else:
+            return data_json
 # @app.route('/api/models/<string:model_name>', methods=['GET'])
 # def model_info(model_name):
 #     model = get_model(model_name)
@@ -135,3 +151,7 @@ def predict():
         abort(404)
     else:
         return get_model(name).predict(data)
+
+"""
+curl -i -X POST -H 'Content-Type: application/json' -d '[]' http://localhost:5000/api/query/rule-surrogate-breast_cancer-nn-20
+"""

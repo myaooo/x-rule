@@ -66,6 +66,10 @@ export function sum<T extends Vector>(arr: T): number {
   return _sum;
 }
 
+export function mean<T extends Vector>(arr: T): number {
+  return sum(arr) / arr.length;
+}
+
 export function cumsum<T extends Vector>(a: T): T {
   // if (a instanceof nj.NdArray)
   const arr = a.slice() as T;
@@ -73,6 +77,40 @@ export function cumsum<T extends Vector>(a: T): T {
     arr[i] += arr[i - 1];
   }
   return arr;
+}
+
+export function stack<T extends Vector>(arrs: T[]): T[] {
+  const ret = arrs.map((arr: T) => arr.slice() as T);
+  for (let i = 1; i < ret.length; i++) {
+    add(ret[i], ret[i - 1], false);
+  }
+  return ret;
+}
+
+export function sumVec<T extends Vector>(arrs: T[]): T {
+  let _sum: T = arrs[0].slice() as T;
+  for (let i = 1; i < arrs.length; ++i) {
+    add(_sum, arrs[i], false);
+  }
+  return _sum;
+}
+
+export function argMax<T extends Vector>(arr: T): number {
+  if (arr.length === 0) return -1;
+  let maxIdx = 0;
+  for (let i = 1; i < arr.length; i++) {
+    if (arr[maxIdx] < arr[i] ) maxIdx = i;
+  }
+  return maxIdx;
+}
+
+export function argMin<T extends Vector>(arr: T): number {
+  if (arr.length === 0) return -1;
+  let minIdx = 0;
+  for (let i = 1; i < arr.length; i++) {
+    if (arr[i] < arr[minIdx]) minIdx = i;
+  }
+  return minIdx;
 }
 
 // export function 

@@ -11,6 +11,8 @@ import {
   InternalNode
 } from '../models';
 
+import { sum } from './num';
+
 export function countFeatureFreq(model: ModelBase, nFeatures: number): (number | undefined)[] {
 
   const counts = new Array(nFeatures);
@@ -85,14 +87,6 @@ export function condition2String(
     tspan: featureMap(abrString),
     title: featureMap(featureName)
   };
-}
-
-export function sum(arr: Array<number>) {
-  let _sum = 0;
-  for (let e of arr) {
-    _sum += e;
-  }
-  return _sum;
 }
 
 export function collapseInit(root: TreeNode, threshold: number = 0.2) {

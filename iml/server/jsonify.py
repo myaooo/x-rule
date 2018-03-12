@@ -1,6 +1,6 @@
 from math import inf
 from typing import List
-from functools import lru_cache
+from functools import lru_cache, reduce
 
 import numpy as np
 # import flask
@@ -47,8 +47,12 @@ def rl2json(rl: SBRL) -> dict:
                     'category': category
                 } for feature, category in zip(rule.feature_indices, rule.categories)],
                 'output': rule.output,
+                'support': supports[i],
+                'totalSupport': np.sum(supports[i]),
+                'label': int(np.argmax(rule.output)),
+                'idx': i
                 # 'support': rule.support.tolist()
-              } for rule in rl.rule_list],
+              } for i, rule in enumerate(rl.rule_list)],
         'supports': supports
         # 'discretizers': discretizer2json(rl.discretizer),
         # 'activation': rl.activation,
@@ -71,24 +75,6 @@ def discretizer2json(discretizer: MDLP, data=None) -> List[dict]:
         intervals = [[None if low == -inf else low, None if high == inf else high]
                      for low, high in discretizer.cat2intervals(cats, i)]
         category_intervals[i] = intervals
-    # category_ratios = [None] * len(cut_points)
-    # if data is not None:
-    #     continuous = set(discretizer.continuous_features)
-    #     for idx in range(data.shape[1]):
-    #         col = data[:, idx]
-    #         if idx in continuous:
-    #             cats = discretizer.cts2cat(col, idx)
-    #             unique_cats, _counts = np.unique(cats, return_counts=True)
-    #             n_cats = len(discretizer.cut_points_) + 1
-    #         else:
-    #             unique_cats, _counts = np.unique(col, return_counts=True)
-    #             unique_cats = unique_cats.astype(np.int)
-    #             n_cats = int(np.max(unique_cats)) + 1
-    #         n_cats = max(np.max(unique_cats) + 1, n_cats)
-    #         counts = np.zeros(shape=(n_cats,))
-    #         counts[unique_cats] = _counts
-    #         # sorted_idx = np.argsort(unique_cats)
-    #         category_ratios[idx] = (counts / len(col)).tolist()
 
     return [{
         'cutPoints': cut_points[i],
@@ -133,9 +119,6 @@ def model2json(model_name):
     data_name = get_model_data(model_name)
     if isinstance(model, SBRL):
         ret_dict = rl2json(model)
-        # train_x = get_dataset(data_name, split=True, verbose=0)['train_x']
-        # discretizer = discretizer2json(model.discretizer, train_x)
-        # ret_dict['discretizers'] = discretizer
     elif isinstance(model, NeuralNet):
         ret_dict = nn2json(model)
     elif isinstance(model, Tree):
@@ -146,62 +129,62 @@ def model2json(model_name):
         ret_dict.update(surrogate2json(model))
     ret_dict['dataset'] = data_name
     ret_dict['name'] = model.name
+    ret_dict['meta'] = model_meta(model_name)
     return jsonify(ret_dict)
     # ret_dict['featureNames'] = data['feature_names']
     # ret_dict['labelNames'] = data['target_names']
+
+
+@lru_cache(32)
+def model_meta(model_name):
+
+    data_name = get_model_data(model_name)
+    try:
+        data = get_dataset(data_name, split=True, verbose=0, discrete=True)
+    except LookupError:
+        print("Cannot find data with name {}".format(data_name))
+        return None
+    discretizer = data['discretizer']
+    ranges = None if 'ranges' not in data else data['ranges']
+    categories = None if 'categories' not in data else data['categories']
+    is_categorical = data['is_categorical']
+
+    ret = {
+        'featureNames': data['feature_names'],
+        'labelNames': data['target_names'],
+        'isCategorical': is_categorical,
+        'categories': categories,
+        # 'continuous': [True] * x.shape[1],
+        'ranges': ranges,
+        'discretizers': discretizer2json(discretizer),
+    }
+    return ret
 
 
 def data2histogram(data, n_bins: int = 20, ranges=None):
     hists = []
     for i, col in enumerate(data.T):
         counts, bin_edges = np.histogram(col, n_bins, range=None if ranges is None else ranges[i])
-        bin_size = bin_edges[1] - bin_edges[0]
-        bin_centers = [edge + bin_size / 2 for edge in bin_edges.tolist()[:-1]]
-        hists.append({'counts': counts, 'centers': bin_centers})
+        # bin_size = bin_edges[1] - bin_edges[0]
+        # bin_centers = [edge + bin_size / 2 for edge in bin_edges.tolist()[:-1]]
+        hists.append(counts)
     return hists
 
 
-# @lru_cache(32)
-# def data2json(data_name, data_type='train', bins=None):
-#     try:
-#         data = get_dataset(data_name, split=True, verbose=0, discrete=True)
-#     except LookupError:
-#         return None
-#     if data_type == 'train' or data_type == 'test':
-#         x = data[data_type + '_x']
-#         y = data[data_type + '_y']
-#     # elif data_type == 'sampleTrain' or data_type == 'sampleTest':
-#     #     pass
-#     else:
-#         raise ValueError("Unkown data_type")
-#     if bins is None:
-#         bins = 15
-#
-#     ranges = None if 'ranges' not in data else data['ranges']
-#     hists = data2histogram(x, bins, ranges)
-#     is_categorical = data['is_categorical']
-#     ret = {
-#         'data': x.tolist(),
-#         'target': y.tolist(),
-#         'featureNames': data['feature_names'],
-#         'labelNames': data['target_names'],
-#         'isCategorical': is_categorical.tolist() if isinstance(is_categorical, np.ndarray) else is_categorical,
-#         # 'continuous': [True] * x.shape[1],
-#         'hists': hists,
-#         'name': data_type,
-#         'ranges': data['ranges'].tolist(),
-#         'discretizers': discretizer2json(data['discretizer'], x)
-#     }
-#
-#     if 'categories' in data:
-#         categories = data['categories']
-#         ret['categories'] = categories.tolist() if isinstance(categories, np.ndarray) else categories
-#     return jsonify(ret)
-
-
 @lru_cache(32)
-def model_data2json(model_name, data_type='train', bins=None):
+def model_data(model_name, data_type='train', bins=20, filters=None):
+    x, y = get_model_x_y(model_name, data_type, filters)
+
+    ret = construct_data(model_name, x, y, bins)
+    ret.update({
+        'name': data_type,
+    })
+    return ret
+
+
+def get_model_x_y(model_name, data_type='train', filters=None):
     data_name = get_model_data(model_name)
+    model = get_model(model_name)
     try:
         data = get_dataset(data_name, split=True, verbose=0, discrete=True)
     except LookupError:
@@ -211,7 +194,6 @@ def model_data2json(model_name, data_type='train', bins=None):
         x = data[data_type + '_x']
         y = data[data_type + '_y']
     elif data_type == 'sample train' or 'sample test':
-        model = get_model(model_name)
         if isinstance(model, SurrogateMixin):
             x = model.load_cache(data_type == 'sample train')
             y = model.target.predict(x).astype(np.int)
@@ -219,27 +201,71 @@ def model_data2json(model_name, data_type='train', bins=None):
             raise ValueError("Model {} is not a surrogate, cannot load data with type {}".format(model_name, data_type))
     else:
         raise ValueError("Unkown data_type {}".format(data_type))
-    if bins is None:
-        bins = 15
+    return filter_data(data['is_categorical'], x, y, filters)
 
-    ranges = None if 'ranges' not in data else data['ranges']
-    categories = None if 'categories' not in data else data['categories']
+
+def construct_data(model_name, x, y, bins=20):
+    model = get_model(model_name)
+    data_name = get_model_data(model_name)
+    try:
+        data = get_dataset(data_name, split=True, verbose=0, discrete=True)
+    except LookupError:
+        print("Cannot find data with name {}".format(data_name))
+        return None
+    ranges = data['ranges']
+    categories = data['categories']
     discretizer = data['discretizer']
     hists = data2histogram(x, bins, ranges)
-    is_categorical = data['is_categorical']
+    confidence = model.fidelity(x)
+    score = model.score(y, model.predict(x))
     ret = {
         'data': x,
         'target': y,
-        'featureNames': data['feature_names'],
-        'labelNames': data['target_names'],
-        'isCategorical': is_categorical,
-        'categories': categories,
+        # 'featureNames': data['feature_names'],
+        # 'labelNames': data['target_names'],
+        # 'isCategorical': is_categorical,
+        # 'categories': categories,
         # 'continuous': [True] * x.shape[1],
         'hists': hists,
-        'name': data_type,
-        'ranges': ranges,
+        # 'ranges': ranges,
         'ratios': get_category_ratios(x, discretizer, categories),
-        'discretizers': discretizer2json(discretizer, x)
+        # 'discretizers': discretizer2json(discretizer, x),
+        'confidence': confidence,
+        'score': score
     }
+    return ret
 
-    return jsonify(ret)
+
+def filter_data(is_categorical, x, y, query=None):
+    if query is None:
+        return x, y
+
+    assert len(x) == len(y)
+    satisfied = []
+    for i, _filter in enumerate(query):
+        if _filter is None:
+            continue
+        assert isinstance(_filter, list)
+        if i == len(is_categorical):
+            category = True
+            col = y
+        else:
+            col = x[:, i]
+            category = is_categorical[i]
+
+        if category:
+            sats = [col == c for c in _filter]
+            satisfied += [reduce(np.logical_or, sats)]
+        else:
+            low = _filter[0] if _filter[0] is not None else -inf
+            high = _filter[1] if _filter[1] is not None else inf
+            satisfied += [np.logical_and(low < col, col < high)]
+
+    selected = reduce(np.logical_and, satisfied, np.ones((len(y),), dtype=np.bool))
+    return x[selected], y[selected]
+
+
+@lru_cache(32)
+def model_data2json(model_name, data_type='train', bins=20, filters=None):
+    return jsonify(model_data(model_name, data_type, bins, filters))
+

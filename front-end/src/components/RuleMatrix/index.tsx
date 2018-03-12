@@ -1,14 +1,15 @@
 import * as React from 'react';
 import { NodeGroup } from 'react-move';
 
-import { RuleModel, Rule, Condition, DataSet, Streams, ConditionalStreams, isConditionalStreams } from '../../models';
+import { RuleList, Rule, Condition, DataSet, Streams, ConditionalStreams, isConditionalStreams } from '../../models';
 import * as nt from '../../service/num';
 import TextGroup from '../SVGComponents/TextGroup';
 import VerticalFlow from '../SVGComponents/VerticalFlow';
 import RuleRow from './RuleRow';
+import RowOutput from './RowOutput';
 
 import './index.css';
-// import { defaultDuration } from '../Painters/Painter';
+import { labelColor as defaultLabelColor, ColorType } from '../Painters/Painter';
 
 class RuleMatrixNodeGroup extends NodeGroup<number, {y?: number, height?: number}> {}
 
@@ -18,10 +19,11 @@ interface RuleMatrixPropsOptional {
   intervalY: number;
   intervalX: number;
   width: number;
+  labelColor: ColorType;
 }
 
 export interface RuleMatrixProps extends Partial<RuleMatrixPropsOptional> {
-  model: RuleModel;
+  model: RuleList;
   datasets: DataSet[];
   streams?: Streams | ConditionalStreams;
 }
@@ -43,6 +45,7 @@ export default class RuleMatrix extends React.Component<RuleMatrixProps, RuleMat
     intervalY: 10,
     intervalX: 0.2,
     width: 60,
+    labelColor: defaultLabelColor,
   };
   private stateUpdated: boolean;
 
@@ -134,14 +137,14 @@ export default class RuleMatrix extends React.Component<RuleMatrixProps, RuleMat
       state = {features: RuleMatrix.computeExistingFeatures(nextProps.model.rules)};
       state = {...state, ...(RuleMatrix.computePos(nextProps, this.state))};
       // console.log("Change state due to model change"); //tslint:disable-line
-      this.setState(state);
       this.stateUpdated = true;
+      this.setState(state);
       return;
     }
     if (nextProps.size && nextProps.size !== this.props.size) {
       // console.log("Change state due to size change"); //tslint:disable-line
-      this.setState(RuleMatrix.computePos(nextProps, this.state));
       this.stateUpdated = true;
+      this.setState(RuleMatrix.computePos(nextProps, this.state));
     }
   }
 
@@ -162,7 +165,8 @@ export default class RuleMatrix extends React.Component<RuleMatrixProps, RuleMat
   }
 
   render() {
-    const {model, datasets, transform, width, size, streams} = this.props as RuleMatrixPropsOptional & RuleMatrixProps;
+    const {model, datasets, transform, width, size, streams, labelColor} 
+      = this.props as RuleMatrixPropsOptional & RuleMatrixProps;
     // console.log(rules); // tslint:disable-line
     const getStreams = streams 
       ? (isConditionalStreams(streams) ? ((i: number) => streams[i]) : () => streams) 
@@ -181,15 +185,16 @@ export default class RuleMatrix extends React.Component<RuleMatrixProps, RuleMat
     const textXs = xs.map((x, i) => x += widths[i] / 2);
     const midYs = ys.map((y, i) => y + heights[i] / 2);
     const x0 = 150;
-    const flowDx = 50;
+    const flowDx = Math.max(50, size + 10);
+    const outputX = xs[xs.length - 1] + widths[widths.length - 1] + 10;
     // console.log(xs); // tslint:disable-line
     // const getStreams = streams
     return (
       <g transform={transform}>
         <TextGroup
-          texts={selectedFeatureNames}
-          xs={textXs}
-          rotate={-50}
+          texts={[...selectedFeatureNames, 'Confidence']}
+          xs={[...textXs, xs[xs.length - 1] + widths[xs.length - 1] + 30]}
+          rotate={-45}
           transform={`translate(${x0}, 75)`}
         />
         <RuleMatrixNodeGroup 
@@ -208,21 +213,30 @@ export default class RuleMatrix extends React.Component<RuleMatrixProps, RuleMat
                 const i = Number(key);
                 // console.log(rules[i]);  // tslint:disable-line
                 return (
-                  <RuleRow 
-                    key={key} 
-                    rule={rules[i]} 
-                    dataset={datasets[0]}
-                    supports={model.supports[i]}
-                    features={features}
-                    activeFeatures={activeFeatures}
-                    feature2Idx={feature2Idx}
-                    xs={xs}
-                    streams={getStreams && getStreams(i)}
-                    widths={widths} 
-                    height={heights[i]}
-                    transform={`translate(0, ${y})`}
-                    onClick={(f) => this.handleClick(Number(key), f)}
-                  />
+                  <g key={key} transform={`translate(0, ${y})`}>
+                    <RuleRow 
+                      rule={rules[i]} 
+                      dataset={datasets[0]}
+                      supports={model.supports[i]}
+                      features={features}
+                      activeFeatures={activeFeatures}
+                      feature2Idx={feature2Idx}
+                      xs={xs}
+                      streams={getStreams && getStreams(i)}
+                      widths={widths} 
+                      height={heights[i]}
+                      onClick={(f) => this.handleClick(Number(key), f)}
+                    />
+                    <RowOutput
+                      outputs={rules[i].output}
+                      supports={model.useSupportMat ? model.supportMats[i] : model.supports[i]}
+                      height={heights[i]}
+                      supportWidth={500}
+                      transform={`translate(${outputX}, 0)`}
+                      color={labelColor}
+                      className="matrix-outputs"
+                    />
+                  </g>
                 );
               })}
             </g>

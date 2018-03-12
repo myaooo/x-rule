@@ -62,10 +62,12 @@ export const initRuleStyles: RuleStyles = {
 
 export interface Settings {
   conditional: boolean;
+  supportMat: boolean;
 }
 
 export const initialSettings: Settings = {
   conditional: false,
+  supportMat: false,
 };
 
 export const initialStreamBaseState: StreamBaseState = {};

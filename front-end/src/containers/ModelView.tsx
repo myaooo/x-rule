@@ -19,6 +19,7 @@ import RuleList from '../containers/RuleList';
 import FeatureList from '../containers/FeatureList';
 import Legend from '../components/Legend';
 import { getStreams } from '../store/selectors';
+import { Patterns } from '../components/patterns';
 
 export interface ModelViewStateProp {
   model: RuleModel | ModelBase | null;
@@ -65,6 +66,11 @@ class ModelView extends React.Component<ModelViewProp, any> {
     const { loadModel, modelName } = this.props;
     loadModel(modelName);
   }
+  componentWillReceiveProps(nextProps: ModelViewProp) {
+    const { loadModel, modelName } = nextProps;
+    if (modelName !== this.props.modelName)
+      loadModel(modelName);
+  }
   // componentDidUpdate() {
   //   const { width, height } = {width: 960, height: 720};
   //   d3.select(this.svgRef).attr('width', width).attr('height', height);
@@ -93,6 +99,7 @@ class ModelView extends React.Component<ModelViewProp, any> {
     return (
       <Card>
         <svg ref={(ref: SVGSVGElement) => this.svgRef = ref} width={width} height={height}>
+        <Patterns />
           <FeatureList 
               width={featureWidth} 
               featureNames={featureNames} 

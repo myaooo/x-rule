@@ -11,7 +11,6 @@ export interface Discretizer {
   readonly intervals: [number | null, number | null][] | null;
   readonly min: number;
   readonly max: number;
-  readonly ratios: number[];
 }
 
 export interface Histogram {
@@ -26,9 +25,10 @@ export interface PlainData {
   labelNames: string[];
   isCategorical: boolean[];
   hists: Histogram[];
-  name: 'train' | 'test';
+  name: DataTypeX;
   ranges: [number, number][];
-  categories?: (string[] | null)[];
+  categories: (string[] | null)[];
+  ratios: number[][];
   readonly discretizers: Discretizer[];
 }
 
@@ -58,14 +58,17 @@ export class DataSet {
   public featureNames: string[];
   public labelNames: string[];
   public hists: Histogram[];
-  public name: DataType;
+  public name: DataTypeX;
+  public ratios: number[][];
   public ranges: [number, number][];
-  public categories?: (string[] | null)[];
+  public categories: (string[] | null)[];
+  public isCategorical: boolean[];
   public discretizers: Discretizer[];
   public streams?: Streams;
   public conditionalStreams?: ConditionalStreams;
   constructor(raw: PlainData) {
-    const { data, target, featureNames, labelNames, hists, name, ranges, categories, discretizers } = raw;
+    const { data, target, featureNames, labelNames, hists, name, ranges } = raw;
+    const { categories, discretizers, ratios, isCategorical } = raw;
     this.data = data.map((d: number[]) => new Float32Array(d));
     this.target = new Int32Array(target);
     this.featureNames = featureNames;
@@ -74,7 +77,9 @@ export class DataSet {
     this.name = name;
     this.ranges = ranges;
     this.categories = categories;
+    this.ratios = ratios;
     this.discretizers = discretizers;
+    this.isCategorical = isCategorical;
     // this.categorical = categorical;
   }
   public categoryInterval(f: number, c: number): [number | null, number | null] {
@@ -118,4 +123,14 @@ export class Matrix {
     this.data = new Float32Array(size1 * size2);
   }
   // get_column()
+}
+
+export type Support = number[][];
+
+export type SupportMat = number[][][];
+
+export type SupportType = Support | SupportMat;
+
+export function isSupportMat(support: SupportType): support is SupportMat {
+  return Array.isArray(support[0][0]);
 }

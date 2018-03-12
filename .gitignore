@@ -4,6 +4,7 @@ datasets
 models
 !iml/models
 !front-end/**/models
+vendors/pyfim
 tmp
 notebooks/
 py-discretize/

@@ -12,6 +12,7 @@ export interface RectGroupProps {
   fill?: (i: number) => string;
   transform?: string;
   className?: string;
+  animation?: boolean;
 }
 
 export interface RectGroupState {
@@ -24,32 +25,39 @@ export default class RectGroup extends React.PureComponent<RectGroupProps, RectG
   }
 
   render() {
-    const {xs, ys, widths, heights, fill, ...rest} = this.props;
-
-    const getTargetState = ys 
-      ? (d: any, i: number) => ({y: ys[i], width: [widths[i]], height: [heights[i]]})
-      : (d: any, i: number) => ({width: [widths[i]], height: [heights[i]]});
+    const { animation, xs, ys, widths, heights, fill, ...rest} = this.props;
+    if (animation) {
+      const getTargetState = ys 
+        ? (d: any, i: number) => ({y: ys[i], width: [widths[i]], height: [heights[i]]})
+        : (d: any, i: number) => ({width: [widths[i]], height: [heights[i]]});
+      return (
+          <RectNodeGroup 
+            data={xs} 
+            keyAccessor={(d, i) => i.toString()}
+            start={(d, i) => ({width: 0, height: 0})}
+            enter={getTargetState}
+            update={getTargetState}
+            leave={(d, i) => ({width: [0], height: [0]})}
+          >
+            {(nodes) => (
+              <g {...rest}>
+                {nodes.map(({key, data, state}) => {
+                  // const { x, y, height, width } = state;
+                  const i = Number(key);
+                  return (
+                    <rect key={key} x={xs[i]} fill={fill && fill(Number(key))} {...state}/>
+                  );
+                })}
+              </g>
+            )}
+          </RectNodeGroup>
+      );
+    }
     return (
-        <RectNodeGroup 
-          data={xs} 
-          keyAccessor={(d, i) => i.toString()}
-          start={(d, i) => ({width: 0, height: 0})}
-          enter={getTargetState}
-          update={getTargetState}
-          leave={(d, i) => ({width: [0], height: [0]})}
-        >
-          {(nodes) => (
-            <g {...rest}>
-              {nodes.map(({key, data, state}) => {
-                // const { x, y, height, width } = state;
-                const i = Number(key);
-                return (
-                  <rect key={key} x={xs[i]} fill={fill && fill(Number(key))} {...state}/>
-                );
-              })}
-            </g>
-          )}
-        </RectNodeGroup>
-    );
+      <g {...rest}> 
+        {xs.map((x, i: number) => (
+          <rect key={i} x={xs[i]} y={ys ? ys[i] : 0} width={widths[i]} height={heights[i]} fill={fill && fill(i)}/>
+        ))}
+      </g>);
   }
 }

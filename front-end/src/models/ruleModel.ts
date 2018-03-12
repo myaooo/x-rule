@@ -1,4 +1,4 @@
-import { ModelBase } from './index';
+import { ModelBase, SupportType, isSupportMat } from './index';
 
 // Rule Model
 
@@ -18,6 +18,8 @@ export interface RuleModel extends ModelBase {
   readonly type: 'rule';
   readonly rules: Rule[];
   readonly supports: number[][];
+  readonly supportMats: number[][][];
+  readonly useSupportMat: boolean;
   // readonly discretizers: Discretizer[];
 }
 
@@ -35,6 +37,9 @@ export class RuleList implements RuleModel {
   public readonly rules: Rule[];
   public readonly target?: string;
   public supports: number[][];
+  public supportMats: number[][][];
+  public useSupportMat: boolean;
+  // public fidelities: number[];
   // public readonly discretizers: Discretizer[];
   // public data?: DataSet;
 
@@ -46,17 +51,24 @@ export class RuleList implements RuleModel {
       this.rules = rules;
       this.name = name;
       this.supports = supports;
+      this.useSupportMat = false;
       // this.supports = rules.map((r: Rule) => r.support);
       // this.discretizers = discretizers;
       this.type = 'rule';
       if (target) this.target = target;
   }
 
-  public support(newSupport: number[][]): this {
+  public support(newSupport: SupportType): this {
       if (newSupport.length !== this.rules.length) {
           throw `Shape not match! newSupport has length ${newSupport.length}, but ${this.rules.length} is expected`;
       }
-      this.supports = newSupport;
+      if (isSupportMat(newSupport)) {
+        this.supportMats = newSupport;
+        this.useSupportMat = true;
+      } else {
+        this.supports = newSupport;
+        this.useSupportMat = false;
+      }
       // this.rules.forEach((r: Rule, i: number) => r.support = newSupport[i]);
       return this;
   }
