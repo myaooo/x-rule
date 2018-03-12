@@ -1,0 +1,10 @@
+.ant-table {
+    font-size: 12px !important;
+}
+
+.table-header {
+    /* display: block; */
+    /* white-space: normal; */
+    /* width: 100%; */
+    word-break: normal !important;
+}

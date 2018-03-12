@@ -1,0 +1,10 @@
+.v-reserves rect {
+  /* fill: none; */
+  fill-opacity: 0.6;
+}
+
+.v-flows path {
+  fill: none;
+  stroke-opacity: 0.6;
+  stroke-linejoin: round;
+}

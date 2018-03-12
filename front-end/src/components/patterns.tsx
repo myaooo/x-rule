@@ -16,8 +16,16 @@ export function Patterns (props: PatternsProps) {
           <rect width="1" height="3" transform="translate(0,0)" fill="white" />
         </pattern>
         <mask id="mask-stripe">
-          <rect x="0" y="0" width="100%" height="100%" fill="url(#pattern-stripe)" />
-        </mask>      
+          <rect 
+            x="0" 
+            y="0" 
+            width="100%" 
+            height="100%" 
+            fill="url(#pattern-stripe)" 
+            // stroke="white" 
+            // strokeWidth="4" 
+          />
+        </mask>
       </defs>
     );
 }

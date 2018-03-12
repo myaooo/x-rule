@@ -1,141 +1,225 @@
-// import * as nt from '../../service/num';
-// import { ColorType, Painter, labelColor, defaultDuration } from './index';
+import * as nt from '../../service/num';
+import { ColorType, Painter, labelColor, defaultDuration } from './index';
 
-// // type Point = {x: number, y: number};
-// // const originPoint = {x: 0, y: 0};
+import './FlowPainter.css';
 
-// // const curve = (s: Point = originPoint, t: Point = originPoint): string => {
-// //   let dy = t.y - s.y;
-// //   let dx = t.x - s.x;
-// //   const r = Math.min(Math.abs(dx), Math.abs(dy));
-// //   if (Math.abs(dx) > Math.abs(dy))
-// //     return `M${s.x},${s.y} A${r},${r} 0 0 0 ${s.x + r} ${t.y} H ${t.x}`;
-// //   else
-// //     return `M ${s.x},${s.y} V ${s.y - r} A${r},${r} 0 0 0 ${t.x} ${t.y} `;
-// // };
+type Point = {x: number, y: number};
+const originPoint = {x: 0, y: 0};
 
-// // const flowCurve = (d?: {s: Point, t: Point}): string => {
-// //   if (d) return curve(d.s, d.t);
-// //   return curve();
-// // };
+const curve = (s: Point = originPoint, t: Point = originPoint): string => {
+  let dy = t.y - s.y;
+  let dx = t.x - s.x;
+  const r = Math.min(Math.abs(dx), Math.abs(dy));
+  if (Math.abs(dx) > Math.abs(dy))
+    return `M${s.x},${s.y} A${r},${r} 0 0 0 ${s.x + r} ${t.y} H ${t.x}`;
+  else
+    return `M ${s.x},${s.y} V ${s.y - r} A${r},${r} 0 0 0 ${t.x} ${t.y} `;
+};
 
-// // function drawRects()
+const flowCurve = (d?: {s: Point, t: Point}): string => {
+  if (d) return curve(d.s, d.t);
+  return curve();
+};
 
-// interface FlowOptional {
-//   width: number;
-//   dx: number;
-//   dy: number;
-//   height: number;
-//   duration: number;
-//   color: ColorType;
-// }
+// function drawRects()
 
-// interface FlowPainterParams extends Partial<FlowOptional> {}
+interface FlowOptional {
+  width: number;
+  dx: number;
+  dy: number;
+  height: number;
+  duration: number;
+  color: ColorType;
+}
 
-// type Rect = {x: number, width: number, height: number};
+interface FlowPainterParams extends Partial<FlowOptional> {}
 
-// // type FlowData = { width: number; shift: number; height: number; y: number };
+type Rect = {x: number, width: number, height: number};
 
-// type Flow = {support: number[], y: number};
+type Path = {s: Point, t: Point, width: number};
 
-// export default class FlowPainter implements Painter<Flow[], FlowPainterParams> {
-//   public static defaultParams: FlowOptional = {
-//     width: 100,
-//     height: 50,
-//     duration: defaultDuration,
-//     dy: -30,
-//     dx: -40,
-//     color: labelColor
-//     // fontSize: 12,
-//     // multiplier: 1.0,
-//   };
-//   private params: FlowPainterParams & FlowOptional;
-//   private flows: Flow[];
-//   // private totalFlows: number[];
-//   private outFlows: number[];
-//   private reserves: Float32Array[];
-//   private reserveSums: Float32Array;
-//   public update(params: FlowPainterParams) {
-//     this.params = { ...FlowPainter.defaultParams, ...this.params, ...params };
-//     return this;
-//   }
-//   public data(flows: Flow[]) {
-//     this.flows = flows;
-//     this.outFlows = flows.map((r: Flow) => nt.sum(r.support));
+// type FlowData = { width: number; shift: number; height: number; y: number };
 
-//     let reserves: Float32Array[] = flows[0].support.map((_, i) => new Float32Array(flows.map(rule => rule.support[i])));
-//     this.reserves = reserves.map((reserve: Float32Array) => nt.cumsum(reserve.reverse()).reverse());
-//     this.reserveSums = new Float32Array(this.reserves[0].length);
-//     this.reserves.forEach((reserve: Float32Array) => nt.add(this.reserveSums, reserve, false));
-//     // console.log(this.reserves); // tslint:disable-line
-//     // console.log(this.reserveSums); // tslint:disable-line
-//     return this;
-//   }
-//   public render(selector: d3.Selection<SVGElement, any, any, any>): this {
-//     const {width} = this.params;
-//     // Make sure the root group exits
-//     selector
-//       .selectAll('g.flows')
-//       .data(['flows'])
-//       .enter()
-//       .append('g')
-//       .attr('class', 'flows');
-//     const rootGroup = selector.select<SVGGElement>('g.flows')
-//       .attr('transform', `translate(${-width}, 0)`);
+type Flow = {support: number[], y: number};
 
-//     // Render Rects
-//     this.renderRects(rootGroup);
-//     // // Join
-//     // const rule = selector.select('g.flows')
-//     //   .selectAll<SVGGElement, Flow>('g.flow')
-//     //   .data(this.flows);
+export default class FlowPainter implements Painter<Flow[], FlowPainterParams> {
+  public static defaultParams: FlowOptional = {
+    width: 100,
+    height: 50,
+    duration: defaultDuration,
+    dy: -30,
+    dx: -40,
+    color: labelColor
+    // fontSize: 12,
+    // multiplier: 1.0,
+  };
+  private params: FlowPainterParams & FlowOptional;
+  private flows: Flow[];
+  // private totalFlows: number[];
+  private flowSums: number[];
+  private reserves: number[][];
+  private reserveSums: number[];
+  public update(params: FlowPainterParams) {
+    this.params = { ...FlowPainter.defaultParams, ...this.params, ...params };
+    return this;
+  }
+  public data(flows: Flow[]) {
+    this.flows = flows;
+    const nClasses = flows[0].support.length;
+    this.flowSums = flows.map((r: Flow) => nt.sum(r.support));
+
+    let reserves: number[][] = 
+      Array.from({length: nClasses}, (_, i) => flows.map(flow => flow.support[i]));
+    reserves = reserves.map(reserve => nt.cumsum(reserve.reverse()).reverse());
+    this.reserveSums = new Array(flows.length).fill(0);
+    reserves.forEach(reserve => nt.add(this.reserveSums, reserve, false));
+
+    // const multiplier = width / reserveSums[0];
+    this.reserves = Array.from({length: flows.length}, (_, i) => reserves.map(reserve => reserve[i]));
+
+    // console.log(this.reserves); // tslint:disable-line
+    // console.log(this.reserveSums); // tslint:disable-line
+    return this;
+  }
+  public render(selector: d3.Selection<SVGGElement, any, any, any>): this {
+    // const {width} = this.params;
+    // Make sure the root group exits
+    // selector
+    //   .selectAll('g.flows')
+    //   .data(['flows'])
+    //   .enter()
+    //   .append('g')
+    //   .attr('class', 'flows');
+    // const rootGroup = selector.select<SVGGElement>('g.flows')
+    //   .attr('transform', `translate(${-width}, 0)`);
+
+    // Render Rects
+    this.renderRects(selector);
+
+    // Render Flows
+    this.renderFlows(selector);
     
-//     return this;
-//   }
+    return this;
+  }
 
-//   public renderRects(root: d3.Selection<SVGGElement, any, any, any>): this {
-//     const {duration, height, width, dy} = this.params;
-//     const {flows, reserves, reserveSums} = this;
-//     // Compute pos
-//     const heights = flows.map((f, i) => i > 0 ? f.y - flows[i - 1].y : height);
-//     const multiplier = width / reserveSums[0];
+  public renderRects(root: d3.Selection<SVGGElement, any, any, any>): this {
+    const {duration, height, width, dy, color} = this.params;
+    const {flows, reserves, reserveSums} = this;
+    // Compute pos
+    const heights = flows.map((f, i) => i > 0 ? f.y - flows[i - 1].y : height);
+    const multiplier = width / reserveSums[0];
 
-//     // JOIN
-//     const reserve = root.selectAll('v-reserve').data(flows);
+    // JOIN
+    const reserve = root.selectAll('g.v-reserves').data(flows);
 
-//     // ENTER
-//     const reserveEnter = reserve.enter().append('g').attr('class', 'v-reserve');
+    // ENTER
+    const reserveEnter = reserve.enter().append('g').attr('class', 'v-reserves');
 
-//     // UPDATE
-//     const reserveUpdate = reserveEnter.merge(reserve);
-//     // Transition groups
-//     reserveUpdate.transition().duration(duration)
-//       .attr('transform', (d: Flow, i: number) => `translate(0,${d.y - heights[i] - dy})`);
+    // UPDATE
+    const reserveUpdate = reserveEnter.merge(reserve);
+    // Transition groups
+    reserveUpdate.transition().duration(duration)
+      .attr('transform', (d: Flow, i: number) => `translate(0,${d.y - heights[i] - dy})`);
+
+    // EXIT
+    reserve.exit().transition().duration(duration)
+      .attr('transform', 'translate(0,0)').remove();
     
-//     const rects = reserveUpdate.selectAll('rect')
-//       .data<Rect>((d: Flow, i: number) => {
-//         const widths = reserves[i].map((r) => r * multiplier);
-//         const xs = [0, ...(nt.cumsum(widths.slice(0, -1)))];
-//         return d.support.map((s: number, j: number) => {
-//           return {
-//             width: widths[j], height: heights[i], x: xs[j]
-//           };
-//         });
-//       });
+    // *RECTS START*
+    // JOIN RECT DATA
+    // console.warn(reserves);
+    const rects = reserveUpdate.selectAll('rect')
+      .data<Rect>((d: Flow, i: number) => {
+        const widths = reserves[i].map((r) => r * multiplier);
+        const xs = [0, ...(nt.cumsum(widths.slice(0, -1)))];
+        return d.support.map((s: number, j: number) => {
+          return {
+            width: widths[j], height: heights[i], x: xs[j]
+          };
+        });
+      });
     
-//     // RECT ENtER
-//     const rectsEnter = rects.enter().append('rect');
+    // RECT ENTER
+    const rectsEnter = rects.enter()
+      .append('rect')
+      .attr('width', d => d.width)
+      .style('fill', (d, i) => color(i));
       
-//     // RECT UPDATE
-//     const rectsUpdate = rectsEnter.merge(rects);
-//     rectsUpdate.transition().duration(duration)
-//       .attr('width', d => d.width).attr('height', d => d.height);
+    // RECT UPDATE
+    const rectsUpdate = rectsEnter.merge(rects);
+    rectsUpdate.transition().duration(duration)
+      .attr('width', d => d.width).attr('height', d => d.height).attr('x', d => d.x);
+    
+    // RECT EXIT
+    rects.exit().transition().duration(duration)
+      .attr('height', 1e-6).remove();
+    // *RECTS END*
 
-//     return this;
-//   }
+    return this;
+  }
 
-//   // private updatePos() {
-//   //   const {outFlows, reserves, reserveSums} = this;
-//   //   // const heights = ys.map
-//   // }
-// }
+  public renderFlows(root: d3.Selection<SVGGElement, any, any, any>): this {
+    const {duration, width, dy, dx, color} = this.params;
+    const {flows, reserves, reserveSums, flowSums} = this;
+    // Compute pos
+    // const heights = flows.map((f, i) => i > 0 ? f.y - flows[i - 1].y : height);
+    const multiplier = width / reserveSums[0];
+
+    // JOIN
+    const flow = root.selectAll('g.v-flows').data(flows);
+
+    // ENTER
+    const flowEnter = flow.enter().append('g').attr('class', 'v-flows');
+
+    // UPDATE
+    const flowUpdate = flowEnter.merge(flow);
+    // Transition groups
+    flowUpdate.transition().duration(duration)
+      .attr('transform', (d: Flow, i: number) => `translate(0,${d.y})`);
+
+    // EXIT
+    flow.exit().transition().duration(duration)
+      .attr('transform', 'translate(0,0)').remove();
+    
+    // *PATHS START*
+    // JOIN PATH DATA
+    const paths = flowUpdate.selectAll('path')
+      .data<Path>((d: Flow, i: number) => {
+        let x0 = ((i === reserves.length - 1) ? 0 : reserveSums[i + 1]) * multiplier;
+        let y1 = flowSums[i] * multiplier / 2;
+        return flows[i].support.map((f: number) => {
+          const pathWidth = f * multiplier;
+          const s = {x: x0 + pathWidth / 2, y: -dy};
+          const t = {x: dx + width, y: y1 - pathWidth / 2};
+          x0 += pathWidth;
+          y1 -= pathWidth;
+          return {s, t, width: pathWidth};
+        });
+      });
+    
+    // PATH ENTER
+    const pathsEnter = paths.enter()
+      .append('path')
+      .attr('d', flowCurve())
+      .style('stroke', (d, i) => color(i))
+      .style('stroke-width', 1e-6);
+      
+    // PATH UPDATE
+    const pathsUpdate = pathsEnter.merge(paths);
+    pathsUpdate.transition().duration(duration)
+      .attr('d', flowCurve)
+      .style('stroke-width', d => d.width);
+    
+    // PATH EXIT
+    paths.exit().transition().duration(duration)
+      .attr('d', flowCurve()).style('stroke-width', 1e-6)
+      .remove();
+    // *PATHS END*
+
+    return this;
+  }
+  // private updatePos() {
+  //   const {outFlows, reserves, reserveSums} = this;
+  //   // const heights = ys.map
+  // }
+}

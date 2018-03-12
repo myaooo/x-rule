@@ -34,7 +34,7 @@ export interface SideBarState {
   activeKey: string | string[];
 }
 
-const defaultActiveKey = ['1', '2', '3'];
+const defaultActiveKey = ['1', '2', '3', '4'];
 
 class SideBar extends React.Component<SideBarProps, SideBarState> {
   constructor(props: SideBarProps) {

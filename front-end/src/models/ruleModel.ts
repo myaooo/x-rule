@@ -1,17 +1,35 @@
+import * as d3 from 'd3';
+import * as nt from '../service/num';
 import { ModelBase, SupportType, isSupportMat } from './index';
+import { BaseModel } from './base';
 
 // Rule Model
 
 export interface Condition {
   readonly feature: number;
   readonly category: number;
+  rank?: number;
   // readonly support: number;
 }
 
 export interface Rule {
   readonly conditions: Condition[];
   readonly output: number[];
-  // support: number[];
+  readonly label: number;
+  readonly idx: number;
+  support: number[] | number[][];
+  _support: number[];
+  totalSupport: number;
+  parent?: RuleGroup;
+  // _support: number;  // the origin number of support obtained during training
+}
+
+export interface RuleGroup extends Rule {
+  readonly rules: Rule[];
+}
+
+export function isRuleGroup(rule: Rule | RuleGroup): rule is RuleGroup {
+  return (<RuleGroup> rule).rules !== undefined;
 }
 
 export interface RuleModel extends ModelBase {
@@ -27,52 +45,83 @@ export function isRuleModel(model: ModelBase): model is RuleModel {
   return model.type === 'rule';
 }
 
-export class RuleList implements RuleModel {
-  // public static readonly type: 'rule';
-  public readonly name: string;
+export class RuleList extends BaseModel implements RuleModel {
   public readonly type: 'rule';
-  public readonly dataset: string;
-  public readonly nFeatures: number;
-  public readonly nClasses: number;
   public readonly rules: Rule[];
   public readonly target?: string;
   public supports: number[][];
   public supportMats: number[][][];
   public useSupportMat: boolean;
-  // public fidelities: number[];
-  // public readonly discretizers: Discretizer[];
-  // public data?: DataSet;
+  public maxSupport: number;
 
   constructor(raw: RuleModel) {
-      const {dataset, nFeatures, nClasses, rules, target, name, supports} = raw;
-      this.dataset = dataset;
-      this.nFeatures = nFeatures;
-      this.nClasses = nClasses;
-      this.rules = rules;
-      this.name = name;
-      this.supports = supports;
-      this.useSupportMat = false;
-      // this.supports = rules.map((r: Rule) => r.support);
-      // this.discretizers = discretizers;
-      this.type = 'rule';
-      if (target) this.target = target;
+    super(raw);
+    const { rules, target, supports } = raw;
+    this.rules = rules;
+    this.supports = supports;
+    this.rules.forEach((r, i) => {
+      r._support = nt.isMat(r.support) ? nt.sumVec(r.support) : r.support;
+    });
+    this.maxSupport = d3.max(supports, nt.sum) || 0.1;
+    // this.minSupport = 0.01;
+    this.useSupportMat = false;
+    this.type = 'rule';
+    if (target) this.target = target;
   }
 
   public support(newSupport: SupportType): this {
-      if (newSupport.length !== this.rules.length) {
-          throw `Shape not match! newSupport has length ${newSupport.length}, but ${this.rules.length} is expected`;
-      }
-      if (isSupportMat(newSupport)) {
-        this.supportMats = newSupport;
-        this.useSupportMat = true;
-      } else {
-        this.supports = newSupport;
-        this.useSupportMat = false;
-      }
-      // this.rules.forEach((r: Rule, i: number) => r.support = newSupport[i]);
-      return this;
+    if (newSupport.length !== this.rules.length) {
+      throw `Shape not match! newSupport has length ${newSupport.length}, but ${this.rules.length} is expected`;
+    }
+    if (isSupportMat(newSupport)) {
+      this.supportMats = newSupport;
+      this.rules.forEach((r, i) => (r.support = newSupport[i]));
+      this.useSupportMat = true;
+      this.maxSupport = d3.max(newSupport, mat => nt.sum(nt.sumVec(mat))) || 0.1;
+    } else {
+      this.supports = newSupport;
+      this.useSupportMat = false;
+      this.maxSupport = d3.max(newSupport, nt.sum) || 0.1;
+    }
+    this.rules.forEach((r, i) => {
+      const support = newSupport[i];
+      r.support = support;
+      if (nt.isMat(support)) r._support = nt.sumVec(support);
+      else r._support = support;
+      r.totalSupport = nt.sum(r._support);
+    });
+    // this._minSupport = 0;
+    // this.rules.forEach((r: Rule, i: number) => r.support = newSupport[i]);
+    return this;
   }
-  // public bindData(data: DataSet) {
-  //     this.data = data;
+
+  public getSupport(): number[][] {
+    return this.supports;
+    // if (this._minSupport !== this.minSupport)
+    //   this.computeGroups();
+    // return this.groupedSupports;
+  }
+
+  public getSupportOrSupportMat(): number[][] | number[][][] {
+    // if (this._minSupport !== this.minSupport)
+    //   this.computeGroups();
+    if (this.useSupportMat) return this.supportMats;
+    return this.supports;
+  }
+
+  // public setMinSupport(minSupport: number): this {
+  //   this.minSupport = minSupport;
+  //   return this;
   // }
+
+  public getRules(): Rule[] {
+    return this.rules;
+  }
+  // public getRules(): Rule[] {
+  //   if (!this.groupedRules || this._minSupport !== this.minSupport) {
+  //     this.computeGroups();
+  //   }
+  //   return this.groupedRules;
+  // }
+
 }

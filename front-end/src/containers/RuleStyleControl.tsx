@@ -28,34 +28,48 @@ class RuleStyleControl extends React.Component<RuleStyleControlProps, any> {
   render() {
     const {changeStyles} = this.props;
     return (
-      <div style={{ paddingLeft: 12 }}>
+      <div style={{ paddingLeft: 12, fontSize: 12 }}>
 
          <Row>
           <Col span={10}>
-            <span>Width: </span>
+            <span>Flow Width: </span>
           </Col>
           <Col span={14}>
             <Slider 
               min={5}
               max={100}
-              value={this.props.styles.width}
+              value={this.props.styles.flowWidth}
               step={1}
-              onChange={(width: number) => changeStyles({width})}
+              onChange={(flowWidth: number) => changeStyles({flowWidth})}
             />
           </Col>
         </Row>
 
         <Row>
           <Col span={10}>
-            <span>Size: </span>
+            <span>Rect Width: </span>
           </Col>
           <Col span={14}>
             <Slider 
               min={5}
               max={100}
-              value={this.props.styles.size}
+              value={this.props.styles.rectWidth}
               step={1}
-              onChange={(size: number) => changeStyles({size})}
+              onChange={(rectWidth: number) => changeStyles({rectWidth})}
+            />
+          </Col>
+        </Row>
+        <Row>
+          <Col span={10}>
+            <span>Rect Height: </span>
+          </Col>
+          <Col span={14}>
+            <Slider 
+              min={5}
+              max={100}
+              value={this.props.styles.rectHeight}
+              step={1}
+              onChange={(rectHeight: number) => changeStyles({rectHeight})}
             />
           </Col>
         </Row>
@@ -67,7 +81,7 @@ class RuleStyleControl extends React.Component<RuleStyleControlProps, any> {
           <Col span={14}>
             <RadioGroup 
               value={this.props.styles.mode}
-              onChange={(e) => changeStyles({mode: e.target.value})}
+              onChange={(e) => changeStyles({mode: e.target.value as 'matrix' | 'list'})}
               size="small"
             >
               <RadioButton value="list">List</RadioButton>

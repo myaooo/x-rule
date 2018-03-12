@@ -1,24 +1,27 @@
 import * as React from 'react';
 import { Action } from 'redux';
 import * as d3 from 'd3';
-import { Rule, RuleModel, RuleList, DataSet, Streams, ConditionalStreams } from '../../models';
+import { RuleList, DataSet, Streams, ConditionalStreams } from '../../models';
 import './index.css';
-import RuleView from './RuleView';
-import { collapsedHeight, expandedHeight } from './ConditionView';
+// import RuleView from './RuleView';
+// import { collapsedHeight, expandedHeight } from './ConditionView';
 import { FeatureStatus, RuleStyles } from '../../store';
 import { RuleListPainter } from './Painter';
 import RuleMatrix from '../RuleMatrix';
+import { Settings } from '../../store/state';
 
 export interface RuleListProps {
   // rules: Rule[];
-  model: RuleModel;
-  data?: DataSet[];
+  model: RuleList;
+  support: number[][] | number[][][];
+  data: DataSet[];
   fontSize?: number;
   width: number;
   height: number;
   transform?: string;
   interval?: number;
   styles?: RuleStyles;
+  settings?: Settings;
   streams?: Streams | ConditionalStreams;
   // mode?: 'list' | 'matrix';
   selectFeature({idx, deselect}: {idx: number, deselect: boolean}): Action;
@@ -73,79 +76,92 @@ class RuleListView extends React.Component<RuleListProps, RuleListState> {
     this.update();
   }
   render() {
-    const {transform, styles, model, data, streams} = this.props;
+    const {transform, styles, model, data, streams, settings, support} = this.props;
     if (styles === undefined || styles.mode === 'list') {
       return <g ref={(ref: SVGGElement) => (this.ref = ref)} transform={transform}/>;
     }
-    if (model instanceof RuleList)
-      return <RuleMatrix model={model} datasets={data || []} streams={streams} transform={transform} {...styles}/>;
+    if (model instanceof RuleList) {
+      return (
+        <RuleMatrix 
+          model={model} 
+          dataset={data[0]} 
+          streams={streams} 
+          transform={transform} 
+          support={support}
+          {...styles} 
+          minSupport={settings ? settings.minSupport : 0}
+        />
+      );
+    }
     return <text>The model must be an instance of RuleList to enable RuleMatrix mode!</text>;
   }
-  renderBackUp() {
-    const { model, data, width, selectFeature, transform, featureStatus, interval } = this.props;
+  // renderBackUp() {
+  //   const { model, data, width, selectFeature, transform, featureStatus, interval } = this.props;
 
-    const { unCollapsedSet } = this.state;
+  //   const { unCollapsedSet } = this.state;
     
-    const nRules = model.rules.length;
-    // const ruleHeight = Math.max(80, Math.min((height - 2 * margin - (nRules - 1) * interval) / nRules, 100));
-    const discretizers = model.discretizers;
-    let featureNames = ((i: number): string => `X${i}`);
-    let labelNames = ((i: number): string => `L${i}`);
-    if (data && data.length) {
-      featureNames = ((i: number): string => data[0].featureNames[i]);
-      labelNames = ((i: number): string => data[0].labelNames[i]);
-    }
+  //   const nRules = model.rules.length;
+  //   // const ruleHeight = Math.max(80, Math.min((height - 2 * margin - (nRules - 1) * interval) / nRules, 100));
+  //   let featureNames = ((i: number): string => `X${i}`);
+  //   let labelNames = ((i: number): string => `L${i}`);
+  //   let categoryIntervals = undefined;
+  //   let categoryRatios = undefined;
+  //   if (data && data.length) {
+  //     featureNames = ((i: number): string => data[0].featureNames[i]);
+  //     labelNames = ((i: number): string => data[0].labelNames[i]);
+  //     const discretizers = data[0].discretizers;
 
-    const categoryIntervals = (feature: number, cat: number) => {
-      if (feature === -1) return 0;
-      const intervals = discretizers[feature].intervals;
-      if (intervals === null) return cat;
-      return intervals[cat];
-    };
+  //     categoryIntervals = (feature: number, cat: number) => {
+  //       if (feature === -1) return 0;
+  //       const intervals = discretizers[feature].intervals;
+  //       if (intervals === null) return cat;
+  //       return intervals[cat];
+  //     };
 
-    const categoryRatios = (feature: number, cat: number): [number, number, number] => {
-      const ratios = discretizers[feature].ratios;
-      let prevSum = 0;
-      for (let i = 0; i < cat; i++) {
-        prevSum += ratios[i];
-      }
-      return [prevSum, ratios[cat], 1 - prevSum - ratios[cat]];
-    };
+  //     categoryRatios = (feature: number, cat: number): [number, number, number] => {
+  //       const ratios = data[0].ratios[feature];
+  //       let prevSum = 0;
+  //       for (let i = 0; i < cat; i++) {
+  //         prevSum += ratios[i];
+  //       }
+  //       return [prevSum, ratios[cat], 1 - prevSum - ratios[cat]];
+  //     };
+  //   }
 
-    const nConditions = Math.max(...(model.rules.map(rule => rule.conditions.length)));
-    const passDown = {
-      selectFeature, featureStatus, categoryRatios, nConditions, featureNames, labelNames, categoryIntervals
-    };
-    let heightSum = 0;
+  //   const nConditions = Math.max(...(model.rules.map(rule => rule.conditions.length)));
+  //   const passDown = {
+  //     selectFeature, featureStatus, categoryRatios, nConditions, featureNames, labelNames, categoryIntervals
+  //   };
+  //   let heightSum = 0;
 
-    return (
-      <g ref={(ref: SVGGElement) => (this.ref = ref)} transform={transform}>
-        {model.rules.map((rule: Rule, i: number) => {
-          const collapsed = !unCollapsedSet.has(i);
-          const yTransform = heightSum;
-          heightSum += (collapsed ? collapsedHeight : expandedHeight) + (interval as number);
-          return (
-            <g key={i}>
-              <RuleView
-                logicString={i === 0 ? 'IF' : ((i === nRules - 1) ? 'DEFAULT' : 'ELSE IF')}
-                rule={rule} 
-                support={model.supports[i]}
-                width={width} 
-                interval={interval as number}
-                mins={(j: number) => discretizers[j].min}
-                maxs={(j: number) => discretizers[j].max}
-                hists={(data && data.length) ? ((j: number) => data.map(d => d.hists[j])) : undefined}
-                transform={`translate(0,${yTransform})`}
-                collapsed={collapsed}
-                onClickCollapse={(c: boolean) => this.handleClickCollapse(i, c)}
-                {...passDown}
-              />
-            </g>
-          );
-        })}
-      </g>
-    );
-  }
+  //   return (
+  //     <g ref={(ref: SVGGElement) => (this.ref = ref)} transform={transform}>
+  //       {model.rules.map((rule: Rule, i: number) => {
+  //         const collapsed = !unCollapsedSet.has(i);
+  //         const yTransform = heightSum;
+  //         heightSum += (collapsed ? collapsedHeight : expandedHeight) + (interval as number);
+  //         return (
+  //           <g key={i}>
+  //             <RuleView
+  //               logicString={i === 0 ? 'IF' : ((i === nRules - 1) ? 'DEFAULT' : 'ELSE IF')}
+  //               rule={rule} 
+  //               support={model.supports[i]}
+  //               width={width} 
+  //               interval={interval as number}
+  //               mins={(j: number) => discretizers[j].min}
+  //               maxs={(j: number) => discretizers[j].max}
+  //               hists={(data && data.length) ? ((j: number) => data.map(d => d.hists[j])) : undefined}
+  //               transform={`translate(0,${yTransform})`}
+  //               collapsed={collapsed}
+  //               onClickCollapse={(c: boolean) => this.handleClickCollapse(i, c)}
+  //               {...passDown}
+  //             />
+  //           </g>
+  //         );
+  //       })}
+  //     </g>
+  //   );
+  // }
 }
 
 export default RuleListView;

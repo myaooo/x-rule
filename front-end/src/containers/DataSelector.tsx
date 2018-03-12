@@ -91,9 +91,10 @@ class DataSelector extends React.Component <DataSelectorProps, DataSelectorState
     if (model) {
       this.props.loadModelData(model.name, dataName);
       // do shallow copy
-      const selectedDataNames = new Set(this.props.selectedDataNames);
-      if (checked) selectedDataNames.add(dataName);
-      else selectedDataNames.delete(dataName);
+      // const selectedDataNames = new Set(this.props.selectedDataNames);
+      // if (checked) selectedDataNames.add(dataName);
+      // else selectedDataNames.delete(dataName);
+      const selectedDataNames = [dataName];
       this.props.selectData([...selectedDataNames]);
     }
   }

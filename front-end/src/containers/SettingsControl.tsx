@@ -1,13 +1,15 @@
 import * as React from 'react';
 import { connect } from 'react-redux';
-import { Row, Col, Switch } from 'antd';
+import { Row, Col, Switch, Slider } from 'antd';
 import { RootState, Dispatch, changeSettingsAndFetchData, Settings } from '../store';
 import { DataSet } from '../models/data';
-import { getSelectedData } from '../store/selectors';
+import { getSelectedData, getModel } from '../store/selectors';
+import { ModelBase } from '../models/base';
 
 export interface SettingsStateProps {
   settings: Settings;
   dataSets: DataSet[];
+  model: ModelBase | null;
 }
 
 export interface SettingsDispatchProps {
@@ -25,10 +27,10 @@ class SettingsControl extends React.Component<SettingsControlProps, any> {
   //   this.props.changeStyles({width: value});
   // }
   render() {
-    const {updateSettings} = this.props;
-    const hasData = !this.props.dataSets.length;
+    const {updateSettings, model} = this.props;
+    const hasData = Boolean(this.props.dataSets.length);
     const common = {
-      size: 'small' as 'small', disabled: hasData
+      size: 'small' as 'small', disabled: !hasData
     };
     return (
       <div style={{ paddingLeft: 12 }}>
@@ -44,6 +46,8 @@ class SettingsControl extends React.Component<SettingsControlProps, any> {
               {...common}
             />
           </Col>
+        </Row>
+        <Row style={{marginTop: 8}}>
           <Col span={14}>
             <span>Detail Output: </span>
           </Col>
@@ -52,6 +56,22 @@ class SettingsControl extends React.Component<SettingsControlProps, any> {
               checked={this.props.settings.supportMat}
               onChange={(supportMat) => updateSettings({supportMat})}
               {...common}
+            />
+          </Col>
+        </Row>
+        <Row style={{marginTop: 8}}>
+          <Col span={14}>
+            <span>Rule Filter:</span>
+          </Col>
+          <Col span={10}>
+            <Slider 
+              min={0.0}
+              max={0.1}
+              defaultValue={0.01}
+              step={0.002}
+              // value={this.props.settings.minSupport}
+              onAfterChange={(minSupport: number) => updateSettings({minSupport})}
+              disabled={!model}
             />
           </Col>
         </Row>
@@ -65,6 +85,7 @@ const mapStateToProps = (state: RootState): SettingsStateProps => {
   return {
     settings: state.settings,
     dataSets: getSelectedData(state),
+    model: getModel(state),
   };
 };
 

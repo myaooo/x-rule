@@ -47,28 +47,46 @@ export const initTreeStyles: TreeStyles = {
 };
 
 export interface RuleStyles {
-  size: number;
-  width: number;
-  mode: string;
+  flowWidth: number;
+  rectWidth: number;
+  rectHeight: number;
+  mode: 'list' | 'matrix';
   // conditional: boolean;
 }
 
+export interface SupportState {
+  isFetching: boolean;
+  support: number[][] | number[][][] | null;
+}
+
+export const initSupportState: SupportState = {
+  isFetching: false,
+  support: null,
+};
+
 export const initRuleStyles: RuleStyles = {
-  size: 30,
-  mode: 'list',
-  width: 50,
+  flowWidth: 50,
+  mode: 'matrix',
+  rectWidth: 40,
+  rectHeight: 30,
   // conditional: false,
 };
 
 export interface Settings {
   conditional: boolean;
   supportMat: boolean;
+  minSupport: number;
 }
 
 export const initialSettings: Settings = {
   conditional: false,
-  supportMat: false,
+  supportMat: true,
+  minSupport: 0.01,
 };
+
+export type DataFilter = [number[] | null][];
+
+export const initDataFilter = [];
 
 export const initialStreamBaseState: StreamBaseState = {};
 
@@ -77,12 +95,14 @@ export interface RootState {
   // selectedModel: string;
   model: ModelState;
   dataBase: DataBaseState;
+  dataFilters: DataFilter[];
   streamBase: StreamBaseState;
   selectedData: DataTypeX[];
   selectedFeatures: FeatureState[];
   treeStyles: TreeStyles;
   ruleStyles: RuleStyles;
   settings: Settings;
+  support: SupportState;
   // conditional: boolean;
 }
 

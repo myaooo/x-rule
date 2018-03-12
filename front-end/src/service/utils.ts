@@ -8,10 +8,10 @@ import {
   Condition,
   TreeNode,
   isInternalNode,
-  InternalNode
+  traverseTree
 } from '../models';
 
-import { sum } from './num';
+import * as d3 from 'd3';
 
 export function countFeatureFreq(model: ModelBase, nFeatures: number): (number | undefined)[] {
 
@@ -32,32 +32,6 @@ export function countFeatureFreq(model: ModelBase, nFeatures: number): (number |
   }
 
   return counts;
-}
-
-export function hasLeftChild(node: TreeNode) {
-  return isInternalNode(node) && node.left;
-}
-
-export function hasRightChild(node: TreeNode) {
-  return isInternalNode(node) && node.right;
-}
-
-// Performs pre-order traversal on a tree
-export function traverseTree(source: TreeNode, fn: (node: TreeNode, i: number) => void) {
-  let idx = 0;
-  const _traverse = (node: TreeNode) => {
-    // root
-    fn(node, idx++);
-    // left
-    if (hasLeftChild(node)) {
-      _traverse((node as InternalNode).left);
-    }
-    // right
-    if (hasRightChild(node)) {
-      _traverse((node as InternalNode).right);
-    }
-  };
-  _traverse(source);
 }
 
 const MAX_STR_LEN = 16;
@@ -89,11 +63,48 @@ export function condition2String(
   };
 }
 
-export function collapseInit(root: TreeNode, threshold: number = 0.2) {
-  console.log('init collpase attr!'); // tslint:disable-line
-  const totalSupport = sum(root.value);
-  const minDisplaySupport = Math.floor(threshold * totalSupport);
-  traverseTree(root, (node: TreeNode) => {
-    node.collapsed = sum(node.value) < minDisplaySupport;
-  });
+export function registerStripePattern(
+  color: string, strokeWidth: number = 2, padding: number = 4
+): string {
+  const defs = d3.select('svg').select('defs');
+  const patternName = `stripe-${color.slice(1)}-${strokeWidth}-${padding}`;
+  const patternNode = defs.select(`#${patternName}`).node();
+  const pattern = patternNode === null 
+    ? defs.append('pattern').attr('id', patternName)
+    : defs.select(`#${patternName}`);
+  pattern.attr('width', padding).attr('height', padding)
+    .attr('patternUnits', 'userSpaceOnUse')
+    .attr('patternTransform', 'rotate(-45)');
+
+  const path = pattern.select('path').node() === null
+    ? pattern.append('path') : pattern.select('path');
+  path.attr('d', `M 0 ${padding / 2} H ${padding}`)
+    .attr('stroke-linecap', 'square')
+    .attr('stroke-width', strokeWidth)
+    .attr('stroke', color);
+  // defs.append('pattern')
+  return patternName;
+}
+
+export interface Cache<T> {
+  count: number;
+  data: T;
+}
+
+// export function memorize<T>()
+
+export function memorizePromise<T>(
+  f: (...a: any[]) => Promise<T>
+): (...a: any[]) => Promise<T> {
+  const cache: {[key: string]: Cache<T>} = {};
+  return function (...a: any[]) {
+    const key = a.map((e) => JSON.stringify(a)).join(',');
+    if (key in cache)
+      return Promise.resolve<T>(cache[key].data);
+    else
+      return f(...a).then((data) => {
+        cache[key] = {data, count: 0};
+        return data;
+      });
+  };
 }

@@ -3,28 +3,29 @@ import * as nt from '../../service/num';
 
 import { Condition, Rule, DataSet, Histogram } from '../../models';
 import { Painter, defaultDuration, ColorType, labelColor, HistPainter } from '../Painters';
-import * as utils from '../../service/utils';
-import { RuleModel } from '../../models/ruleModel';
+// import * as utils from '../../service/utils';
+import { RuleList } from '../../models/ruleModel';
 
 const defaultCondWidth = 200;
 const histHeight = 60;
+
+interface ConditionX extends Condition {
+  tspan: string;
+  title: string;
+  // interval: [number | null, number | null];
+  histRange: [number, number];
+  activeRatio: [number, number];
+  collapsed?: boolean;
+  histPainter?: HistPainter;
+}
 
 interface RuleX extends Rule {
   x: number;
   y: number;
   height: number;
-  support: number[];
-  totalSupport: number;
+  // support: number[];
+  // _support: number[];
   collapsed?: boolean;
-}
-
-interface ConditionX extends Condition {
-  tspan: string;
-  title: string;
-  interval: [number | null, number | null];
-  activeRatio: [number, number];
-  collapsed?: boolean;
-  histPainter?: HistPainter;
 }
 
 interface ConditionOptional {
@@ -51,6 +52,10 @@ class ConditionPainter implements Painter<ConditionDataType, ConditionPainterPar
   };
   private params: ConditionPainterParams & ConditionOptional;
   private conditions: ConditionDataType;
+  private histPainter: HistPainter;
+  constructor() {
+    this.histPainter = new HistPainter();
+  }
   public update(params: Partial<ConditionPainterParams>) {
     this.params = { ...ConditionPainter.defaultParams, ...this.params, ...params };
     return this;
@@ -69,12 +74,14 @@ class ConditionPainter implements Painter<ConditionDataType, ConditionPainterPar
 
   public doJoin(
     selector: d3.Selection<SVGElement, any, SVGElement, any>
-  ): d3.Selection<SVGGElement, ConditionX, any, any> {
+  ): d3.Selection<SVGGElement, ConditionX, SVGElement, any> {
     const joined = selector.selectAll<SVGGElement, ConditionX>('g.condition').data(this.conditions);
     return joined;
   }
 
-  public doEnter(selector: d3.Selection<d3.EnterElement, any, any, any>): d3.Selection<SVGElement, any, any, any> {
+  public doEnter(
+    selector: d3.Selection<d3.EnterElement, ConditionX, SVGElement, any>
+  ): d3.Selection<SVGGElement, ConditionX, SVGElement, any> {
     const { width, fontSize } = this.params;
     const joined = selector.append<SVGGElement>('g').attr('class', 'condition');
     joined
@@ -95,7 +102,7 @@ class ConditionPainter implements Painter<ConditionDataType, ConditionPainterPar
     return joined;
   }
 
-  public doUpdate(conditionUpdate: d3.Selection<SVGElement, any, any, any>) {
+  public doUpdate(conditionUpdate: d3.Selection<SVGGElement, ConditionX, SVGElement, any>) {
     const { width, duration, interval, hists, fontSize } = this.params;
 
     const updated = conditionUpdate
@@ -124,20 +131,19 @@ class ConditionPainter implements Painter<ConditionDataType, ConditionPainterPar
     text.select('tspan').text((c: ConditionX) => c.tspan);
     text.select('title').text((c: ConditionX) => c.title);
 
-    conditionUpdate.select('g.hists').attr('transform', `translate(0, ${fontSize * 2})`);
+    const histGroup = conditionUpdate.select<SVGGElement>('g.hists').attr('transform', `translate(0, ${fontSize * 2})`);
 
-    conditionUpdate.each(function(c: ConditionX, i: number) {
+    const painter = this.histPainter;
+    histGroup.each((c: ConditionX, i: number, nodes) => {
       // console.log(c); // tslint:disable-line
-      if (c.collapsed && c.histPainter === undefined) return;
-      if (c.histPainter === undefined) c.histPainter = new HistPainter();
-      c.histPainter
+      // if (c.collapsed) return;
+      // console.warn(i);
+      painter
         .data((hists && !c.collapsed) ? hists(c.feature) : [])
-        .update({width, height: histHeight - 5, range: c.interval})
-        .render(d3.select(this).select('g.hists'));
+        .update({width, height: histHeight - 5, interval: c.histRange})
+        .render(d3.select(nodes[i]));
     });
-    // conditionUpdate.select('g.hists').each((c: ConditionX, i: number) => {
 
-    // });
   }
 
   public doExit(conditionExit: d3.Selection<Element, ConditionX, any, any>): void {
@@ -285,9 +291,10 @@ class FlowPainter implements Painter<RuleX[], FlowPainterParams> {
   }
   public data(rules: RuleX[]) {
     this.rules = rules;
-    this.flows = rules.map((r: RuleX) => nt.sum(r.support));
+    this.flows = rules.map((r: RuleX) => nt.sum(r._support));
 
-    let reserves: Float32Array[] = rules[0].support.map((_, i) => new Float32Array(rules.map(rule => rule.support[i])));
+    let reserves: Float32Array[] = 
+      rules[0]._support.map((_, i) => new Float32Array(rules.map(rule => rule._support[i])));
     this.reserves = reserves.map((reserve: Float32Array) => nt.cumsum(reserve.reverse()).reverse());
     this.reserveSums = new Float32Array(this.reserves[0].length);
     this.reserves.forEach((reserve: Float32Array) => nt.add(this.reserveSums, reserve, false));
@@ -328,7 +335,7 @@ class FlowPainter implements Painter<RuleX[], FlowPainterParams> {
           : -dy) - 3.5;
       // const sum = reserveSums[i] * multiplier;
       const y = (rule.height - flows[i] * multiplier) / 2 - height; // + reserveSums[i] * multiplier;
-      return rule.support.map((_, j: number) => {
+      return rule._support.map((_, j: number) => {
         const reserve = reserves[j][i] * multiplier;
         const ret = {
           height,
@@ -352,7 +359,7 @@ class FlowPainter implements Painter<RuleX[], FlowPainterParams> {
       const sum = d.totalSupport * multiplier;
       let y = (d.height - sum) / 2 + 2;
       // y = y > 0 ? y : 0;
-      return d.support.map((support: number, j: number) => {
+      return d._support.map((support: number, j: number) => {
         const value = support * multiplier;
         const ret = {
           width: value,
@@ -459,11 +466,12 @@ interface RuleOptional {
   outputWidth: number;
   color: ColorType;
   onClick: (i: number, collapse: boolean) => void;
+  categoryDescription: (f: number, c: number, abr: boolean) => string;
 }
 
 interface RulePainterParams extends Partial<RuleOptional> {
-  featureName: (i: number) => string;
-  categoryInterval?: (f: number, c: number) => number | [number | null, number | null];
+  // featureName: (i: number) => string;
+  categoryRange?: (f: number, c: number) => [number, number];
   categoryRatio?: (f: number, c: number) => [number, number];
   hists?: (f: number) => Histogram[];
 }
@@ -479,7 +487,8 @@ class RulePainter implements Painter<RuleX[], RulePainterParams> {
     interval: 30,
     buttonSize: 12,
     outputWidth: 150,
-    onClick: () => null
+    onClick: () => null,
+    categoryDescription: (f: number, c: number, abr: boolean) => `X${f} = ${c}`
     // interval: 20,
   };
   private params: RulePainterParams & RuleOptional;
@@ -511,7 +520,9 @@ class RulePainter implements Painter<RuleX[], RulePainterParams> {
       return r.conditions.map((c: Condition) => {
         return { ...c, tspan: '', title: '', collapsed, 
           activeRatio: [0, 1] as [number, number], 
-          interval: [null, null] as [number | null, number | null] };
+          // interval: [null, null] as [number | null, number | null],
+          histRange: [0, 0] as [number, number],
+        };
       });
     });
     this.conditionPainter.data((r: RuleX, i: number) => {
@@ -521,22 +532,16 @@ class RulePainter implements Painter<RuleX[], RulePainterParams> {
     return this;
   }
   public updatePos() {
-    const { featureName, categoryInterval, categoryRatio} = this.params;
+    const { categoryRange, categoryRatio, categoryDescription} = this.params;
     this.rules.forEach((r: RuleX, i: number) => {
       if (i === this.rules.length - 1) return;
       const collapsed = r.collapsed;
       this.conditions[i].forEach((c: ConditionX, j: number) => {
-        const interval = categoryInterval ? categoryInterval(c.feature, c.category) : c.category;
-        // console.log(interval); // tslint:disable-line
-        // console.log(c); // tslint:disable-line
-        const { tspan, title } = utils.condition2String(
-          featureName(c.feature),
-          interval,
-        );
-        c.tspan = tspan;
-        c.title = title;
+        const range = categoryRange ? categoryRange(c.feature, c.category) : c.category;
+        c.tspan = categoryDescription(c.feature, c.category, true);
+        c.title = categoryDescription(c.feature, c.category, false);
         c.collapsed = collapsed;
-        c.interval = Array.isArray(interval) ? interval : [interval - 0.5, interval + 0.5];
+        c.histRange = Array.isArray(range) ? range : [range, range + 1];
         c.activeRatio = categoryRatio ? categoryRatio(c.feature, c.category) : [0, 0];
       });
     });
@@ -561,7 +566,7 @@ class RulePainter implements Painter<RuleX[], RulePainterParams> {
         let x = (conditionWidth + interval) * r.conditions.length - 40;
         const multiplier = outputWidth / maxSupport;
         const y = (r.height - outputHeight) / 2;
-        return r.support.map((o: number): OutputData => {
+        return r._support.map((o: number): OutputData => {
           const width = o * multiplier;
           const ret = {
             x,
@@ -679,7 +684,7 @@ export interface RuleListPainterParams extends Partial<RuleListOptional> {
   // featureStatus(idx: number): FeatureStatus;
 }
 
-export class RuleListPainter implements Painter<RuleModel, RuleListPainterParams> {
+export class RuleListPainter implements Painter<RuleList, RuleListPainterParams> {
   public static defaultParams: RuleListOptional = {
     fontSize: 12,
     width: 700,
@@ -690,7 +695,7 @@ export class RuleListPainter implements Painter<RuleModel, RuleListPainterParams
     flow2Rule: 60
   };
   private params: RuleListPainterParams & RuleListOptional;
-  private model: RuleModel;
+  private model: RuleList;
   private rules: RuleX[];
   // private supports: number[][];
   private rulePainter: RulePainter;
@@ -708,13 +713,12 @@ export class RuleListPainter implements Painter<RuleModel, RuleListPainterParams
     this.ruleHeightExpanded = this.ruleHeightCollapsed + histHeight;
     return this;
   }
-  public data(model: RuleModel) {
+  public data(model: RuleList) {
     if (model === this.model) {
-      this.rules.forEach((rule: RuleX, i: number): void => {
-        rule.support = model.supports[i];
-        rule.totalSupport = nt.sum(model.supports[i]);
-        // totalSupport = 
-      });
+      // this.rules.forEach((rule: RuleX, i: number): void => {
+      //   rule.support = model.supports[i];
+      //   rule.totalSupport = nt.sum(model.supports[i]);
+      // });
       this.rulePainter.data(this.rules);
       this.flowPainter.data(this.rules);
       return this;
@@ -723,8 +727,9 @@ export class RuleListPainter implements Painter<RuleModel, RuleListPainterParams
     this.model = model;
     this.rules = model.rules.map((rule: Rule, i: number): RuleX => ({
       ...rule,
-      support: model.supports[i],
-      totalSupport: nt.sum(model.supports[i]),
+      // support: model.supports[i],
+      // totalSupport: nt.sum(model.supports[i]),
+      // _support: nt.isMat(rule.support) ? rule.support.map((s) => nt.sum(s)) : rule.support,
       x: 0, y: 0, height: 0, collapsed: true
     }));
     this.rulePainter.data(this.rules);
@@ -750,23 +755,18 @@ export class RuleListPainter implements Painter<RuleModel, RuleListPainterParams
 
   public reRender(selector: d3.Selection<SVGElement, any, any, any>) {
     const { data, intervalX, flowWidth, flow2Rule } = this.params;
-    const { rules } = this;
+    const { rules, model } = this;
     this.updateRulePos();
-    let featureName = (i: number): string => `X${i}`;
+    // let featureName = (i: number): string => `X${i}`;
     let hists: undefined | ((f: number) => Histogram[]) = undefined;
-    let categoryInterval = undefined;
+    // let categoryInterval = undefined;
+    let categoryRange = model.categoryHistRange;
     let categoryRatio = undefined;
+    let categoryDescription = model.categoryDescription;
     // let labelNames = ((i: number): string => `L${i}`);
     if (data && data.length) {
-      featureName = (i: number): string => data[0].featureNames[i];
+      // featureName = (i: number): string => data[0].featureNames[i];
       hists = (f: number): Histogram[] => data.map((d) => d.hists[f]);
-      const discretizers = data[0].discretizers;
-      categoryInterval = (feature: number, cat: number): number | [number | null, number | null] => {
-        if (feature === -1) return 0;
-        const intervals = discretizers[feature].intervals;
-        if (intervals === null) return cat;
-        return intervals[cat];
-      };
   
       categoryRatio = (feature: number, cat: number): [number, number] => {
         // console.log(feature); // tslint:disable-line
@@ -784,8 +784,8 @@ export class RuleListPainter implements Painter<RuleModel, RuleListPainterParams
       rules[i].collapsed = collapsed;
       this.reRender(selector);
     };
-    const ruleParams = { featureName, hists, categoryInterval, categoryRatio, 
-      interval: intervalX, onClick: collapseRule };
+    const ruleParams = { hists, categoryRatio, categoryRange,
+      interval: intervalX, onClick: collapseRule, categoryDescription };
     this.rulePainter
       .update(ruleParams)
       .render(selector);

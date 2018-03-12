@@ -8,14 +8,6 @@ import { Stream } from '../../models';
 type Section = number[] | Int32Array;
 // type Stream = Section[];
 
-function process(stream: Stream): Section[] {
-  const ret = new Array(stream[0].length);
-  for (let i = 0; i < ret.length; ++i) {
-    ret[i] = stream.map((s) => s[i]);
-  }
-  return ret;
-}
-
 interface OptionalProps {
   width: number;
   height: number;
@@ -58,8 +50,8 @@ export default class StreamPlot extends React.PureComponent<StreamPlotProps, Str
 
     // const chartWidth = width - margin.left + margin.right;
     // const chartHeight = height - margin.top + margin.bottom;
-    const processed = process(data);
-    const stack = d3.stack<Section, number>().keys(d3.range(data.length)).offset(d3.stackOffsetWiggle);
+    const processed = data.stream;
+    const stack = d3.stack<Section, number>().keys(d3.range(data.stream.length)).offset(d3.stackOffsetWiggle);
     const streams = stack(processed);
     const yMin = d3.min(streams, (stream) => d3.min(stream, (d) => d[0])) || -100;
     const yMax = d3.max(streams, (stream) => d3.max(stream, (d) => d[1])) || 100;
@@ -74,9 +66,9 @@ export default class StreamPlot extends React.PureComponent<StreamPlotProps, Str
       .y0((d, i) => yScaler(d[0]))
       .y1((d, i) => yScaler(d[1]))
       .curve(d3.curveCardinal.tension(0.3));
-    console.log('streams'); //tslint:disable-line
-    console.log(streams); //tslint:disable-line
-    console.log(processed); //tslint:disable-line
+    // console.log('streams'); //tslint:disable-line
+    // console.log(streams); //tslint:disable-line
+    // console.log(processed); //tslint:disable-line
     return (
       <g style={{display}} {...rest}>
         {streams.map((stream: d3.Series<number[], number>, i: number) => (

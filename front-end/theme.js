@@ -9,5 +9,6 @@ module.exports = () => {
     'padding-md': '12px',
     'padding-lg': '18px',
     'slider-margin': '6px 4px 6px',
+    'font-size-base': '14px'
   };
 };

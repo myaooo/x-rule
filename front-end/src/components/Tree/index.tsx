@@ -107,11 +107,8 @@ export default class TreeView extends React.Component<TreeViewProps, TreeViewSta
     this.needUpdate = false;
   }
   private update() {
-    const { data, width, height, styles } = this.props as TreeViewProps & OptionalProps;
-    const availableData = data[0] || data[1];
-    const featureName = availableData 
-      ? ((i: number) => availableData.featureNames[i]) 
-      : ((i: number) => `X${i}`);
+    const { width, height, styles, model } = this.props as TreeViewProps & OptionalProps;
+    const featureName = (i: number) => model.meta.featureNames[i];
     const params = { ...styles, width, height, featureName };
     this.painter.update(params).render(d3.select(this.ref));
   }

@@ -6,28 +6,50 @@ import * as d3ScaleChromatic from 'd3-scale-chromatic';
 //     selector: d3.Selection<SVGElement, DataType, GElement, any>,
 //     ...args: any[]
 //   ): void;
-//   // doJoin<GElement extends d3.BaseType>(selector: d3.Selection<SVGElement, DataType, GElement, any>): 
+//   // doJoin<GElement extends d3.BaseType>(selector: d3.Selection<SVGElement, DataType, GElement, any>):
 //   // d3.Selection<SVGElement, DataType, GElement, any>;
-//   // doEnter<GElement extends d3.BaseType>(entered: d3.Selection<d3.EnterElement, DataType, GElement, any>): 
+//   // doEnter<GElement extends d3.BaseType>(entered: d3.Selection<d3.EnterElement, DataType, GElement, any>):
 //   // d3.Selection<SVGElement, DataType, GElement, any>;
 //   // doUpdate<GElement extends d3.BaseType>(merged: d3.Selection<SVGElement, DataType, GElement, any>): void;
 //   // doExit<PElement extends d3.BaseType>(exited: d3.Selection<SVGElement, DataType, PElement, any>): void;
-// } 
+// }
 
 export interface Painter<DataType, ParamsType> {
-  update(
-    params: ParamsType
-  ): this;
+  update(params: ParamsType): this;
   data(newData: DataType): this;
-  render<GElement extends d3.BaseType>(
-    selector: d3.Selection<SVGElement, DataType, GElement, any>,
-  ): this;
-} 
+  render<GElement extends d3.BaseType>(selector: d3.Selection<SVGElement, DataType, GElement, any>): this;
+}
 
 export type ColorType = (i: number) => string;
 
+const gColor = [
+  '#3366cc',
+  '#ff9900',
+  '#dc3912',
+  '#109618',
+  '#990099',
+  '#0099c6',
+  '#dd4477',
+  '#66aa00',
+  '#b82e2e',
+  '#316395',
+  '#994499',
+  '#22aa99',
+  '#aaaa11',
+  '#6633cc',
+  '#e67300',
+  '#8b0707',
+  '#651067',
+  '#329262',
+  '#5574a6',
+  '#3b3eac'
+];
+
+export const googleColor: ColorType = (n: number) => gColor[n % gColor.length];
+
 export const defaultColor: ColorType = d3.scaleOrdinal<number, string>(d3ScaleChromatic.schemeSet1 as string[]);
 
-export const labelColor: ColorType = d3.scaleOrdinal<number, string>(d3.schemeCategory10);
+// export const labelColor: ColorType = d3.scaleOrdinal<number, string>(d3.schemeCategory10);
+export const labelColor: ColorType = googleColor;
 
 export const defaultDuration = 400;

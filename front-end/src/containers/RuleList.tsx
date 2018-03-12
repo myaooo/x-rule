@@ -2,12 +2,14 @@ import RuleList from '../components/RuleList';
 import { Action } from 'redux';
 import { connect } from 'react-redux';
 import { 
-  RuleStyles,
+  RuleStyles, Settings, getSettings,
   RootState, Dispatch, selectFeature, FeatureStatus, getFeatureStates, FeatureState 
 } from '../store';
 
 type RuleListStateProp = {
   styles?: RuleStyles,
+  settings?: Settings,
+  support: number[][] | number[][][] | null,
   featureStatus(i: number): FeatureStatus,
 };
 
@@ -15,6 +17,8 @@ const mapStateToProps = (state: RootState): RuleListStateProp => {
   // console.log("remapped"); // tslint:disable-line
   return {
     styles: state.ruleStyles,
+    settings: getSettings(state),
+    support: state.support.support,
     featureStatus: (i: number) => {
       const f = getFeatureStates(state).find((v: FeatureState) => v.idx === i);
       return f ? f.status : FeatureStatus.DEFAULT;

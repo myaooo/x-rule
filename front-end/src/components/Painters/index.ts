@@ -1,3 +1,4 @@
 export * from './Painter';
-export * from './HistogramPainter';
+export { default as HistPainter } from './HistPainter';
+// export * from './HistogramPainter';
 // export * from './SupportPainter';

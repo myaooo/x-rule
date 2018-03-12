@@ -41,10 +41,10 @@ export class AreaPainter implements Painter<Histogram[], Partial<AreaPainterPara
   public render(selector: d3.Selection<SVGElement, any, any, any>) {
     const { width, height, color, hasAxis } = this.params;
     const hists = this.hists;
-    const binSizes = hists.map((hist: Histogram) => hist.centers[1] - hist.centers[0]);
+    const binSizes = 1;
     const lineDataList: Line[] = this.hists.map((hist): Line => {
-      return hist.counts.map((count: number, i: number): [number, number] => {
-        return [hist.centers[i], count];
+      return hist.map((count: number, i: number): [number, number] => {
+        return [i, count];
       });
     });
     const xMin = Math.min(...(lineDataList.map((line, i) => line[0][0] - binSizes[i])));
@@ -59,7 +59,7 @@ export class AreaPainter implements Painter<Histogram[], Partial<AreaPainterPara
   
     const yScale = d3
       .scaleLinear()
-      .domain([0, Math.max(...hists.map(hist => Math.max(...hist.counts)))]) // input
+      .domain([0, Math.max(...hists.map(hist => Math.max(...hist)))]) // input
       .range([height, 0]); // output
   
     const lineGenerator = d3

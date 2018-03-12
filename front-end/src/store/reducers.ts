@@ -1,5 +1,5 @@
 import { combineReducers } from 'redux';
-import { isRuleModel, isTreeModel, RuleList, DataSet, DataTypeX, ConditionalStreams, Streams } from '../models';
+import { isRuleModel, isTreeModel, RuleList, DataSet, DataTypeX, ConditionalStreams, Streams, Tree } from '../models';
 import {
   ModelState,
   DataBaseState,
@@ -13,13 +13,11 @@ import {
   Settings,
   initialSettings
 } from './state';
-import { collapseInit } from '../service/utils';
-import { ReceiveStreamAction } from './actions';
-import { initialStreamBaseState, StreamBaseState } from './state';
+import { ReceiveStreamAction, RequestSupportAction, ActionType } from './actions';
+import { initialStreamBaseState, StreamBaseState, SupportState, initSupportState } from './state';
 
 import {
   ReceiveSupportAction,
-  ActionType,
   RequestModelAction,
   ReceiveModelAction,
   // RequestDatasetAction,
@@ -55,21 +53,32 @@ function modelStateReducer(
       let model = action.model;
       if (model !== null) {
         if (isRuleModel(model)) model = new RuleList(model);
-        if (isTreeModel(model)) collapseInit(model.root);
+        if (isTreeModel(model)) model = new Tree(model);
       }
       return {
         isFetching: false,
         model
       };
     case ActionType.RECEIVE_SUPPORT:
-      const aModel = state.model;
-      if (aModel instanceof RuleList) {
-        aModel.support(action.support);
+      const model2 = state.model;
+      if (model2 instanceof RuleList) {
+        model2.support(action.support);
       }
       return {
         isFetching: false,
-        model: aModel
+        model: model2
       };
+    // case ActionType.CHANGE_SETTINGS:
+    //   const model3 = state.model;
+    //   if (model3 instanceof RuleList) {
+    //     const minSupport = action.newSettings.minSupport;
+    //     if (minSupport)
+    //       model3.setMinSupport(minSupport);
+    //   }
+    //   return {
+    //     isFetching: false,
+    //     model: model3
+    //   };
     default:
       return state;
   }
@@ -134,14 +143,14 @@ function selectedFeaturesReducer(
         if (feature.status < FeatureStatus.HOVER) {
           return [...state.slice(0, idx), ...state.slice(idx + 1)];
         }
-        return state;
+        return [...state];
       } else {
         const idx = state.findIndex((f: FeatureState) => f.idx === action.idx);
         if (idx === -1) return [...state, { idx: action.idx, status: FeatureStatus.HOVER }];
         else if (state[idx].status < FeatureStatus.SELECT) {
           state[idx].status++;
         }
-        return state;
+        return [...state];
       }
     default:
       return state;
@@ -174,6 +183,23 @@ function settingsReducer(state: Settings = initialSettings, action: ChangeSettin
       return state;
   }
 }
+
+function supportReducer(
+  state: SupportState = initSupportState, action: RequestSupportAction | ReceiveSupportAction
+): SupportState {
+  switch (action.type) {
+    case ActionType.REQUEST_SUPPORT:
+      return { isFetching: true, support: null };
+    case ActionType.RECEIVE_SUPPORT:
+      return { isFetching: false, support: action.support};
+    default:
+      return state;
+  }
+}
+
+// function filtersReducer(
+//   state: DataFilter[] = initDataFilter, action:
+// )
 // function selectedDataReducer(
 //   state: string,
 //   action:
@@ -182,10 +208,12 @@ function settingsReducer(state: Settings = initialSettings, action: ChangeSettin
 export const rootReducer = combineReducers<RootState>({
   model: modelStateReducer,
   dataBase: dataBaseReducer,
+  // dataFilters: 
   streamBase: streamBaseReducer,
   selectedData: selectDatasetReducer,
   selectedFeatures: selectedFeaturesReducer,
   treeStyles: treeStylesReducer,
   ruleStyles: ruleStylesReducer,
   settings: settingsReducer,
+  support: supportReducer,
 });

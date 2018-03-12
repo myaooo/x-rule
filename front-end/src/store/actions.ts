@@ -15,6 +15,7 @@ import {
 
 import dataService from '../service/dataService';
 import { isConditional } from './selectors';
+import { FilterType } from '../components/DataFilter';
 
 export type Dispatch = ReduxDispatch<RootState>;
 
@@ -32,6 +33,7 @@ export enum ActionType {
   CHANGE_TREE_STYLES = 'CHANGE_TREE_STYLES',
   CHANGE_RULE_STYLES = 'CHANGE_RULE_STYLES',
   CHANGE_SETTINGS = 'CHANGE_SETTINGS',
+  CHANGE_FILTERS = 'CHANGE_FILTERS',
 }
 
 export interface TypedAction<T> extends Action {
@@ -98,6 +100,10 @@ export interface ChangeRuleStylesAction extends TypedAction<ActionType.CHANGE_RU
 
 export interface ChangeSettingsAction extends TypedAction<ActionType.CHANGE_SETTINGS> {
   readonly newSettings: Partial<Settings>;
+}
+
+export interface ChangeFiltersAction extends TypedAction<ActionType.CHANGE_FILTERS> {
+  readonly newFilters: FilterType[];
 }
 
 export function requestModel(modelName: string): RequestModelAction {
@@ -212,6 +218,13 @@ export function changeSettings(newSettings: Partial<Settings>): ChangeSettingsAc
   };
 }
 
+export function changeFilters(newFilters: FilterType[]): ChangeFiltersAction {
+  return {
+    type: ActionType.CHANGE_FILTERS,
+    newFilters
+  };
+}
+
 export type AsyncAction = ThunkAction<any, RootState, {}>;
 
 function fetchDataWrapper<ArgType, ReturnType>(
@@ -300,11 +313,11 @@ export const fetchStreamIfNeeded = fetchDataWrapper(
     return dataService.getStream(modelName, dataType, conditional).then(data => {
       if (conditional)
         return {
-          streams: createConditionalStreams(data as number[][][][]),
+          streams: createConditionalStreams(data as ConditionalStreams),
           ...payload
         };
       return {
-        streams: createStreams(data as number[][][]),
+        streams: createStreams(data as Streams),
         ...payload
       };
     });
@@ -321,7 +334,6 @@ export const fetchStreamIfNeeded = fetchDataWrapper(
 
 export function selectDatasetAndFetchSupport(dataNames: DataTypeX[]): ThunkAction<void, RootState, {}> {
   return (dispatch: Dispatch, getState: () => RootState) => {
-    dispatch(selectDataset(dataNames));
     const state = getState();
     const modelState = state.model;
     const model = modelState.model;
@@ -335,12 +347,12 @@ export function selectDatasetAndFetchSupport(dataNames: DataTypeX[]): ThunkActio
       dispatch(fetchSupportIfNeeded({ modelName, data: dataNames[0] }));
       dispatch(fetchStreamIfNeeded({modelName, dataType: dataNames[0], conditional}));
     }
+    dispatch(selectDataset(dataNames));
   };
 }
 
 export function changeSettingsAndFetchData(newSettings: Partial<Settings>): ThunkAction<void, RootState, {}> {
   return (dispatch: Dispatch, getState: () => RootState) => {
-    dispatch(changeSettings(newSettings));
     const state = getState();
     const modelState = state.model;
     const dataNames = state.selectedData;
@@ -355,8 +367,11 @@ export function changeSettingsAndFetchData(newSettings: Partial<Settings>): Thun
       dispatch(fetchSupportIfNeeded({ modelName, data: dataNames[0] }));
       dispatch(fetchStreamIfNeeded({modelName, dataType: dataNames[0], conditional}));
     }
+    dispatch(changeSettings(newSettings));
   };
 }
+
+// export function changeFilterAndFetchData
 
 // export const fetchDatasetAndSelect = (datasetName,)
 

@@ -1,3 +1,4 @@
+import * as d3 from 'd3';
 // DataSets
 
 export type DataType = 'train' | 'test';
@@ -6,112 +7,76 @@ export type DataTypeX = DataType | SurrogateDataType;
 
 export type PlainMatrix = number[][];
 
-export interface Discretizer {
-  readonly cutPoints: number[] | null;
-  readonly intervals: [number | null, number | null][] | null;
-  readonly min: number;
-  readonly max: number;
-}
+export type Histogram = number[];
 
-export interface Histogram {
-  counts: number[];
-  centers: number[];
+export interface BasicData {
+  data: number[][];
+  target: number[];
+  end: number;
+  totalLength: number;
 }
 
 export interface PlainData {
   data: number[][];
   target: number[];
-  featureNames: string[];
-  labelNames: string[];
-  isCategorical: boolean[];
   hists: Histogram[];
   name: DataTypeX;
-  ranges: [number, number][];
-  categories: (string[] | null)[];
   ratios: number[][];
-  readonly discretizers: Discretizer[];
+  // readonly discretizers: Discretizer[];
 }
 
-export type StreamLayer = Int32Array;
+export type StreamLayer = number[];
 
-export type Stream = StreamLayer[];
+export interface Stream {
+  stream: StreamLayer[];
+  xs: number[];
+  yMax: number;
+  processed?: boolean;
+}
 
 export type Streams = Stream[];
 
 export type ConditionalStreams = Streams[];
 
-export function createStreams(raw: number[][][]): Streams {
-  return raw.map((rawStream: number[][]) => rawStream.map((layer: number[]) => new Int32Array(layer)));
+export function createStreams(raw: Streams): Streams {
+  raw.forEach((stream: Stream) => {
+    stream.stream = d3.transpose(stream.stream);
+    stream.processed = true;
+  });
+  return raw;
 }
 
-export function createConditionalStreams(raw: number[][][][]): ConditionalStreams {
-  return raw.map((streams: number[][][]) => createStreams(streams));
+export function createConditionalStreams(raw: ConditionalStreams): ConditionalStreams {
+  return raw.map((streams: Streams) => createStreams(streams));
 }
 
 export function isConditionalStreams(streams: Streams | ConditionalStreams): streams is ConditionalStreams {
-  return streams[0][0][0] instanceof Int32Array;
+  return Array.isArray(streams[0]);
 }
 
 export class DataSet {
   public data: Float32Array[];
   public target: Int32Array;
-  public featureNames: string[];
-  public labelNames: string[];
   public hists: Histogram[];
   public name: DataTypeX;
   public ratios: number[][];
-  public ranges: [number, number][];
-  public categories: (string[] | null)[];
-  public isCategorical: boolean[];
-  public discretizers: Discretizer[];
+  // public discretizers: Discretizer[];
   public streams?: Streams;
   public conditionalStreams?: ConditionalStreams;
   constructor(raw: PlainData) {
-    const { data, target, featureNames, labelNames, hists, name, ranges } = raw;
-    const { categories, discretizers, ratios, isCategorical } = raw;
+    const { data, target, hists, name, ratios } = raw;
     this.data = data.map((d: number[]) => new Float32Array(d));
     this.target = new Int32Array(target);
-    this.featureNames = featureNames;
-    this.labelNames = labelNames;
     this.hists = hists;
     this.name = name;
-    this.ranges = ranges;
-    this.categories = categories;
     this.ratios = ratios;
-    this.discretizers = discretizers;
-    this.isCategorical = isCategorical;
+    // this.discretizers = discretizers;
+
+    // this.categoryInterval = this.categoryInterval.bind(this);
+    // this.categoryDescription = this.categoryDescription.bind(this);
+    // this.categoryHistRange = this.categoryHistRange.bind(this);
+    // this.interval2HistRange = this.interval2HistRange.bind(this);
     // this.categorical = categorical;
-  }
-  public categoryInterval(f: number, c: number): [number | null, number | null] {
-    const intervals = this.discretizers[f].intervals;
-    return intervals ? intervals[c] : [null, null];
-  }
-  public categoryDescription(f: number, c: number, maxLength: number = 20, abr: boolean = false): string {
-    const {featureNames, discretizers, categories} = this;
-    const cutSize = Math.round((maxLength - 2) / 2);
-    const featureName = featureNames[f];
-    const intervals = discretizers[f].intervals;
-    const category = intervals ? intervals[c] : c;
-    let featureMap = (feature: string): string => `${feature} is any`;
-    if (typeof category === 'number' && categories) {
-      featureMap = (feature: string) => `${feature} = ${(<string[]> categories[f])[c]}`;
-    } else {
-      const low = category[0];
-      const high = category[1];
-      if (low === null && high === null) featureMap = (feature: string) => `${feature} is any`;
-      else {
-        const lowString = low !== null ? `${low.toPrecision(3)} < ` : '';
-        const highString = high !== null ? ` < ${high.toPrecision(3)}` : '';
-        featureMap = (feature: string) => lowString + feature + highString;
-      }
-    }
-    if (abr) {
-      const abrString = featureName.length > maxLength
-      ? `"${featureName.substr(0, cutSize)}…${featureName.substr(-cutSize, cutSize)}"`
-      : featureName;
-      return featureMap(abrString);
-    }
-    return featureMap(featureName);
   }
 }
 

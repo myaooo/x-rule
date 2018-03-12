@@ -3,7 +3,7 @@ import { Layout, Row, Col } from 'antd';
 import './App.css';
 import ModelView from './ModelView';
 import SideBar from './SideBar';
-import DataInput from './DataInput';
+import DataTable from './DataTable';
 
 const { Sider } = Layout;
 
@@ -43,7 +43,7 @@ class App extends React.Component<AppProps, AppState> {
           </Sider>
           <Col>
             <Row>
-              <DataInput/>
+              <DataTable/>
             </Row>
             {/* <h1>Rule Inspector </h1> */}
             {/* <Row gutter={16} type="flex" justify="space-around"> */}

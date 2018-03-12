@@ -8,6 +8,7 @@ import { ColorType, labelColor as defaultLabelColor } from '../Painters/Painter'
 // import RowOutput from './RowOutput';
 import { DataSet, Streams, Stream } from '../../models';
 import StreamPlot from '../SVGComponents/StreamPlot';
+import { BaseModel } from '../../models/base';
 
 type RectState = {x: number, y?: number, height: number, width: number};
 class RectNodeGroup extends NodeGroup<Condition, RectState> {}
@@ -105,6 +106,7 @@ interface OptionalProps {
 
 export interface RuleRowProps extends Partial<OptionalProps> {
   rule: Rule;
+  model: BaseModel;
   dataset?: DataSet;
   features: number[];
   feature2Idx: number[];
@@ -159,7 +161,7 @@ export default class RuleRow extends React.Component<RuleRowProps, RuleRowState>
     }
   }
   render() {
-    const { feature2Idx, widths, height, transform, rule, onClick, dataset, xs, labelColor, supports, streams } 
+    const { feature2Idx, widths, height, transform, rule, onClick, model, dataset, xs, labelColor, supports, streams } 
       = this.props as OptionalProps & RuleRowProps;
     const { activeFeatures } = this.props;
     const rowWidth = this.state.rowWidth;
@@ -174,19 +176,7 @@ export default class RuleRow extends React.Component<RuleRowProps, RuleRowState>
     // const conditionFeatures = rule.conditions.map((c) => c.feature);
     // const supportsScaled = (supports && dataset) ? nt.muls(supports, 1 / dataset.data.length) : undefined;
 
-    const cat2Interval = dataset ? ((f: number, c: number): [number, number] => {
-      const intervals = dataset.discretizers[f].intervals;
-      const range = dataset.ranges[f];
-      const w = range[1] - range[0];
-      if (intervals) {
-        let low = intervals[c][0];
-        let high = intervals[c][1];
-        low = low === null ? 0 : (low - range[0]) / w;
-        high = high === null ? 1 : (high - range[0]) / w;
-        return [low, high];
-      }
-      return [c - 0.5, c + 0.5];
-    }) : undefined;
+    const cat2Interval = model.categoryInterval;
     return (
       <g transform={transform}>
         { rule.conditions[0].feature !== -1 && 

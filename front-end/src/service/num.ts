@@ -31,6 +31,12 @@ export type Vector =
 //   }
 // }
 
+export function isMat(a: number[] | number[][]): a is number[][] {
+  if (a.length)
+    return Array.isArray(a[0]);
+  return false;
+}
+
 export function muls<T extends Vector>(a: T, b: number, copy: boolean = true): T {
   const ret = copy ? a.slice() as T : a;
   for (let i = 0; i < ret.length; ++i)
@@ -55,6 +61,16 @@ export function add<T extends Vector>(a: T, b: T, copy: boolean = true): T {
   const ret = copy ? a.slice() as T : a;
   for (let i = 0; i < ret.length; ++i)
     ret[i] += b[i];
+  return ret;
+}
+
+export function addMat<T extends Vector>(a: T[], b: T[], copy: boolean = true): T[] {
+  if (a.length !== b.length) {
+    throw 'Length of a and b must be equal!';
+  }
+  const ret = copy ? a.map((_a: T) => _a.slice() as T) : a;
+  for (let i = 0; i < ret.length; ++i)
+    add(ret[i], b[i], false);
   return ret;
 }
 
@@ -88,9 +104,18 @@ export function stack<T extends Vector>(arrs: T[]): T[] {
 }
 
 export function sumVec<T extends Vector>(arrs: T[]): T {
+  // if (arrs.length === 0) return ;
   let _sum: T = arrs[0].slice() as T;
   for (let i = 1; i < arrs.length; ++i) {
     add(_sum, arrs[i], false);
+  }
+  return _sum;
+}
+
+export function sumMat<T extends Vector>(arrs: T[][]): T[] {
+  let _sum = arrs[0].map((arr: T) => arr.slice() as T);
+  for (let i = 1; i < arrs.length; ++i) {
+    addMat(_sum, arrs[i], false);
   }
   return _sum;
 }

@@ -1,24 +1,29 @@
 .matrix-bg {
-  fill: none;
+  fill: #fff;
   stroke-width: 0.5px;
   stroke: #bbb;
 }
 
 .matrix-condition rect {
-  fill-opacity: 0.4;
-  
-  stroke: #000;
+  /* fill-opacity: 0.4; */
+  /* stroke: #000; */
   cursor: pointer;
 }
 
-.matrix-condition rect:hover {
-  fill-opacity: 0.8;
+/* .matrix-condition rect:hover {
+  fill-opacity: 0.6;
+} */
+
+.mo-outputs rect {
+  fill-opacity: 0.6;
+  /* stroke-width: 0.5; */
+  /* stroke: #444; */
 }
 
-.matrix-outputs rect {
+.mo-supports rect {
   fill-opacity: 0.6;
   stroke-width: 0.5;
-  stroke: #444;
+  /* stroke: #444; */
 }
 
 .matrix-outputs text {
@@ -45,4 +50,78 @@ rect.mc-stripe {
   fill-opacity: 1.0;
   stroke-width: 0.5;
   stroke: #444;
+}
+
+rect.header-bg {
+  stroke-width: 0.5;
+  stroke: #444;
+  fill: #eee;
+}
+
+.matrix-glyph-expand path {
+  fill-opacity: 0.6;
+}
+
+.matrix-glyph-expand path:hover{
+  fill-opacity: 0.9;
+}
+
+rect.mo-support-mat {
+  /* mask: url(#mask-stripe); */
+  fill-opacity: 0.7;
+  stroke-width: 0.5;
+}
+
+.visible {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 0.5s linear;
+}
+
+.hidden {
+  visibility: hidden;
+  opacity: 0;
+  transition: visibility 0s 0.5s, opacity 0.5s linear;
+}
+
+g.row-button {
+  cursor: pointer;
+}
+
+g.row-button:hover {
+  fill-opacity: 0.5
+}
+
+text.glyph-desc {
+  font-family: 'Menlo', monospace
+}
+
+g.reset-button {
+  cursor: pointer;
+}
+
+g.reset-button:hover {
+  fill-opacity: 0.5;
+  stroke-opacity: 0.5;
+}
+
+g.cursor-ruler{
+  stroke-width: 0.5;
+  stroke: #444;
+}
+
+text.tooltip {
+  fill: #444;
+}
+
+rect.tooltip {
+  stroke: #444;
+  stroke-width: 0.5;
+  stroke-opacity: 0.6;
+  fill: #eee;
+  fill-opacity: 0.6;
+}
+
+text.header-expanded {
+  font-weight: 700;
 }

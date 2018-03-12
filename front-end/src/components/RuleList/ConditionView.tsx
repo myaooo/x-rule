@@ -88,8 +88,8 @@ export default class ConditionView extends React.Component<ConditionViewProps, C
     const chartWidth = width - margin.left - margin.right;
     const chartHeight = expandedHeight - margin.top - margin.bottom;
     const lineDataList: [number, number][][] = hists.map((hist): [number, number][] => {
-      const lineData: [number, number][] = hist.counts.map((count: number, i: number): [number, number] => {
-        return [hist.centers[i], count];
+      const lineData: [number, number][] = hist.map((count: number, i: number): [number, number] => {
+        return [i, count];
       });
       // this.min = hist.centers[0] - interval / 2;
       // this.max = hist.centers[nBins - 1] + interval / 2;
@@ -103,7 +103,7 @@ export default class ConditionView extends React.Component<ConditionViewProps, C
 
     const yScale = d3
       .scaleLinear()
-      .domain([0, Math.max(...(hists.map((hist) => Math.max(...hist.counts))))]) // input
+      .domain([0, Math.max(...(hists.map((hist) => Math.max(...hist))))]) // input
       .range([chartHeight, 0]); // output
 
     this.xScale = xScale;
