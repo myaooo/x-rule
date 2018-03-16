@@ -3,7 +3,7 @@ Dataset: Adult Data Set,
 Url: https://archive.ics.uci.edu/ml/datasets/Adult
 Download:
 ```bash
-    mkdir -p ../datasets/thoracic
+    mkdir -p ../datasets/adult
     curl https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data -o ../datasets/adult/adult.data
     curl https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.test -o ../datasets/adult/adult.test
 ```

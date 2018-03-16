@@ -3,7 +3,7 @@ Dataset: Thoracic Surgery Data,
 Url: https://archive.ics.uci.edu/ml/datasets/Bank+Marketing
 Download:
 ```bash
-    mkdir -p ../datasets/thoracic
+    mkdir -p ../datasets/bank_marketing
     curl https://archive.ics.uci.edu/ml/machine-learning-databases/00222/bank-additional.zip \
         -o ../datasets/bank_marketing/bank-additional.zip
     unzip ../datasets/bank_marketing/bank-additional.zip -d ../datasets/bank_marketing

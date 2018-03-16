@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-mkdir -p ../datasets/thoracic
+mkdir -p ../datasets/adult
 curl https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data -o ../datasets/adult/adult.data
 curl https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.test -o ../datasets/adult/adult.test
 
@@ -8,7 +8,7 @@ mkdir -p ../datasets/abalone
 curl http://archive.ics.uci.edu/ml/machine-learning-databases/abalone/abalone.data \
     --output ../datasets/abalone/abalone.data
 
-mkdir -p ../datasets/thoracic
+mkdir -p ../datasets/bank_marketing
 curl https://archive.ics.uci.edu/ml/machine-learning-databases/00222/bank-additional.zip \
     -o ../datasets/bank_marketing/bank-additional.zip
 unzip ../datasets/bank_marketing/bank-additional.zip -d ../datasets/bank_marketing
