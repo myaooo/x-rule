@@ -11,10 +11,11 @@ import {
   initRuleStyles,
   RootState,
   Settings,
-  initialSettings
+  initialSettings,
+  DataFilter,
 } from './state';
-import { ReceiveStreamAction, RequestSupportAction, ActionType } from './actions';
-import { initialStreamBaseState, StreamBaseState, SupportState, initSupportState } from './state';
+import { ReceiveStreamAction, RequestSupportAction, ActionType, ChangeFiltersAction } from './actions';
+import { initialStreamBaseState, StreamBaseState, SupportState, initSupportState, initDataFilter } from './state';
 
 import {
   ReceiveSupportAction,
@@ -197,9 +198,16 @@ function supportReducer(
   }
 }
 
-// function filtersReducer(
-//   state: DataFilter[] = initDataFilter, action:
-// )
+function filtersReducer(
+  state: DataFilter[] = initDataFilter, action: ChangeFiltersAction
+): DataFilter[] {
+  switch (action.type) {
+    case ActionType.CHANGE_FILTERS:
+      return action.newFilters;
+    default:
+      return state;
+  }
+}
 // function selectedDataReducer(
 //   state: string,
 //   action:
@@ -208,7 +216,7 @@ function supportReducer(
 export const rootReducer = combineReducers<RootState>({
   model: modelStateReducer,
   dataBase: dataBaseReducer,
-  // dataFilters: 
+  dataFilters: filtersReducer,
   streamBase: streamBaseReducer,
   selectedData: selectDatasetReducer,
   selectedFeatures: selectedFeaturesReducer,

@@ -17,6 +17,10 @@ interface RuleMatrixPropsOptional {
   intervalX: number;
   flowWidth: number;
   labelColor: ColorType;
+  width: number;
+  height: number;
+  x0: number;
+  y0: number;
 }
 
 export interface RuleMatrixProps extends Partial<RuleMatrixPropsOptional> {
@@ -40,6 +44,10 @@ export default class RuleMatrix extends React.PureComponent<RuleMatrixProps, Rul
     intervalX: 0.2,
     flowWidth: 60,
     labelColor: defaultLabelColor,
+    width: 1200,
+    height: 800,
+    x0: 100,
+    y0: 160,
   };
   // private stateUpdated: boolean;
   private ref: SVGGElement;
@@ -72,13 +80,14 @@ export default class RuleMatrix extends React.PureComponent<RuleMatrixProps, Rul
   }
 
   painterUpdate() {
-    const {dataset, streams, model, rectWidth, rectHeight, flowWidth, minSupport, support} = this.props;
+    const {dataset, streams, model, rectWidth, rectHeight, flowWidth, minSupport, support, x0, y0} = this.props;
     console.log('updating matrix'); // tslint:disable-line
     this.state.painter.update({
       dataset,
       streams, 
       support,
-      transform: `translate(100, 160)`,
+      x0, y0,
+      // transform: `translate(100, 160)`,
       elemWidth: rectWidth,
       elemHeight: rectHeight,
       flowWidth,
@@ -88,7 +97,12 @@ export default class RuleMatrix extends React.PureComponent<RuleMatrixProps, Rul
       .render(d3.select<SVGGElement, {}>(this.ref));
   }
   render() {
-    return <g ref={(ref) => ref && (this.ref = ref)}/>;
+    // const {width, height, x0, y0} = this.props as RuleMatrixProps & RuleMatrixPropsOptional;
+    return(
+      <g ref={(ref) => ref && (this.ref = ref)}>
+        {/* <rect stroke="#888" x={-x0} y={-y0} width={width} height={height} fill="none"/> */}
+      </g>
+    );
   }
 
 }

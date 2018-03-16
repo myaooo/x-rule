@@ -8,6 +8,22 @@ import * as d3 from 'd3';
 const CheckboxGroup = Checkbox.Group;
 // const Panel = Collapse.Panel;
 
+export interface DataInputHeaderProps {
+  onClick?: () => void;
+}
+
+export function DataInputHeader(props: DataInputHeaderProps) {
+  const { onClick } = props;
+  return (
+    <div>
+      Data Filter
+      <Button onClick={onClick} type="primary" icon="upload" style={{ float: 'right', fontSize: 12 }} size="small">
+        Filter
+      </Button>
+    </div>
+  );
+}
+
 export type FilterType = number[] | null;
 
 export interface CategoricalInputProps {
@@ -97,7 +113,7 @@ export class NumericInput extends React.PureComponent<NumericInputProps, Numeric
     };
   }
   onChangeValue(input: [number, number]) {
-    this.props.onChange(input);
+    this.props.onChange(input.slice(0, 2) as [number, number]);
   }
   // handleChangeMode(useRange: boolean) {
   //   this.setState({useRange});
@@ -123,7 +139,7 @@ export class NumericInput extends React.PureComponent<NumericInputProps, Numeric
     const max = Math.ceil(r1 / step) * step;
     const common = {
       onAfterChange: this.onChangeValue,
-      style: {marginTop: 20, marginBottom: 0, fontSize: 9},
+      style: {marginTop: 24, marginBottom: 0, fontSize: 9},
       step, min, max,
       marks,
     };
@@ -131,7 +147,7 @@ export class NumericInput extends React.PureComponent<NumericInputProps, Numeric
       <div className="card">
         <Row gutter={6}>
           <Col span={10}>
-            <span style={{fontSize: 12, marginTop: 10}}>
+            <span style={{fontSize: 12, marginTop: 16}}>
               {featureName} 
             </span>
           </Col>
@@ -162,6 +178,7 @@ export function DataFilterHeader(props: DataFilterHeaderProps) {
 
 interface ListData {
   featureName: string;
+  idx: number;
   categories: string[] | null;
   cutPoints: number[] | null;
 }
@@ -169,10 +186,14 @@ interface ListData {
 function computeListData(meta: ModelMeta, indices?: number[]): ListData[] {
   const {categories, ranges, discretizers, featureNames} = meta;
   if (indices === undefined) indices = d3.range(featureNames.length);
-  return indices.map((i: number) => ({
-    featureName: featureNames[i], categories: categories[i], 
-    cutPoints: [ranges[i][0], ...discretizers[i].cutPoints, ranges[i][1]]
-  }));
+  return indices.map((i: number) => {
+    const cutPoints = discretizers[i].cutPoints;
+    return {
+      featureName: featureNames[i], categories: categories[i], 
+      cutPoints: [ranges[i][0], ...(cutPoints ? cutPoints : []), ranges[i][1]],
+      idx: i
+    };
+  });
 }
 
 export interface DataFilterProps {
@@ -180,6 +201,7 @@ export interface DataFilterProps {
   indices?: number[];
   filters: (number[] | null)[];
   onChangeFilter: (i: number, filter: number[] | null) => void;
+  onSubmitFilter?: () => void;
 }
 
 export interface DataFilterState {
@@ -210,38 +232,13 @@ export default class DataFilter extends React.Component<DataFilterProps, DataFil
       this.setState({listData: computeListData(meta, indices)});
     }
   }
-  
-  // onChangeCategories(i: number, checkedList: string[]) {
-  //   if (this.props.meta.categories[i]) {
-  //     const conditionList = this.state.conditionList;
-  //     conditionList[i] = checkedList;
-  //     this.setState({
-  //       conditionList
-  //     });
-  //   } else {
-  //     console.warn(`Feature ${i} is not categorical!`);
-  //   }
-  // }
-
-  // onChangeNumeric(i: number, value: number | [number, number]) {
-  //   if (this.props.meta.categories[i]) {
-  //     console.warn(`Feature ${i} is categorical!`);
-  //   } else {
-  //     const conditionList = this.state.conditionList;
-  //     conditionList[i] = value;
-  //     this.setState({
-  //       conditionList
-  //     });
-  //   }
-  // }
 
   render() {
-    const { filters, onChangeFilter } = this.props;
-    // const { featureNames, categories, ranges, discretizers } = meta;
-    // const { conditionList } = this.state;
-    // const isCategorical = dataset.isCategorical;
+    const { filters, onChangeFilter, onSubmitFilter } = this.props;
+
     return (
       <List
+        header={<DataInputHeader onClick={onSubmitFilter}/>}
         className="scrolling-wrapper"
         // itemLayout="vertical"
         dataSource={this.state.listData}
@@ -253,7 +250,7 @@ export default class DataFilter extends React.Component<DataFilterProps, DataFil
                 featureName={item.featureName}
                 categories={item.categories} 
                 checkedList={filters[i]} 
-                onChange={(checkedList: number[]) => onChangeFilter(i, checkedList)}
+                onChange={(checkedList: number[]) => onChangeFilter(item.idx, checkedList)}
               />
             }
             {item.cutPoints &&
@@ -262,7 +259,7 @@ export default class DataFilter extends React.Component<DataFilterProps, DataFil
                 // range={ranges[i]}
                 cutPoints={item.cutPoints}
                 value={filters[i] as [number, number]}
-                onChange={(valueRange: [number, number]) => onChangeFilter(i, valueRange)}
+                onChange={(valueRange: [number, number]) => onChangeFilter(item.idx, valueRange)}
               />
             }
           </List.Item>

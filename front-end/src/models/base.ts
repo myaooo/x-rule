@@ -72,6 +72,7 @@ export class BaseModel implements ModelBase {
     if (f < 0 || c < 0) return 'default';
     const intervals = this.meta.discretizers[f].intervals;
     if (intervals) {
+      // console.log(c); // tslint:disable-line
       const [r0, r1] = intervals[c];
       return `${r0 === null ? '(∞' : `[${toString(r0)}`},${r1 === null ? '∞' : toString(r1)})`;
     }

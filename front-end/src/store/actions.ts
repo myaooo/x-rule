@@ -1,7 +1,7 @@
 // Action Types
 import { Dispatch as ReduxDispatch, Action } from 'redux';
 import { ThunkAction } from 'redux-thunk';
-import { RootState, TreeStyles, RuleStyles, Settings } from './state';
+import { RootState, TreeStyles, RuleStyles, Settings, DataFilter } from './state';
 import {
   ModelBase,
   PlainData,
@@ -14,8 +14,7 @@ import {
 } from '../models';
 
 import dataService from '../service/dataService';
-import { isConditional } from './selectors';
-import { FilterType } from '../components/DataFilter';
+import { isConditional, getModel, getSelectedDataNames } from './selectors';
 
 export type Dispatch = ReduxDispatch<RootState>;
 
@@ -103,7 +102,7 @@ export interface ChangeSettingsAction extends TypedAction<ActionType.CHANGE_SETT
 }
 
 export interface ChangeFiltersAction extends TypedAction<ActionType.CHANGE_FILTERS> {
-  readonly newFilters: FilterType[];
+  readonly newFilters: DataFilter[];
 }
 
 export function requestModel(modelName: string): RequestModelAction {
@@ -218,7 +217,7 @@ export function changeSettings(newSettings: Partial<Settings>): ChangeSettingsAc
   };
 }
 
-export function changeFilters(newFilters: FilterType[]): ChangeFiltersAction {
+export function changeFilters(newFilters: DataFilter[]): ChangeFiltersAction {
   return {
     type: ActionType.CHANGE_FILTERS,
     newFilters
@@ -231,7 +230,7 @@ function fetchDataWrapper<ArgType, ReturnType>(
   fetchFn: (arg: ArgType, getState: () => RootState) => Promise<ReturnType>,
   requestAction: (arg: ArgType) => Action,
   receiveAction: (ret: ReturnType | null) => Action,
-  needFetch: (arg: ArgType, getState: () => RootState) => boolean
+  needFetch?: (arg: ArgType, getState: () => RootState) => boolean
 ): ((arg: ArgType) => AsyncAction) {
   // ): ThunkAction<any, RootState, ArgType> {
   const fetch = (fetchArg: ArgType, getState: () => RootState): Dispatch => {
@@ -245,7 +244,7 @@ function fetchDataWrapper<ArgType, ReturnType>(
   };
   return (arg: ArgType) => {
     return (dispatch: Dispatch, getState: () => RootState) => {
-      if (needFetch(arg, getState)) {
+      if (needFetch === undefined ? true : needFetch(arg, getState)) {
         return dispatch(fetch(arg, getState));
       }
       return;
@@ -269,8 +268,11 @@ export const fetchModelIfNeeded = fetchDataWrapper(
 
 type DatasetArg = { modelName: string; dataType: DataTypeX };
 
-function fetchModelData({ modelName, dataType }: DatasetArg): Promise<ReceiveDatasetPayload> {
-  return dataService.getModelData(modelName, dataType).then(data => ({
+function fetchModelData(
+  { modelName, dataType }: DatasetArg, getState: () => RootState
+): Promise<ReceiveDatasetPayload> {
+  const filters = getState().dataFilters;
+  return dataService.getModelData(modelName, dataType, filters).then(data => ({
     data,
     modelName,
     dataType
@@ -291,9 +293,9 @@ type FetchSupportArg = {modelName: string; data: DataTypeX};
 function fetchSupport(
   { modelName, data }: FetchSupportArg, getState: () => RootState
 ): Promise<ReceiveSupportPayload> {
-  const fetcher: (modelName: string, data: DataTypeX) => Promise<SupportType> 
+  const fetcher: (modelName: string, data: DataTypeX, filters: DataFilter[]) => Promise<SupportType> 
     = getState().settings.supportMat ? dataService.getSupportMat : dataService.getSupport;
-  return fetcher(modelName, data)
+  return fetcher(modelName, data, getState().dataFilters)
     .then((support: SupportType) => ({
       support,
       modelName
@@ -308,28 +310,25 @@ export const fetchSupportIfNeeded = fetchDataWrapper(
 );
 
 export const fetchStreamIfNeeded = fetchDataWrapper(
-  (payload: StreamPayload): Promise<StreamPayload & { streams: Streams | ConditionalStreams }> => {
+  (payload: StreamPayload, getState): Promise<StreamPayload & { streams: Streams | ConditionalStreams }> => {
     const { modelName, dataType, conditional } = payload;
-    return dataService.getStream(modelName, dataType, conditional).then(data => {
-      if (conditional)
+    const filters = getState().dataFilters;
+    return dataService.getStream(modelName, dataType, conditional, filters)
+      .then(data => {
+        if (conditional)
+          return {
+            streams: createConditionalStreams(data as ConditionalStreams),
+            ...payload
+          };
         return {
-          streams: createConditionalStreams(data as ConditionalStreams),
+          streams: createStreams(data as Streams),
           ...payload
         };
-      return {
-        streams: createStreams(data as Streams),
-        ...payload
-      };
-    });
+      });
   },
   requestStream,
   receiveStream,
-  (payload: StreamPayload, getState: () => RootState): boolean => {
-    const streamBase = getState().streamBase[payload.dataType];
-    if (!streamBase) return true;
-    if (payload.conditional) return !streamBase.conditionalStreams;
-    return !streamBase.streams;
-  }
+  () => true,
 );
 
 export function selectDatasetAndFetchSupport(dataNames: DataTypeX[]): ThunkAction<void, RootState, {}> {
@@ -354,10 +353,9 @@ export function selectDatasetAndFetchSupport(dataNames: DataTypeX[]): ThunkActio
 export function changeSettingsAndFetchData(newSettings: Partial<Settings>): ThunkAction<void, RootState, {}> {
   return (dispatch: Dispatch, getState: () => RootState) => {
     const state = getState();
-    const modelState = state.model;
-    const dataNames = state.selectedData;
-    const model = modelState.model;
-    if (model === null || modelState.isFetching) return;
+    const model = getModel(state);
+    if (model === null) return;
+    const dataNames = getSelectedDataNames(state);
     const modelName = model.name;
     const conditional = newSettings.conditional === undefined ? isConditional(state) : newSettings.conditional;
 
@@ -371,7 +369,19 @@ export function changeSettingsAndFetchData(newSettings: Partial<Settings>): Thun
   };
 }
 
-// export function changeFilterAndFetchData
+export function changeFilterAndFetchData(newFilters: DataFilter[]): ThunkAction<void, RootState, {}> {
+  return (dispatch: Dispatch, getState: () => RootState) => {
+    dispatch(changeFilters(newFilters));
+    const state = getState();
+    const model = getModel(state);
+    if (model === null) return;
+    const modelName = model.name;
+    const dataNames = getSelectedDataNames(state);
+    const conditional = isConditional(state);
+    dispatch(fetchSupportIfNeeded({modelName, data: dataNames[0] }));
+    dispatch(fetchStreamIfNeeded({modelName, dataType: dataNames[0], conditional}));
+  };
+}
 
 // export const fetchDatasetAndSelect = (datasetName,)
 

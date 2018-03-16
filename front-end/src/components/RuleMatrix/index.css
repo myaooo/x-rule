@@ -86,6 +86,7 @@ rect.mo-support-mat {
 
 g.row-button {
   cursor: pointer;
+  stroke-linecap: round;
 }
 
 g.row-button:hover {

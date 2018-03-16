@@ -166,7 +166,7 @@ export default class RuleRowPainter implements Painter<RuleX, RuleRowParams> {
 
     // UPDATE
     const conditionsUpdate = conditionsEnter.merge(conditions)
-      .classed('hidden', false).classed('visible', true);
+      .classed('hidden', false).classed('visible', true).attr('display', null);
     // conditionsUpdate.select('title').text(d => d.title);
     // Add listeners to update tooltip
     if (tooltip) {
@@ -200,7 +200,9 @@ export default class RuleRowPainter implements Painter<RuleX, RuleRowParams> {
     // );
 
     // EXIT
-    conditions.exit().classed('hidden', true).transition().duration(duration);
+    conditions.exit().classed('hidden', true)
+      .transition().delay(300)
+      .attr('display', 'none');
 
     return this;
   }

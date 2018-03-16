@@ -4,7 +4,7 @@ import { Table, Col, Row } from 'antd';
 import { ModelMeta } from '../models/base';
 import DataFilter from './DataFilter';
 import { FilterType } from './DataFilter';
-import { BasicData } from '../models/data';
+import { BasicData, DataSet } from '../models/data';
 import * as nt from '../service/num';
 
 import './DataTable.css';
@@ -17,14 +17,14 @@ interface DataElem {
 }
 
 function computeColumns(meta: ModelMeta, indices?: number[]): any[] {
-  const {featureNames, categories} = meta;
+  const {featureNames} = meta;
   const columns: any[] = [{ title: 'Label', dataIndex: 'label', width: 80, fixed: 'left' }];
   const orders = indices ? indices : d3.range(featureNames.length);
   columns.push(
     ...orders.map((i: number) => ({
       title: featureNames[i],
       dataIndex: i.toString(),
-      width: categories[i] ? 100 : 90,
+      width: 100,
       className: 'table-header'
     }))
   );
@@ -38,12 +38,14 @@ interface OptionalProps {
 
 export interface DataTableProps extends Partial<OptionalProps> {
   meta: ModelMeta;
+  dataSet?: DataSet;
   height: number;
   // width: number;
   // data: number[][];
   indices?: number[];
   // query?: FilterType[];
   getData: (filters: FilterType[], start?: number, end?: number) => Promise<BasicData>;
+  onSubmitFilter?: (filters: FilterType[]) => void;
 }
 
 export interface DataTableState {
@@ -69,7 +71,7 @@ export default class DataTable extends React.Component<DataTableProps, DataTable
     this.state = { data: [], filters, totalLength: 0, end: 0, loading: false, columns };
   }
   handleFilterChange(filters: FilterType[]) {
-    this.setState({ filters, data: [], end: 0, totalLength: 0 });
+    this.setState({ filters });
     this.getData(filters, 0);
     // this.props.getData(filters, 0).then((baseData: BasicData) => {
     //   const {meta} = this.props;
@@ -112,9 +114,9 @@ export default class DataTable extends React.Component<DataTableProps, DataTable
   }
 
   componentWillReceiveProps(nextProps: DataTableProps) {
-    const {meta, indices} = nextProps;
+    const {meta, indices, dataSet} = nextProps;
     // const updateState: Partial<DataTableState> = {};
-    if (meta !== this.props.meta || indices !== this.props.indices) {
+    if (meta !== this.props.meta || indices !== this.props.indices || dataSet !== this.props.dataSet) {
       const columns = computeColumns(meta, indices);
       this.setState({columns});
       this.getData(this.state.filters, 0);
@@ -128,10 +130,13 @@ export default class DataTable extends React.Component<DataTableProps, DataTable
   }
 
   render() {
-    const { meta, height, indices } = this.props as DataTableProps & OptionalProps;
+    const { meta, height, indices, onSubmitFilter, dataSet } = this.props as DataTableProps & OptionalProps;
     const { data, columns, totalLength, filters } = this.state;
 
     const totalWidth = nt.sum(columns.map(col => col.width)) + 20;
+    let title = `DataSet: ${dataSet ? dataSet.name : 'train'}`;
+    if (dataSet)
+      title +=  ` | (${totalLength}/${dataSet.data.length})`;
     return (
       <Row>
         <Col span={6}>
@@ -139,6 +144,7 @@ export default class DataTable extends React.Component<DataTableProps, DataTable
             meta={meta} 
             filters={filters} 
             onChangeFilter={this.handleFilterUpdate}
+            onSubmitFilter={onSubmitFilter && (() => onSubmitFilter(filters))}
             indices={indices}
           />
         </Col>
@@ -149,7 +155,7 @@ export default class DataTable extends React.Component<DataTableProps, DataTable
             columns={columns}
             dataSource={data}
             scroll={{ y: height, x: totalWidth + 10 }}
-            title={() => `Data Num: ${totalLength}`}
+            title={() => title}
             pagination={{ pageSize: 25 }}
             style={{fontSize: 12}}
             loading={this.state.loading}

@@ -40,8 +40,10 @@ export type ConditionalStreams = Streams[];
 
 export function createStreams(raw: Streams): Streams {
   raw.forEach((stream: Stream) => {
-    stream.stream = d3.transpose(stream.stream);
-    stream.processed = true;
+    if (!stream.processed) {
+      stream.stream = d3.transpose(stream.stream);
+      stream.processed = true;
+    }
   });
   return raw;
 }

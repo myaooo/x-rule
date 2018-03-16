@@ -64,7 +64,9 @@ interface OptionalParams {
   paddingX: number;
   paddingY: number;
   flowWidth: number;
-  transform: string;
+  x0: number;
+  y0: number;
+  // transform: string;
   elemWidth: number;
   elemHeight: number;
   color: ColorType;
@@ -88,6 +90,8 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
     color: labelColor,
     elemWidth: 30,
     elemHeight: 30,
+    x0: 100,
+    y0: 160,
     duration: defaultDuration,
     fontSize: 12,
     headerSize: 13,
@@ -96,7 +100,7 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
     paddingY: 0.2,
     // buttonSize: 12,
     outputWidth: 200,
-    transform: '',
+    // transform: '',
     expandFactor: [4, 3],
     flowWidth: 50,
     // onClick: () => null
@@ -273,7 +277,7 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
   }
 
   public render(selector: d3.Selection<SVGGElement, any, any, any>) {
-    const {transform} = this.params;
+    const {x0, y0} = this.params;
     this.selector = selector;
     this.updateRules().updatePresentation().updatePos();
     console.log(this.rules); // tslint:disable-line
@@ -287,45 +291,60 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
       }
       this.render(selector);
     };
+
     // Global Transform
-    selector.attr('transform', transform);
-
-    // Rule Root
-    selector.selectAll('g.rules').data(['rules']).enter()
-      .append('g').attr('class', 'rules');
-    const ruleRoot = selector.select<SVGGElement>('g.rules');
-
-    // Flow Root
-    selector.selectAll('g.flows').data(['flows']).enter()
-    .append('g').attr('class', 'flows');
-    const flowRoot = selector.select<SVGGElement>('g.flows');
-
-    // Header Root
-    selector.selectAll('g.headers').data(['headers']).enter()
-      .append('g').attr('class', 'headers');
-    const headerRoot = selector.select<SVGGElement>('g.headers');
-
-    // Header Root
-    selector.selectAll('g.outputs').data(['outputs']).enter()
-      .append('g').attr('class', 'outputs');
-    const outputRoot = selector.select<SVGGElement>('g.outputs');
-
-    // CursorFollow
-    selector.selectAll('g.cursor-follow').data(['cursor-follow']).enter()
-      .append('g').attr('class', 'cursor-follow');
-    const cursorFollow = selector.select<SVGGElement>('g.cursor-follow');
+    selector.attr('transform', `translate(${x0}, ${y0})`);
+    selector.selectAll('rect.bg').data(['rect-bg']).enter()
+      .append('rect').attr('class', 'bg');
+    
+    // Root Container
+    selector.selectAll('g.container').data(['container']).enter()
+      .append('g').attr('class', 'container');
+    const container = selector.select<SVGGElement>('g.container');
 
     // Button
     selector.selectAll('g.buttons').data(['buttons']).enter()
       .append('g').attr('class', 'buttons');
     const buttons = selector.select<SVGGElement>('g.buttons');
 
-    this.renderCursorFollow(selector, cursorFollow);
+    // Rule Root
+    container.selectAll('g.rules').data(['rules']).enter()
+      .append('g').attr('class', 'rules');
+    const ruleRoot = container.select<SVGGElement>('g.rules');
+
+    // Flow Root
+    container.selectAll('g.flows').data(['flows']).enter()
+    .append('g').attr('class', 'flows');
+    const flowRoot = container.select<SVGGElement>('g.flows');
+
+    // Header Root
+    container.selectAll('g.headers').data(['headers']).enter()
+      .append('g').attr('class', 'headers');
+    const headerRoot = container.select<SVGGElement>('g.headers');
+
+    // Output
+    container.selectAll('g.outputs').data(['outputs']).enter()
+      .append('g').attr('class', 'outputs');
+    const outputRoot = container.select<SVGGElement>('g.outputs');
+
+    // CursorFollow
+    container.selectAll('g.cursor-follow').data(['cursor-follow']).enter()
+      .append('g').attr('class', 'cursor-follow');
+    const cursorFollow = container.select<SVGGElement>('g.cursor-follow');
+
+    this.renderCursorFollow(container, cursorFollow);
     this.renderRows(ruleRoot);
     this.renderFlows(flowRoot);
     this.renderHeader(headerRoot);
     this.renderOutputs(outputRoot);
     this.renderButton(buttons);
+    this.registerZoom(selector, container);
+
+    selector.select('rect.bg')
+      .attr('width', this.getWidth())
+      .attr('height', this.getHeight())
+      .attr('fill', 'white');
+
     return this;
   }
 
@@ -351,7 +370,7 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
 
     // Update
     const ruleUpdate = ruleEnter.merge(rule)
-      .classed('hidden', false).classed('visible', true);
+      .classed('hidden', false).classed('visible', true).attr('display', null);
     ruleUpdate
       .transition()
       .duration(duration)
@@ -364,7 +383,9 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
       .transition()
       .duration(duration)
       .attr('transform', (d, i, nodes) => 
-        `translate(0,${collapseYs.get(nodes[i].id)})`);
+        `translate(0,${collapseYs.get(nodes[i].id)})`
+      ).transition().delay(300)
+      .attr('display', 'none');
     
     const painter = this.rowPainter;
 
@@ -384,9 +405,8 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
 
   public renderOutputs(root: d3.Selection<SVGGElement, any, SVGElement, any>): this {
     const { outputWidth, duration, fontSize, color, flowWidth } = this.params;
-    const { widths, xs, model } = this;
-    const widthFactor = outputWidth / model.maxSupport;
-    const width = xs[xs.length - 1] + widths[widths.length - 1];
+    const widthFactor = outputWidth / this.model.maxSupport;
+    const width = this.getWidth();
     root.transition().duration(duration)
       .attr('transform', `translate(${width + flowWidth},0)`);
 
@@ -441,8 +461,7 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
     cursorFollow.attr('display', 'none');
     const tooltip = this.renderToolTip(cursorFollow);
     const ruler = this.renderLine(cursorFollow);
-    const lastRule = this.rules[this.rules.length - 1];
-    const height = lastRule.y + lastRule.height;
+    const height = this.getHeight();
     root
       .on('mousemove', function() {
         const pos = d3.mouse(this);
@@ -482,7 +501,7 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
   }
 
   private renderButton(buttonGroup: d3.Selection<SVGGElement, any, any, any>): this {
-    buttonGroup.attr('transform', `translate(-80,-150)`);
+    buttonGroup.attr('transform', `translate(-100,-150)`);
     const g = buttonGroup.selectAll('g.reset-button').data(['g']).enter()
       .append('g').attr('class', 'reset-button')
       .on('click', this.collapseAll);
@@ -497,6 +516,39 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
     rect.attr('width', box ? box.width + 10 : 40)
       .attr('height', box ? box.height + 8 : 20);
     return this;
+  }
+
+  private registerZoom(
+    root: d3.Selection<SVGGElement, any, any, any>,
+    container: d3.Selection<SVGGElement, any, any, any>
+  ): this {
+    // const {x0, y0} = this.params;
+    const width = this.getWidth();
+    const height = this.getHeight();
+    const rootNode = container.node();
+    const zoomed = function () {
+      if (rootNode) {
+        container.attr('transform', d3.event.transform);
+      }
+    };
+    console.log(width); // tslint:disable-line
+    console.log(height); // tslint:disable-line
+    const zoom = d3.zoom()
+      .scaleExtent([0.5, 5])
+      .translateExtent([[-200, -200], [2000, 2000]])
+      .on('zoom', zoomed);
+    root.call(zoom);
+    return this;
+  }
+
+  private getHeight() {
+    const lastRule = this.rules[this.rules.length - 1];
+    return lastRule.y + lastRule.height;
+  }
+
+  private getWidth() {
+    const {xs, widths} = this;
+    return xs[xs.length - 1] + widths[widths.length - 1];
   }
 
 }

@@ -84,9 +84,9 @@ export const initialSettings: Settings = {
   minSupport: 0.01,
 };
 
-export type DataFilter = [number[] | null][];
+export type DataFilter = number[] | null;
 
-export const initDataFilter = [];
+export const initDataFilter: DataFilter[] = [];
 
 export const initialStreamBaseState: StreamBaseState = {};
 
