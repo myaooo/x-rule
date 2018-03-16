@@ -21,8 +21,8 @@
 }
 
 .mo-supports rect {
-  fill-opacity: 0.6;
-  stroke-width: 0.5;
+  fill-opacity: 0.8;
+  stroke-width: 0;
   /* stroke: #444; */
 }
 
@@ -68,8 +68,8 @@ rect.header-bg {
 
 rect.mo-support-mat {
   /* mask: url(#mask-stripe); */
-  fill-opacity: 0.7;
-  stroke-width: 0.5;
+  fill-opacity: 0.8;
+  stroke-width: 0;
 }
 
 .visible {
@@ -87,6 +87,7 @@ rect.mo-support-mat {
 g.row-button {
   cursor: pointer;
   stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 g.row-button:hover {

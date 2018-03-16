@@ -16,6 +16,7 @@ import {
 } from './state';
 import { ReceiveStreamAction, RequestSupportAction, ActionType, ChangeFiltersAction } from './actions';
 import { initialStreamBaseState, StreamBaseState, SupportState, initSupportState, initDataFilter } from './state';
+import { isSurrogate } from '../models/base';
 
 import {
   ReceiveSupportAction,
@@ -176,10 +177,17 @@ function ruleStylesReducer(state: RuleStyles = initRuleStyles, action: ChangeRul
   }
 }
 
-function settingsReducer(state: Settings = initialSettings, action: ChangeSettingsAction): Settings {
+function settingsReducer(
+  state: Settings = initialSettings, 
+  action: ChangeSettingsAction | ReceiveModelAction
+): Settings {
   switch (action.type) {
     case ActionType.CHANGE_SETTINGS:
       return { ...state, ...action.newSettings };
+    case ActionType.RECEIVE_MODEL:
+      const model = action.model;
+      const supportMat = model !== null && isSurrogate(model);
+      return {...state, supportMat};
     default:
       return state;
   }

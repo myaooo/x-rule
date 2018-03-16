@@ -462,12 +462,19 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
     const tooltip = this.renderToolTip(cursorFollow);
     const ruler = this.renderLine(cursorFollow);
     const height = this.getHeight();
+    const width = this.getWidth();
+    const {flowWidth} = this.params;
     root
       .on('mousemove', function() {
         const pos = d3.mouse(this);
         cursorFollow.attr('transform', `translate(${pos[0]},0)`);
         tooltip.attr('transform', `translate(4,${pos[1] - 6})`);
-        ruler.select('line').attr('y2', height);
+        if (pos[0] < flowWidth || pos[0] > flowWidth + width) {
+          ruler.attr('display', 'none');
+        } else {
+          ruler.select('line').attr('y2', height);
+          ruler.attr('display', null);
+        }
       })
       .on('mouseover', () => cursorFollow.attr('display', null))
       .on('mouseout', () => cursorFollow.attr('display', 'none'));

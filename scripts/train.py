@@ -163,7 +163,7 @@ if __name__ == '__main__':
     # Rules
     ###########
 
-    # train_rule(dataset='breast_cancer')
+    train_rule(dataset='breast_cancer')
     # train_rule(dataset='iris')
     # train_rule(dataset='wine')
     # train_rule(dataset='thoracic', rule_max_len=2, )
@@ -222,7 +222,7 @@ if __name__ == '__main__':
 
     # train_surrogate('models/diabetes-nn-200-100-50.mdl', surrogate='tree', sampling_rate=0.1)
     # train_surrogate('models/adult-nn-30-30.mdl', surrogate='rule', sampling_rate=5)
-    train_surrogate('models/wine_quality_red-nn-40-40.mdl', surrogate='rule', sampling_rate=5, rule_maxlen=3)
+    # train_surrogate('models/wine_quality_red-nn-40-40.mdl', surrogate='rule', sampling_rate=5, rule_maxlen=3)
     # train_surrogate('models/wine_quality_white-nn-40-40.mdl', surrogate='rule', sampling_rate=10)
 
     ###########

@@ -48,7 +48,6 @@ const cache: {[key: string]: Cache<any>} = {};
 function memorizedGetOrPost<T>(
   url: string, params?: any, json?: any
 ): Promise<T> {
-  
   const key = [url, params, json].map((e) => JSON.stringify(e)).join(',');
   if (key in cache)
     return Promise.resolve<T>(cache[key].data);
@@ -76,7 +75,8 @@ function getModelData(
 ): Promise<PlainData> {
   const url = `${api}/model_data/${modelName}`;
   const params = {data, bins: nBins};
-  return memorizedGetOrPost(url, params, filters);
+  const json = filters && (filters.length ? filters : null);
+  return memorizedGetOrPost(url, params, json);
 }
 
 function getFilterData(
@@ -90,7 +90,8 @@ function getFilterData(
   const url = `${api}/query/${modelName}`;
   const params = {data, bins: nBins, start, end};
   // const post = {filters, start, end};
-  return memorizedGetOrPost(url, params, filters);
+  const json = filters && (filters.length ? filters : null);
+  return memorizedGetOrPost(url, params, json);
 }
 
 function getStream(
@@ -99,7 +100,8 @@ function getStream(
 ): Promise<Stream[] | Stream[][]> {
   const url = `${api}/stream/${modelName}`;
   const params = {data, conditional, bins: nBins};
-  return memorizedGetOrPost(url, params, filters);
+  const json = filters && (filters.length ? filters : null);
+  return memorizedGetOrPost(url, params, json);
 }
 
 function getSupport(
@@ -108,7 +110,8 @@ function getSupport(
 ): Promise<number[][]> {
   const url = `${api}/support/${modelName}`;
   const params = {data};
-  return memorizedGetOrPost(url, params, filters);
+  const json = filters && (filters.length ? filters : null);
+  return memorizedGetOrPost(url, params, json);
 }
 
 function getSupportMat(
@@ -116,7 +119,8 @@ function getSupportMat(
 ): Promise<number[][][]> {
   const url = `${api}/support/${modelName}`;
   const params = {data, support: 'mat'};
-  return memorizedGetOrPost(url, params, filters);
+  const json = filters && (filters.length ? filters : null);
+  return memorizedGetOrPost(url, params, json);
 }
 
 export default {

@@ -25,9 +25,9 @@ export type ColorType = (i: number) => string;
 const gColor = [
   '#3366cc',
   '#ff9900',
-  '#dc3912',
   '#109618',
   '#990099',
+  '#dc3912',
   '#0099c6',
   '#dd4477',
   '#66aa00',
@@ -50,6 +50,6 @@ export const googleColor: ColorType = (n: number) => gColor[n % gColor.length];
 export const defaultColor: ColorType = d3.scaleOrdinal<number, string>(d3ScaleChromatic.schemeSet1 as string[]);
 
 // export const labelColor: ColorType = d3.scaleOrdinal<number, string>(d3.schemeCategory10);
-export const labelColor: ColorType = googleColor;
+export const labelColor: ColorType = d3.scaleOrdinal<number, string>(d3.schemeCategory20 as string[]);
 
 export const defaultDuration = 400;

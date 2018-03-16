@@ -80,7 +80,7 @@ export interface Settings {
 
 export const initialSettings: Settings = {
   conditional: false,
-  supportMat: true,
+  supportMat: false,
   minSupport: 0.01,
 };
 

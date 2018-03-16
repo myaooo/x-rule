@@ -85,7 +85,7 @@ export class SupportPainter implements Painter<SupportData, SupportParams> {
     support: number[][]
   ): this {
     const { height, widthFactor, duration, color } = this.params;
-    const trueLabels = support.length ? nt.sumVec(support) : [];
+    const trueLabels = support.map((s: number[]) => nt.sum(s));
     // const total = nt.sum(trueLabels);
     // const width = total * widthFactor;
     const widths = trueLabels.map((l) => l * widthFactor);
@@ -94,7 +94,7 @@ export class SupportPainter implements Painter<SupportData, SupportParams> {
     // const heights = ys.map((y) => height - y);
 
     // Render True Rects
-    const trueData = d3.transpose<number>(support)
+    const trueData = support
       .map((s, i) => ({width: widths[i], x: xs[i], height: ys[i], data: s, label: i}))
       .filter(v => v.width > 0);
     // Join
@@ -349,7 +349,7 @@ export default class OutputPainter implements Painter<RuleX[], OutputParams> {
     enter: d3.Selection<SVGGElement, RuleX, SVGGElement, RuleX[]>,
     update: d3.Selection<SVGGElement, RuleX, SVGGElement, RuleX[]>
   ): this {
-    const { duration, fontSize, widthFactor } = this.params;
+    const { duration, fontSize, widthFactor, color } = this.params;
     // Enter
     enter.append('g').attr('class', 'mo-supports');
     // Update
@@ -360,7 +360,7 @@ export default class OutputPainter implements Painter<RuleX[], OutputParams> {
     // supports
     supports.each(({support, height}, i, nodes) => 
       support && this.supportPainter
-        .update({widthFactor, height})
+        .update({widthFactor, height, color})
         .data(support)
         .render(d3.select(nodes[i]))
     );

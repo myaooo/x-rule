@@ -82,14 +82,14 @@ class Rule:
             s += " [" + "/".join(support) + "]"
         return s
 
-    def is_satisfy(self, x_cat, per_condition=False) -> Union[np.ndarray, List[np.ndarray]]:
+    def is_satisfy(self, x_cat) -> Union[np.ndarray, List[np.ndarray]]:
         satisfied = []
         if self.is_default():
             return np.ones(x_cat.shape[0], dtype=bool)
         for idx, cat in zip(self.feature_indices, self.categories):
             satisfied.append(x_cat[:, idx] == cat)
-        if per_condition:
-            return satisfied
+        # if per_condition:
+        #     return satisfied
         return reduce(np.logical_and, satisfied)
 
 
@@ -401,10 +401,17 @@ class SBRL(Classifier):
         n_classes = self.n_classes
         n_rules = self.n_rules
         supports = self.decision_support(x)
+        if np.sum(supports.astype(np.int)) != x.shape[0]:
+            print(np.sum(supports.astype(np.int)))
+            print(x.shape[0])
+            print(supports)
         support_summary = np.zeros((n_rules, n_classes), dtype=np.int)
         for i, support in enumerate(supports):
             support_labels = y[support]
             unique_labels, unique_counts = np.unique(support_labels, return_counts=True)
+            if len(unique_labels) > 0 and np.max(unique_labels) > support_summary.shape[1]:  # There occurs labels that have not seen in training
+                pad_len = np.max(unique_labels) - support_summary.shape[1]
+                support_summary = np.hstack((support_summary, np.zeros((n_rules, pad_len), dtype=np.int)))
             support_summary[i, unique_labels] = unique_counts
         return support_summary
 
@@ -442,25 +449,25 @@ class SBRL(Classifier):
         """
         compute the decision support of the rule list on x
         :param x: x should be already transformed
-        :param per_condition: whether to return support per condition
+        :param per_condition: depretcated. whether to return support per condition
         :return:
             if per_condition is false, return a list of n_rules np.ndarray of shape [n_instances,] of type bool
             if per_condition is true, return a list of satisfied list,
                 each satisfied list contains n_condition np.ndarray of shape [n_instances,] of type bool
         """
-        un_satisfied = np.ones([x.shape[0]], dtype=np.bool)
+        un_satisfied = np.ones((x.shape[0],), dtype=np.bool)
         supports = np.zeros((self.n_rules, x.shape[0]), dtype=np.bool)
         for i, rule in enumerate(self._rule_list):
-            is_satisfied = rule.is_satisfy(x, per_condition)
-            if per_condition:
-                is_satisfied = [np.logical_and(_satisfied, un_satisfied) for _satisfied in is_satisfied]
-                satisfied = reduce(np.logical_and, is_satisfied)
-            else:
-                is_satisfied = np.logical_and(is_satisfied, un_satisfied)
-                satisfied = is_satisfied
+            is_satisfied = rule.is_satisfy(x)
+            # if per_condition:
+            #     is_satisfied = [np.logical_and(_satisfied, un_satisfied) for _satisfied in is_satisfied]
+            #     satisfied = reduce(np.logical_and, is_satisfied)
+            # else:
+            satisfied = np.logical_and(is_satisfied, un_satisfied)
+            # satisfied = is_satisfied
             # marking new satisfied instances as satisfied
             un_satisfied = np.logical_xor(satisfied, un_satisfied)
-            supports[i, :] = is_satisfied
+            supports[i, :] = satisfied
         return supports
 
     def decision_path(self, x) -> np.ndarray:

@@ -223,7 +223,7 @@ def construct_data(model_name, x, y, bins=20):
     categories = data['categories']
     discretizer = data['discretizer']
     hists = data2histogram(x, bins, ranges)
-    confidence = model.fidelity(x)
+    confidence = model.fidelity(x) if isinstance(model, SurrogateMixin) else None
     score = model.score(y, model.predict(x))
     ret = {
         'data': x,
