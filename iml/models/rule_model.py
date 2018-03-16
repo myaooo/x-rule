@@ -372,7 +372,7 @@ class SBRL(Classifier):
         data_name = 'tmp/train'
         data_file, label_file = categorical2pysbrl_data(x, y, data_name, supp=self.min_support,
                                                         zmin=self.rule_minlen, zmax=self.rule_maxlen)
-        n_labels = len(set(y))
+        n_labels = int(np.max(y)) + 1
         _model = train_sbrl(data_file, label_file, self._lambda, eta=self.eta,
                             max_iters=self.iters, nchain=self.nchain,
                             alphas=[1 for _ in range(n_labels)])
@@ -587,17 +587,16 @@ class RuleList(PreProcessMixin, SBRL):
 
         for i, rule in enumerate(self._rule_list):
             category_intervals = None
+            is_last = rule.is_default()
             if self.discretizer is not None:
                 category_intervals = []
-                if rule.feature_indices[0] >= 0:
-                    # continue
+                if not is_last:
                     for idx, cat in zip(rule.feature_indices, rule.categories):
                         if idx not in self.discretizer.continuous_features:
                             interval = None
                         else:
                             interval = self.discretizer.cat2intervals(np.array([cat]), idx)[0]
                         category_intervals.append(interval)
-            is_last = i == len(self._rule_list) - 1
             s += rule.describe(feature_names, category_intervals, label="prob") + "\n"
             if len(self._rule_list) > 1 and not is_last:
                 s += "\nELSE "
@@ -611,6 +610,13 @@ class RuleSurrogate(SurrogateMixin, RuleList):
     def __init__(self, **kwargs):
         # SurrogateMixin.__init__(self, name)
         super(RuleSurrogate, self).__init__(**kwargs)
+
+    def train(self, x, y, rediscretize=False, **kwargs):
+        if rediscretize:
+            discrete_processor = self.processors[0]
+            assert isinstance(discrete_processor, DiscreteProcessor)
+            discrete_processor.refit(x, y, discrete_processor.continuous_features)
+        super(RuleSurrogate, self).train(x, y, **kwargs)
 
 
 if __name__ == '__main__':

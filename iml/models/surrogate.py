@@ -209,7 +209,7 @@ def create_sampler(instances: np.ndarray, constraints, verbose=False) -> Callabl
     cat_keys, cat_probs, cat2instances = _build_cache()
 
     # Try stats.gaussian_kde
-    glb_kde = stats.gaussian_kde(instances[:, is_numeric].T)
+    glb_kde = stats.gaussian_kde(instances[:, is_numeric].T, 'silverman')
     cov = glb_kde.covariance
 
     def sample(n: int) -> np.ndarray:

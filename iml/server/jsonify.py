@@ -7,9 +7,18 @@ import numpy as np
 from flask import jsonify
 from mdlp.discretization import MDLP
 
-from iml.server import get_model, available_models, get_model_data
-from iml.models import NeuralNet, SBRL, RuleSurrogate, Tree, ModelInterface, SurrogateMixin
+from iml.server import get_model, get_model_data
+from iml.models import NeuralNet, RuleList, Tree, SurrogateMixin
 from iml.data_processing import get_dataset
+
+
+def get_surrogate_data(model, data_type):
+    if isinstance(model, SurrogateMixin):
+        x = model.load_cache(data_type == 'sample train')
+        y = model.target.predict(x).astype(np.int)
+    else:
+        raise ValueError("Model {} is not a surrogate, cannot load data with type {}".format(model.name, data_type))
+    return x, y
 
 
 def nn2json(nn: NeuralNet) -> dict:
@@ -33,7 +42,7 @@ def tree2json(tree: Tree) -> dict:
     }
 
 
-def rl2json(rl: SBRL) -> dict:
+def rl2json(rl: RuleList) -> dict:
     supports = np.array([rule.support for rule in rl.rule_list], dtype=np.float)
     supports /= np.sum(supports)
     return {
@@ -117,19 +126,19 @@ def model2json(model_name):
     except FileNotFoundError:
         return None
     data_name = get_model_data(model_name)
-    if isinstance(model, SBRL):
-        ret_dict = rl2json(model)
+    ret_dict = {'meta': model_meta(model_name), 'dataset': data_name, 'name': model.name}
+    if isinstance(model, RuleList):
+        ret_dict.update(rl2json(model))
+        ret_dict['meta']['discretizers'] = discretizer2json(model.discretizer)
     elif isinstance(model, NeuralNet):
-        ret_dict = nn2json(model)
+        ret_dict.update(nn2json(model))
     elif isinstance(model, Tree):
-        ret_dict = tree2json(model)
+        ret_dict.update(tree2json(model))
     else:
         raise ValueError("Unsupported model of type {}".format(model.__class__))
     if isinstance(model, SurrogateMixin):
         ret_dict.update(surrogate2json(model))
-    ret_dict['dataset'] = data_name
-    ret_dict['name'] = model.name
-    ret_dict['meta'] = model_meta(model_name)
+
     return jsonify(ret_dict)
     # ret_dict['featureNames'] = data['feature_names']
     # ret_dict['labelNames'] = data['target_names']
@@ -182,7 +191,9 @@ def model_data(model_name, data_type='train', bins=20, filters=None):
     return ret
 
 
+@lru_cache(32)
 def get_model_x_y(model_name, data_type='train', filters=None):
+
     data_name = get_model_data(model_name)
     model = get_model(model_name)
     try:
@@ -194,11 +205,7 @@ def get_model_x_y(model_name, data_type='train', filters=None):
         x = data[data_type + '_x']
         y = data[data_type + '_y']
     elif data_type == 'sample train' or 'sample test':
-        if isinstance(model, SurrogateMixin):
-            x = model.load_cache(data_type == 'sample train')
-            y = model.target.predict(x).astype(np.int)
-        else:
-            raise ValueError("Model {} is not a surrogate, cannot load data with type {}".format(model_name, data_type))
+        x, y = get_surrogate_data(model, data_type)
     else:
         raise ValueError("Unkown data_type {}".format(data_type))
     return filter_data(data['is_categorical'], x, y, filters)
@@ -268,4 +275,3 @@ def filter_data(is_categorical, x, y, query=None):
 @lru_cache(32)
 def model_data2json(model_name, data_type='train', bins=20, filters=None):
     return jsonify(model_data(model_name, data_type, bins, filters))
-

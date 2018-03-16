@@ -110,7 +110,9 @@ def load_data(name):
 
 sklearn_datasets = {'breast_cancer': {}, 'iris': {}, 'wine': {}}
 local_datasets = {'diabetes': {}, 'abalone': {}, 'thoracic': {'min_depth': 3},
-                  'bank_marketing': {}, 'credit_card': {}, 'adult': {}}
+                  'bank_marketing': {}, 'credit_card': {}, 'adult': {},
+                  'wine_quality_white': {}, 'wine_quality_red': {}
+                  }
 
 
 # @add_cache_support()
@@ -267,7 +269,8 @@ def categorical2pysbrl_data(x: np.ndarray, y: np.ndarray, data_name, supp=0.05, 
     assert len(y.shape) == 1
     assert y.dtype == np.int
     labels = np.unique(y)
-    assert max(labels) + 1 == len(labels)
+    labels = np.arange(np.max(labels) + 1)
+    # assert max(labels) + 1 == len(labels)
 
     x_by_labels = []
     for label in labels:

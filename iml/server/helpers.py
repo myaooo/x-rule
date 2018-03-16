@@ -9,16 +9,7 @@ from iml.models import RuleList, Tree, ModelBase, SurrogateMixin
 from iml.models.metrics import auc_score
 from iml.data_processing import get_dataset
 from iml.server.model_cache import get_model, get_model_data
-from iml.server.jsonify import model_meta, model_data
-
-
-def get_surrogate_data(model, data_type):
-    if isinstance(model, SurrogateMixin):
-        x = model.load_cache(data_type == 'sample train')
-        y = model.target.predict(x).astype(np.int)
-    else:
-        raise ValueError("Model {} is not a surrogate, cannot load data with type {}".format(model.name, data_type))
-    return x, y
+from iml.server.jsonify import model_meta, model_data, get_model_x_y
 
 
 @lru_cache(32)
@@ -54,16 +45,9 @@ def model_metric(model_name, data):
 
 
 @lru_cache(32)
-def get_support(model_name, data_type, support_type='simple'):
+def get_support(model_name, data_type, support_type='simple', filters=None):
     model = get_model(model_name)
-    if data_type == 'train' or data_type == 'test':
-        dataset = get_dataset(get_model_data(model_name), split=True)
-        x = dataset[data_type + '_x']
-        y = dataset[data_type + '_y']
-    elif data_type == 'sample train' or 'sample test':
-        x, y = get_surrogate_data(model, data_type)
-    else:
-        raise ValueError('Unknown data type {}. Should be one of [train, test, sample_train, sample_test]'.format(data_type))
+    x, y = get_model_x_y(model_name, data_type, filters)
     if support_type == 'simple':
         supports = compute_support(model, x, y)
     elif support_type == 'mat':
@@ -111,18 +95,12 @@ def compute_support_matrix(model: ModelBase, x: np.ndarray, y: np.ndarray) -> np
 
 
 @lru_cache(32)
-def get_stream(model_name, data_type, conditional=True, bins=20):
+def get_stream(model_name, data_type, conditional=True, bins=20, filters=None):
     model = get_model(model_name)
     dataset = get_dataset(get_model_data(model_name), split=True)
     ranges = dataset['ranges']
     categories = dataset['categories']
-    if data_type == 'train' or data_type == 'test':
-        x = dataset[data_type + '_x']
-        y = dataset[data_type + '_y']
-    elif data_type == 'sample train' or 'sample test':
-        x, y = get_surrogate_data(model, data_type)
-    else:
-        raise ValueError('Unknown data type {}. Should be one of [train, test, sample_train, sample_test]'.format(data_type))
+    x, y = get_model_x_y(model_name, data_type, filters)
     streams = compute_streams(model, x, y, ranges, categories, conditional, bins)
     return jsonify(streams)
 

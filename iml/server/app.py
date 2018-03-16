@@ -16,7 +16,8 @@ class NumpyEncoder(json.JSONEncoder):
 
 class HashableList(list):
     def __hash__(self):
-        return hash(frozenset(self))
+        # l = [e if hasattr(e, '__hass__') else frozenset(e) for e in self]
+        return hash(json.jsonify(self))
 
 
 app = Flask(__name__)

@@ -1,8 +1,14 @@
 from flask import request, abort, send_from_directory, safe_join, jsonify
 
 from iml.server import app, get_model, available_models, HashableList
-from iml.server.jsonify import model2json, model_data2json
+from iml.server.jsonify import model2json, model_data2json, get_model_x_y
 from iml.server.helpers import model_metric, get_support, get_stream
+
+
+def parse_filter(query_json):
+    if query_json is None:
+        return query_json
+    return HashableList(query_json)
 
 
 @app.route('/static/js/<path:path>')
@@ -53,40 +59,25 @@ def model_info(model_name):
     # else:
     model_json = model2json(model_name)
     if model_json is None:
-        abort(404)
-    else:
-        return model_json
+        return abort(404)
+    return model_json
 
 
-@app.route('/api/model_data/<string:model_name>', methods=['GET'])
+@app.route('/api/model_data/<string:model_name>', methods=['GET', 'POST'])
 def model_data(model_name):
+    if model_name is None:
+        return abort(404)
     data_type = request.args.get('data', 'train')
     bins = int(request.args.get('bins', '20'))
-    if model_name is None:
+    if request.method == 'GET':
+        data_json = model_data2json(model_name, data_type, bins)
+    else:
+        filters = parse_filter(request.get_json())
+        data_json = model_data2json(model_name, data_type, bins, filters=filters)
+    if data_json is None:
         abort(404)
     else:
-        data_json = model_data2json(model_name, data_type, bins)
-        if data_json is None:
-            abort(404)
-        else:
-            return data_json
-
-
-# @app.route('/api/data/<string:data_name>', methods=['GET'])
-# def data(data_name):
-#     data_type = request.args.get('data', 'train')
-#     # is_train = not (request.args.get('isTrain') == 'false')
-#     bins = request.args.get('bins')
-#     # if bins is None:
-#     #     bins = 15
-#     if data_name is None:
-#         abort(404)
-#     else:
-#         data_json = data2json(data_name, data_type, bins)
-#         if data_json is None:
-#             abort(404)
-#         else:
-#             return data_json
+        return data_json
 
 
 @app.route('/api/metric/<string:model_name>', methods=['GET'])
@@ -100,24 +91,33 @@ def metric(model_name):
         return ret_json
 
 
-@app.route('/api/support/<string:model_name>', methods=['GET'])
+@app.route('/api/support/<string:model_name>', methods=['GET', 'POST'])
 def support(model_name):
     data_type = request.args.get('data', 'train')
     support_type = request.args.get('support', 'simple')
-    ret_json = get_support(model_name, data_type, support_type)
+    if request.method == 'GET':
+        ret_json = get_support(model_name, data_type, support_type)
+    else:
+        filters = parse_filter(request.get_json())
+        ret_json = get_support(model_name, data_type, support_type, filters=filters)
+    # ret_json = get_support(model_name, data_type, support_type)
     if ret_json is None:
         abort(404)
     else:
         return ret_json
 
 
-@app.route('/api/stream/<string:model_name>', methods=['GET'])
+@app.route('/api/stream/<string:model_name>', methods=['GET', 'POST'])
 def stream(model_name):
     data_type = request.args.get('data', 'train')
     # per_class = request.args.get('class', 'true') == 'true'
     conditional = request.args.get('conditional', 'true') == 'true'
     bins = int(request.args.get('bins', '20'))
-    ret_json = get_stream(model_name, data_type, conditional=conditional, bins=bins)
+    if request.method == 'GET':
+        ret_json = get_stream(model_name, data_type, conditional=conditional, bins=bins)
+    else:
+        filters = parse_filter(request.get_json())
+        ret_json = get_stream(model_name, data_type, conditional=conditional, bins=bins, filters=filters)
     if ret_json is None:
         abort(404)
     else:
@@ -126,17 +126,30 @@ def stream(model_name):
 
 @app.route('/api/query/<string:model_name>', methods=['POST'])
 def query(model_name):
-    data_type = request.args.get('data', 'train')
-    bins = int(request.args.get('bins', '20'))
-    query_json = HashableList(request.get_json())
     if model_name is None:
         abort(404)
+    data_type = request.args.get('data', 'train')
+    start = int(request.args.get('start', '0'))
+    end = int(request.args.get('end', '100'))
+    query_json = request.get_json()
+    print(query_json)
+    filters = None if query_json is None else HashableList(query_json)
+    try:
+        data = get_model_x_y(model_name, data_type, filters)
+    except:
+        raise
+
+    if data is None:
+        abort(404)
     else:
-        data_json = model_data2json(model_name, data_type, bins, query_json)
-        if data_json is None:
-            abort(404)
-        else:
-            return data_json
+        x, y = data
+        print("get", len(y))
+        return jsonify({
+            'data': x[start:end],
+            'target': y[start:end],
+            'end': end,
+            'totalLength': len(y)
+        })
 # @app.route('/api/models/<string:model_name>', methods=['GET'])
 # def model_info(model_name):
 #     model = get_model(model_name)
@@ -151,7 +164,3 @@ def predict():
         abort(404)
     else:
         return get_model(name).predict(data)
-
-"""
-curl -i -X POST -H 'Content-Type: application/json' -d '[]' http://localhost:5000/api/query/rule-surrogate-breast_cancer-nn-20
-"""

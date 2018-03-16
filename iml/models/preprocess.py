@@ -6,6 +6,7 @@ from iml.models import ModelBase
 
 from mdlp.discretization import MDLP
 
+
 class PreProcessBase:
 
     def fit(self, x: np.ndarray, y: np.ndarray):
@@ -81,11 +82,22 @@ class DiscreteProcessor(PreProcessBase):
             self.is_numeical_[continuous_features] = True
         super(DiscreteProcessor, self).__init__()
 
+    @property
+    def continuous_features(self):
+        return self.discretizer.continuous_features
+
     def fit(self, x: np.ndarray, y: np.ndarray, continuous_features=None):
         if self.discretizer.cut_points_ is not None:
             print("Warning: discretizer has already been fitted. skipped fitting")
         else:
             self.discretizer.fit(x, y, continuous_features)
+        continuous_features = self.discretizer.continuous_features
+        self.is_numeical_ = np.zeros(len(self.discretizer.cut_points_), dtype=np.bool)
+        self.is_numeical_[continuous_features] = True
+
+    def refit(self, x: np.ndarray, y: np.ndarray, continuous_features=None):
+        print("Warning: discretizer refitting")
+        self.discretizer.fit(x, y, continuous_features)
         continuous_features = self.discretizer.continuous_features
         self.is_numeical_ = np.zeros(len(self.discretizer.cut_points_), dtype=np.bool)
         self.is_numeical_[continuous_features] = True
