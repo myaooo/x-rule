@@ -22,6 +22,7 @@ Shell weight / continuous / grams / after being dried
 Rings / integer / -- / +1.5 gives the age in years
 
 """
+
 import numpy as np
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder
 import pandas as pd
@@ -42,7 +43,7 @@ is_categorical = [True, False, False, False, False,
 
 
 # labels = ['']
-bins = [1, 8, 11, 15, 30]
+bins = [1, 9, 15, 30]
 labels = ["[{},{})".format(bins[i], bins[i+1]) for i in range(len(bins) - 1)]
 
 
