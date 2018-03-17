@@ -134,7 +134,7 @@ def train_surrogate(model_file, sampling_rate=5, surrogate='rule',
     # surrogate_model.self_test()
     self_fidelity = surrogate_model.self_test(len(train_y) * sampling_rate * 0.25)
     fidelity, acc = surrogate_model.test(test_x, test_y)
-    return fidelity, acc, self_fidelity
+    return fidelity, acc, self_fidelity, surrogate_model.n_rules
 
 
 datasets = ['breast_cancer', 'wine', 'iris', 'adult', 'wine_quality_red']
@@ -202,12 +202,16 @@ def run_test(dataset, names, rule_maxlen, n_test=10):
         self_fidelities = []
         accs = []
         seconds = []
+        list_lengths = []
         for i in range(n_test):
             print('test', i)
             start = time.time()
-            fidelity, acc, self_fidelity = train_surrogate(model_file, surrogate='rule', sampling_rate=sampling_rate,
-                                                           rule_maxlen=rule_maxlen)
+            fidelity, acc, self_fidelity, n_rules = train_surrogate(model_file, surrogate='rule',
+                                                                    sampling_rate=sampling_rate,
+                                                                    rule_maxlen=rule_maxlen)
             seconds.append(time.time() - start)
+            print('time: {}s; length: {}', seconds[-1], n_rules)
+            list_lengths.append(n_rules)
             self_fidelities.append(self_fidelity)
             fidelities.append(fidelity)
             accs.append(acc)
@@ -225,13 +229,14 @@ def run_test(dataset, names, rule_maxlen, n_test=10):
         max_self_fidelity = float(np.max(self_fidelities))
         min_self_fidelity = float(np.min(self_fidelities))
         mean_time = float(np.mean(seconds))
+        mean_length = float(np.mean(list_lengths))
         obj = {'fidelity': fidelities, 'acc': accs,
                'std_acc': std_acc, 'mean_acc': mean_acc, 'min_acc': min_acc, 'max_acc': max_acc,
                'std_fidelity': std_fidelity, 'mean_fidelity': mean_fidelity,
                'min_fidelity': min_fidelity, 'max_fidelity': max_fidelity,
                'std_self_fidelity': std_self_fidelity, 'mean_self_fidelity': mean_self_fidelity,
                'min_self_fidelity': min_self_fidelity, 'max_self_fidelity': max_self_fidelity,
-               'time': seconds, 'mean_time': mean_time}
+               'time': seconds, 'mean_time': mean_time, 'lengths': list_lengths, 'mean_length': mean_length}
         print(dataset)
         print(name)
         print(obj)
