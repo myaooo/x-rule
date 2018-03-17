@@ -291,6 +291,7 @@ class SurrogateMixin(ModelBase):
         self.self_test_fidelity = fidelity
         if cache:
             self.cache_sample(x, is_train=False)
+        return fidelity
 
     def evaluate(self, x, y, stage='train'):
         prefix = 'Training'
@@ -304,6 +305,7 @@ class SurrogateMixin(ModelBase):
         else:
             self.test_fidelity = fidelity
         print(prefix + " fidelity: {:.5f}; score: {:.5f}".format(fidelity, score))
+        return fidelity, score
 
     @property
     def type(self):
