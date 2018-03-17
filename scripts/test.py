@@ -129,8 +129,8 @@ def train_surrogate(model_file, sampling_rate=5, surrogate='rule',
     else:
         surrogate_model.surrogate(model, instances, constraints, sampling_rate)
     # surrogate_model.evaluate(train_x, train_y)
-    surrogate_model.describe(feature_names=feature_names)
-    surrogate_model.save()
+    # surrogate_model.describe(feature_names=feature_names)
+    # surrogate_model.save()
     # surrogate_model.self_test()
     fidelity, acc = surrogate_model.test(test_x, test_y)
     return fidelity, acc
@@ -202,6 +202,7 @@ def test():
             print(nn_name)
             print(obj)
             print('---------')
+            dict2json(obj, dataset + '-nn.json')
             performance_dict[dataset].append(obj)
 
     dict2json(performance_dict, 'results.json')
