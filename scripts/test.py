@@ -4,7 +4,7 @@ import numpy as np
 
 from iml.models import Tree, NeuralNet, SVM, load_model, RuleSurrogate, TreeSurrogate, create_constraints
 from iml.data_processing import get_dataset, sample_balance
-from iml.utils.io_utils import get_path, dict2json
+from iml.utils.io_utils import get_path, dict2json, file_exists
 
 rebalance = False
 
@@ -150,6 +150,10 @@ def train_all_nn():
         model_names = []
         for layer in layers:
             hidden_layers = [neurons] * layer
+            model_name = '-'.join([dataset, 'nn'] + [str(neuron) for neuron in hidden_layers])
+            if file_exists(get_path('models', model_name + '.mdl')):
+                model_names.append(model_name)
+                continue
             best_nn = None
             score = 0
             for alpha in alphas:
@@ -175,7 +179,7 @@ def test():
         max_rulelen = max_rulelens[i]
         # performance_dict
         for nn_name in nn_names:
-            model_file = 'models/' + nn_name + '.mdl'
+            model_file = '../models/' + nn_name + '.mdl'
             fidelities = []
             accs = []
             for i in range(n_test):
@@ -205,6 +209,7 @@ def test():
 
 if __name__ == '__main__':
 
+    test()
     ###########
     # Trees
     ###########
@@ -225,7 +230,7 @@ if __name__ == '__main__':
     # Rules
     ###########
 
-    train_rule(dataset='breast_cancer')
+    # train_rule(dataset='breast_cancer')
     # train_rule(dataset='iris')
     # train_rule(dataset='wine')
     # train_rule(dataset='thoracic', rule_max_len=2, )
