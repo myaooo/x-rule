@@ -4,7 +4,7 @@ import numpy as np
 
 from iml.models import Tree, NeuralNet, SVM, load_model, RuleSurrogate, TreeSurrogate, create_constraints
 from iml.data_processing import get_dataset, sample_balance
-from iml.utils.io_utils import get_path, dict2json, file_exists
+from iml.utils.io_utils import get_path, dict2json, file_exists, json2dict
 
 rebalance = False
 
@@ -50,7 +50,7 @@ def train_nn(name='nn', dataset='wine', neurons=(20,), alpha=0.01, problem='clas
                    one_hot_encoder=one_hot_encoder, **kwargs)
     nn.train(train_x, train_y)
     nn.evaluate(train_x, train_y, stage='train')
-    loss, acc, auc = nn.test(test_x, test_y)
+    acc, loss, auc = nn.test(test_x, test_y)
     return nn, acc
 
 
@@ -67,7 +67,7 @@ def train_svm(name='svm', dataset='wine', C=1.0, problem='classification', **kwa
     svm = SVM(name=model_name, problem=problem, C=C, one_hot_encoder=one_hot_encoder, **kwargs)
     svm.train(train_x, train_y)
     svm.evaluate(train_x, train_y, stage='train')
-    loss, acc, auc = svm.test(test_x, test_y)
+    acc, loss, auc = svm.test(test_x, test_y)
     return svm, acc
 
 
@@ -169,15 +169,15 @@ def train_all_nn():
 
 
 def train_all_svm():
-    cs = [0.01, 0.1, 1, 10]
+    cs = [0.1, 1, 10]
 
     # NN
     names = []
     for dataset in datasets:
-        model_names = []
+        # model_names = []
         model_name = '-'.join([dataset, 'svm'])
         if file_exists(get_path('models', model_name + '.mdl')):
-            model_names.append(model_name)
+            names.append(model_name)
             continue
         best_svm = None
         score = 0
@@ -187,8 +187,8 @@ def train_all_svm():
                 score = acc
                 best_svm = model
         best_svm.save()
-        model_names.append(best_svm.name)
-        names.append(model_names)
+        names.append(best_svm.name)
+        # names.append(model_names)
     return names
 
 
@@ -237,30 +237,40 @@ def run_test(dataset, names, rule_maxlen, n_test=10):
     return results
 
 
-def test():
+def test(target='svm'):
 
     n_test = 10
-    nns = train_all_nn()
-    svms = train_all_svm()
     max_rulelens = [2, 2, 2, 3, 3]
     performance_dict = {}
-    for i, nn_names in enumerate(nns):
-        dataset = datasets[i]
-        max_rulelen = max_rulelens[i]
-        # performance_dict
-        results = run_test(dataset, nn_names, max_rulelen, n_test=n_test)
-        dict2json(results, dataset + '-nn.json')
-        performance_dict[dataset] = results
-
-    dict2json(performance_dict, 'results-nn.json')
-
+    if target == 'nn':
+        nns = train_all_nn()
+        for i, nn_names in enumerate(nns):
+            dataset = datasets[i]
+            max_rulelen = max_rulelens[i]
+            # performance_dict
+            file_name = dataset + '-nn.json'
+            if file_exists(file_name):
+                results = json2dict(file_name)
+            else:
+                results = run_test(dataset, nn_names, max_rulelen, n_test=n_test)
+                dict2json(results, dataset + '-nn.json')
+            performance_dict[dataset] = results
+ 
+        dict2json(performance_dict, 'results-nn.json')
+        return
     performance_dict = {}
-    for i, svm_names in enumerate(svms):
+    svms = train_all_svm()
+    print(svms)
+    for i, svm_name in enumerate(svms):
         dataset = datasets[i]
         max_rulelen = max_rulelens[i]
         # performance_dict
-        results = run_test(dataset, svm_names, max_rulelen, n_test=n_test)
-        dict2json(results, dataset + '-svm.json')
+        file_name = dataset + '-svm.json'
+        if file_exists(file_name):
+            results = json2dict(file_name)
+        else:
+            results = run_test(dataset, [svm_name], max_rulelen, n_test=n_test)
+            dict2json(results, file_name)
         performance_dict[dataset] = results
 
     dict2json(performance_dict, 'results-svm.json')
@@ -268,7 +278,7 @@ def test():
 
 if __name__ == '__main__':
 
-    test()
+    test('nn')
     ###########
     # Trees
     ###########
