@@ -67,8 +67,8 @@ def train_svm(name='svm', dataset='wine', C=1.0, problem='classification', **kwa
     svm = SVM(name=model_name, problem=problem, C=C, one_hot_encoder=one_hot_encoder, **kwargs)
     svm.train(train_x, train_y)
     svm.evaluate(train_x, train_y, stage='train')
-    svm.test(test_x, test_y)
-    return svm
+    loss, acc, auc = svm.test(test_x, test_y)
+    return svm, acc
 
 
 def train_rule(name='rule', dataset='breast_cancer', rule_max_len=2, **kwargs):
@@ -132,8 +132,9 @@ def train_surrogate(model_file, sampling_rate=5, surrogate='rule',
     # surrogate_model.describe(feature_names=feature_names)
     # surrogate_model.save()
     # surrogate_model.self_test()
+    self_fidelity = surrogate_model.self_test(len(train_y) * 0.25)
     fidelity, acc = surrogate_model.test(test_x, test_y)
-    return fidelity, acc
+    return fidelity, acc, self_fidelity
 
 
 datasets = ['breast_cancer', 'wine', 'iris', 'adult', 'wine_quality_red']
@@ -167,45 +168,102 @@ def train_all_nn():
     return names
 
 
+def train_all_svm():
+    cs = [0.01, 0.1, 1, 10]
+
+    # NN
+    names = []
+    for dataset in datasets:
+        model_names = []
+        model_name = '-'.join([dataset, 'svm'])
+        if file_exists(get_path('models', model_name + '.mdl')):
+            model_names.append(model_name)
+            continue
+        best_svm = None
+        score = 0
+        for c in cs:
+            model, acc = train_svm(dataset=dataset, C=c)
+            if acc > score:
+                score = acc
+                best_svm = model
+        best_svm.save()
+        model_names.append(best_svm.name)
+        names.append(model_names)
+    return names
+
+
+def run_test(dataset, names, rule_maxlen, n_test=10):
+    results = []
+    for name in names:
+        model_file = get_path('models', name + '.mdl')
+        fidelities = []
+        self_fidelities = []
+        accs = []
+        for i in range(n_test):
+            print('test', i)
+            try:
+                fidelity, acc, self_fidelity = train_surrogate(model_file, surrogate='rule', sampling_rate=5,
+                                                               rule_maxlen=rule_maxlen)
+                self_fidelities.append(self_fidelity)
+                fidelities.append(fidelity)
+                accs.append(acc)
+            except:
+                print('error occurs')
+                print('just keep move on')
+
+        std_acc = float(np.std(accs))
+        mean_acc = float(np.mean(accs))
+        max_acc = float(np.max(accs))
+        min_acc = float(np.min(accs))
+        std_fidelity = float(np.std(fidelities))
+        mean_fidelity = float(np.mean(fidelities))
+        max_fidelity = float(np.max(fidelities))
+        min_fidelity = float(np.min(fidelities))
+        std_self_fidelity = float(np.std(self_fidelities))
+        mean_self_fidelity = float(np.mean(self_fidelities))
+        max_self_fidelity = float(np.max(self_fidelities))
+        min_self_fidelity = float(np.min(self_fidelities))
+        obj = {'fidelity': fidelities, 'acc': accs,
+               'std_acc': std_acc, 'mean_acc': mean_acc, 'min_acc': min_acc, 'max_acc': max_acc,
+               'std_fidelity': std_fidelity, 'mean_fidelity': mean_fidelity,
+               'min_fidelity': min_fidelity, 'max_fidelity': max_fidelity,
+               'std_self_fidelity': std_self_fidelity, 'mean_self_fidelity': mean_self_fidelity,
+               'min_self_fidelity': min_self_fidelity, 'max_self_fidelity': max_self_fidelity}
+        print(dataset)
+        print(name)
+        print(obj)
+        print('---------')
+        results.append(obj)
+    return results
+
+
 def test():
-    from collections import defaultdict
 
     n_test = 10
     nns = train_all_nn()
+    svms = train_all_svm()
     max_rulelens = [2, 2, 2, 3, 3]
-    performance_dict = defaultdict(list)
+    performance_dict = {}
     for i, nn_names in enumerate(nns):
         dataset = datasets[i]
         max_rulelen = max_rulelens[i]
         # performance_dict
-        for nn_name in nn_names:
-            model_file = '../models/' + nn_name + '.mdl'
-            fidelities = []
-            accs = []
-            for i in range(n_test):
-                fidelity, acc = train_surrogate(model_file, surrogate='rule', sampling_rate=5, rule_maxlen=max_rulelen)
-                fidelities.append(fidelity)
-                accs.append(acc)
-            std_acc = float(np.std(accs))
-            mean_acc = float(np.mean(accs))
-            max_acc = float(np.max(accs))
-            min_acc = float(np.min(accs))
-            std_fidelity = float(np.std(fidelities))
-            mean_fidelity = float(np.mean(fidelities))
-            max_fidelity = float(np.max(fidelities))
-            min_fidelity = float(np.min(fidelities))
-            obj = {'fidelity': fidelities, 'acc': accs,
-                   'std_acc': std_acc, 'mean_acc': mean_acc, 'min_acc': min_acc, 'max_acc': max_acc,
-                   'std_fidelity': std_fidelity, 'mean_fidelity': mean_fidelity,
-                   'min_fidelity': min_fidelity, 'max_fidelity': max_fidelity}
-            print(dataset)
-            print(nn_name)
-            print(obj)
-            print('---------')
-            dict2json(obj, dataset + '-nn.json')
-            performance_dict[dataset].append(obj)
+        results = run_test(dataset, nn_names, max_rulelen, n_test=n_test)
+        dict2json(results, dataset + '-nn.json')
+        performance_dict[dataset] = results
 
-    dict2json(performance_dict, 'results.json')
+    dict2json(performance_dict, 'results-nn.json')
+
+    performance_dict = {}
+    for i, svm_names in enumerate(svms):
+        dataset = datasets[i]
+        max_rulelen = max_rulelens[i]
+        # performance_dict
+        results = run_test(dataset, svm_names, max_rulelen, n_test=n_test)
+        dict2json(results, dataset + '-svm.json')
+        performance_dict[dataset] = results
+
+    dict2json(performance_dict, 'results-svm.json')
 
 
 if __name__ == '__main__':
