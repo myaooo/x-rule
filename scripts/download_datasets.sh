@@ -13,8 +13,8 @@ curl https://archive.ics.uci.edu/ml/machine-learning-databases/00222/bank-additi
     -o ../datasets/bank_marketing/bank-additional.zip
 unzip ../datasets/bank_marketing/bank-additional.zip -d ../datasets/bank_marketing
 
-sed -i '' 's/;/,/g' ../datasets/bank_marketing/bank-additional/bank-additional.csv
-sed -i '' 's/;/,/g' ../datasets/bank_marketing/bank-additional/bank-additional-full.csv
+sed -i'.back' 's/;/,/g' ../datasets/bank_marketing/bank-additional/bank-additional.csv
+sed -i'.back' 's/;/,/g' ../datasets/bank_marketing/bank-additional/bank-additional-full.csv
 
 mkdir -p ../datasets/credit_card
 curl https://archive.ics.uci.edu/ml/machine-learning-databases/00350/default%20of%20credit%20card%20clients.xls \

@@ -4,7 +4,7 @@ import numpy as np
 
 from iml.models import Tree, NeuralNet, SVM, load_model, RuleSurrogate, TreeSurrogate, create_constraints
 from iml.data_processing import get_dataset, sample_balance
-from iml.utils.io_utils import get_path
+from iml.utils.io_utils import get_path, dict2json
 
 rebalance = False
 
@@ -50,8 +50,8 @@ def train_nn(name='nn', dataset='wine', neurons=(20,), alpha=0.01, problem='clas
                    one_hot_encoder=one_hot_encoder, **kwargs)
     nn.train(train_x, train_y)
     nn.evaluate(train_x, train_y, stage='train')
-    nn.test(test_x, test_y)
-    nn.save()
+    loss, acc, auc = nn.test(test_x, test_y)
+    return nn, acc
 
 
 def train_svm(name='svm', dataset='wine', C=1.0, problem='classification', **kwargs):
@@ -68,7 +68,7 @@ def train_svm(name='svm', dataset='wine', C=1.0, problem='classification', **kwa
     svm.train(train_x, train_y)
     svm.evaluate(train_x, train_y, stage='train')
     svm.test(test_x, test_y)
-    svm.save()
+    return svm
 
 
 def train_rule(name='rule', dataset='breast_cancer', rule_max_len=2, **kwargs):
@@ -94,7 +94,7 @@ def train_rule(name='rule', dataset='breast_cancer', rule_max_len=2, **kwargs):
     brl.save()
 
 
-def train_surrogate(model_file, is_global=True, sampling_rate=5, surrogate='rule',
+def train_surrogate(model_file, sampling_rate=5, surrogate='rule',
                     rule_maxlen=2, min_support=0.01, eta=1):
     is_rule = surrogate == 'rule'
     model = load_model(model_file)
@@ -119,10 +119,7 @@ def train_surrogate(model_file, is_global=True, sampling_rate=5, surrogate='rule
     constraints = get_constraints(train_x, is_categorical)
     # sigmas = [0] * train_x.shape[1]
     # print(sigmas)
-    if is_global:
-        instances = train_x
-    else:
-        instances = train_x[19:20, :]
+    instances = train_x
     # print('train_y:')
     # print(train_y)
     # print('target_y')
@@ -135,14 +132,76 @@ def train_surrogate(model_file, is_global=True, sampling_rate=5, surrogate='rule
     surrogate_model.describe(feature_names=feature_names)
     surrogate_model.save()
     # surrogate_model.self_test()
-    if is_global:
-        surrogate_model.test(test_x, test_y)
-    else:
-        surrogate_model.test(train_x[19:20, :], train_y[19:20])
+    fidelity, acc = surrogate_model.test(test_x, test_y)
+    return fidelity, acc
+
+
+datasets = ['breast_cancer', 'wine', 'iris', 'adult', 'wine_quality_red']
+
+
+def train_all_nn():
+    layers = [1, 2, 3, 4]
+    neurons = 40
+    alphas = [0.001, 0.01, 0.1]
+
+    # NN
+    names = []
+    for dataset in datasets:
+        model_names = []
+        for layer in layers:
+            hidden_layers = [neurons] * layer
+            best_nn = None
+            score = 0
+            for alpha in alphas:
+                nn, acc = train_nn(dataset=dataset, neurons=hidden_layers, alpha=alpha, tol=1e-6)
+                if acc > score:
+                    score = acc
+                    best_nn = nn
+            best_nn.save()
+            model_names.append(best_nn.name)
+        names.append(model_names)
+    return names
 
 
 def test():
-    datasets = ['breast_cancer', 'iris', 'adult', 'wine_quality_red']
+    from collections import defaultdict
+
+    n_test = 10
+    nns = train_all_nn()
+    max_rulelens = [2, 2, 2, 3, 3]
+    performance_dict = defaultdict(list)
+    for i, nn_names in enumerate(nns):
+        dataset = datasets[i]
+        max_rulelen = max_rulelens[i]
+        # performance_dict
+        for nn_name in nn_names:
+            model_file = 'models/' + nn_name + '.mdl'
+            fidelities = []
+            accs = []
+            for i in range(n_test):
+                fidelity, acc = train_surrogate(model_file, surrogate='rule', sampling_rate=5, rule_maxlen=max_rulelen)
+                fidelities.append(fidelity)
+                accs.append(acc)
+            std_acc = float(np.std(accs))
+            mean_acc = float(np.mean(accs))
+            max_acc = float(np.max(accs))
+            min_acc = float(np.min(accs))
+            std_fidelity = float(np.std(fidelities))
+            mean_fidelity = float(np.mean(fidelities))
+            max_fidelity = float(np.max(fidelities))
+            min_fidelity = float(np.min(fidelities))
+            obj = {'fidelity': fidelities, 'acc': accs,
+                   'std_acc': std_acc, 'mean_acc': mean_acc, 'min_acc': min_acc, 'max_acc': max_acc,
+                   'std_fidelity': std_fidelity, 'mean_fidelity': mean_fidelity,
+                   'min_fidelity': min_fidelity, 'max_fidelity': max_fidelity}
+            print(dataset)
+            print(nn_name)
+            print(obj)
+            print('---------')
+            performance_dict[dataset].append(obj)
+
+    dict2json(performance_dict, 'results.json')
+
 
 if __name__ == '__main__':
 

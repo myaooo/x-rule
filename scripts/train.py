@@ -163,7 +163,7 @@ if __name__ == '__main__':
     # Rules
     ###########
 
-    train_rule(dataset='breast_cancer')
+    # train_rule(dataset='breast_cancer')
     # train_rule(dataset='iris')
     # train_rule(dataset='wine')
     # train_rule(dataset='thoracic', rule_max_len=2, )
@@ -216,7 +216,7 @@ if __name__ == '__main__':
     # train_surrogate('models/abalone-nn-40-40-40.mdl', surrogate='rule')
     # train_surrogate('models/abalone-nn-30-30-30-30.mdl', surrogate='tree')
 
-    # train_surrogate('models/iris-nn-20.mdl', surrogate='rule')
+    train_surrogate('models/iris-nn-20.mdl', surrogate='rule')
     # train_surrogate('models/breast_cancer-nn-20.mdl', surrogate='rule')
     # train_surrogate('models/wine-nn-20.mdl', surrogate='rule')
 
