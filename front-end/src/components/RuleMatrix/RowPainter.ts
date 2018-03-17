@@ -62,8 +62,8 @@ export class ConditionPainter implements Painter<ConditionX, ConditionPainterPar
     
     selector.each((c: ConditionX, i, nodes) => {
       const stream = c.stream;
-      const padding = c.expanded ? 5 : 1;
-      const margin = {top: padding, bottom: padding, left: 1, right: 1};
+      const paddingOut = c.expanded ? 5 : 1;
+      const margin = {top: paddingOut, bottom: paddingOut, left: 1, right: 1};
       const params = {width: c.width, height: c.height, interval: c.interval, margin, color};
       const root = d3.select(nodes[i]);
       // // Make sure two groups exists
@@ -77,14 +77,19 @@ export class ConditionPainter implements Painter<ConditionX, ConditionPainterPar
       // console.log(c); // tslint:disable-line
       this.streamPainter
         .update({...params, xs: stream && stream.xs, yMax: stream && stream.yMax})
-        .data((c.expanded && stream) ? stream.stream : [])
+        .data((c.expanded && stream && !c.isCategorical) ? stream.stream : [])
         .render(expandGlyph);
 
+      let padding = 0;
+      if (c.isCategorical && stream) {
+        const nBars = stream.stream.length;
+        padding = c.width / (2 * nBars);
+      }
       this.histPainter
         .update({
-          padding: 0, ...params, xs: stream && stream.xs, yMax: stream && stream.yMax
+          padding, ...params, xs: stream && stream.xs, yMax: stream && stream.yMax
         })
-        .data((!c.expanded && stream) ? [stream.stream.map((s) => nt.sum(s))] : [])
+        .data(((!c.expanded || c.isCategorical) && stream) ? [stream.stream.map((s) => nt.sum(s))] : [])
         .render(glyph);
     });
     return this;

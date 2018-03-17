@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Affix, Card } from 'antd';
+import { Card } from 'antd';
 
 export interface QuestionsProps {
 }
@@ -16,9 +16,7 @@ export default class Questions extends React.Component<QuestionsProps, Questions
   render() {
     return (
       <div>
-        <Affix>
-          <Card />
-        </Affix>
+        <Card />
       </div>
     );
   }

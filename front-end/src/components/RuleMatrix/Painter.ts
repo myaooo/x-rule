@@ -45,6 +45,7 @@ function initRuleXs(rules: Rule[], model: BaseModel): RuleX[] {
       interval: model.categoryInterval(c.feature, c.category),
       expanded: false, 
       histRange: model.categoryHistRange(c.feature, c.category),
+      isCategorical: model.meta.isCategorical[c.feature]
     }));
 
     return {
@@ -444,6 +445,7 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
       count: featureCounts[f],
       cutPoints: model.meta.discretizers[f].cutPoints,
       range: model.meta.ranges[f],
+      categories: model.meta.categories[f],
       expanded: activeFeatures.has(f),
     }));
 

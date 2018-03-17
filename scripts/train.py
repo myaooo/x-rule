@@ -95,7 +95,7 @@ def train_rule(name='rule', dataset='breast_cancer', rule_max_len=2, **kwargs):
 
 
 def train_surrogate(model_file, is_global=True, sampling_rate=5, surrogate='rule',
-                    rule_maxlen=2, min_support=0.01, eta=1):
+                    rule_maxlen=2, min_support=0.01, eta=1, iters=50000):
     is_rule = surrogate == 'rule'
     model = load_model(model_file)
     dataset = model.name.split('-')[0]
@@ -111,7 +111,7 @@ def train_surrogate(model_file, is_global=True, sampling_rate=5, surrogate='rule
     if surrogate == 'rule':
         surrogate_model = RuleSurrogate(name=model_name, discretizer=data['discretizer'],
                                         rule_minlen=1, rule_maxlen=rule_maxlen, min_support=min_support,
-                                        _lambda=50, nchain=30, eta=eta, iters=50000)
+                                        _lambda=50, nchain=30, eta=eta, iters=iters)
     elif surrogate == 'tree':
         surrogate_model = TreeSurrogate(name=model_name, max_depth=None, min_samples_leaf=0.01)
     else:
@@ -197,10 +197,10 @@ if __name__ == '__main__':
     # train_nn(dataset='iris')
     # train_nn(dataset='wine')
     # train_nn(dataset='thoracic', neurons=(30, 30), alpha=5.0)
-    # train_nn(dataset='bank_marketing', neurons=(30, 30), alpha=1.0)
+    # train_nn(dataset='bank_marketing', neurons=(30, 30), alpha=0.1)
     # train_nn(dataset='credit_card', neurons=(40, 40), alpha=0.01)
-    # train_nn(dataset='abalone', neurons=(40, 40), tol=1e-6, alpha=0.01, verbose=True)
-    # train_nn(dataset='adult', neurons=(30, 31), alpha=0.1)
+    train_nn(dataset='abalone', neurons=(40, 40), tol=1e-6, alpha=0.01, verbose=True)
+    # train_nn(dataset='adult', neurons=(50, 50), alpha=0.01)
     # train_nn(dataset='diabetes', neurons=(50, 50), standardize=False,
     #          solver='sgd', momentum=0.8)
     # train_nn(dataset='diabetes', neurons=(50,), verbose=True, tol=1e-6)
@@ -213,17 +213,19 @@ if __name__ == '__main__':
     # Surrogates of NNs
     ###########
 
-    # train_surrogate('models/abalone-nn-40-40-40.mdl', surrogate='rule')
+    train_surrogate('models/abalone-nn-40-40.mdl', surrogate='rule')
     # train_surrogate('models/abalone-nn-30-30-30-30.mdl', surrogate='tree')
 
-    train_surrogate('models/iris-nn-20.mdl', surrogate='rule')
+    # train_surrogate('models/iris-nn-20.mdl', surrogate='rule')
     # train_surrogate('models/breast_cancer-nn-20.mdl', surrogate='rule')
     # train_surrogate('models/wine-nn-20.mdl', surrogate='rule')
 
     # train_surrogate('models/diabetes-nn-200-100-50.mdl', surrogate='tree', sampling_rate=0.1)
-    # train_surrogate('models/adult-nn-30-30.mdl', surrogate='rule', sampling_rate=5)
+    # train_surrogate('models/credit_card-nn-40-40.mdl', surrogate='rule', sampling_rate=3, rule_maxlen=3, iters=70000)
+    # train_surrogate('models/adult-nn-50-50.mdl', surrogate='rule', sampling_rate=3, rule_maxlen=3, iters=70000)
     # train_surrogate('models/wine_quality_red-nn-40-40.mdl', surrogate='rule', sampling_rate=5, rule_maxlen=3)
     # train_surrogate('models/wine_quality_white-nn-40-40.mdl', surrogate='rule', sampling_rate=10)
+    # train_surrogate('models/bank_marketing-nn-30-30.mdl', surrogate='rule', sampling_rate=3, rule_maxlen=3)
 
     ###########
     # Surrogates of SVMs

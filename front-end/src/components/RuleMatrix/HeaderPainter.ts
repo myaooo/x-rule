@@ -63,7 +63,7 @@ export default class HeaderPainter implements Painter<Feature[], HeaderParams> {
     // TRANSITION
     const updateTransition = textGUpdate.transition().duration(duration)
       .attr('transform', (d) => 
-        `translate(${d.x + d.width / 2},${d.expanded ? -20 : -10}) rotate(${rotate})`
+        `translate(${d.x + d.width / 2},${d.expanded ? -40 : -10}) rotate(${rotate})`
       );
     // Text transition
     updateTransition.select('text.header-text')
@@ -87,15 +87,23 @@ export default class HeaderPainter implements Painter<Feature[], HeaderParams> {
       .attr('transform', d => `translate(${d.x})`);
 
     axisUpdate.each((d: Feature, i: number, nodes) => {
-      if (d.expanded && d.range && d.cutPoints) {
-        const ticks = [d.range[0], ...(d.cutPoints), d.range[1]];
-        const scale = d3.scaleLinear().domain(d.range).range([margin.left, d.width - margin.right]);
-        const featureAxis = d3.axisTop(scale).tickValues(ticks).tickSize(2);
-        d3.select(nodes[i]).call(featureAxis)
-          .selectAll('text').style('text-anchor', 'start')
-          .attr('dx', '.4em')
-          .attr('dy', '.5em')
-          .attr('transform', 'rotate(-65)');
+      if (d.expanded) {
+        let featureAxis = null;
+        if (d.range && d.cutPoints) {
+          const ticks = [d.range[0], ...(d.cutPoints), d.range[1]];
+          const scale = d3.scaleLinear().domain(d.range).range([margin.left, d.width - margin.right]);
+          featureAxis = d3.axisTop(scale).tickValues(ticks).tickSize(2);
+        }
+        if (d.categories) {
+          const scale = d3.scalePoint().domain(d.categories).range([margin.left, d.width - margin.right]);
+          featureAxis = d3.axisTop(scale).tickValues(d.categories).tickSize(2);
+        }
+        if (featureAxis)
+          d3.select(nodes[i]).call(featureAxis)
+            .selectAll('text').style('text-anchor', 'start')
+            .attr('dx', '.4em')
+            .attr('dy', '.5em')
+            .attr('transform', 'rotate(-50)');
       } 
     });
 

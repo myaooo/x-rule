@@ -1,4 +1,4 @@
-from typing import List
+import time
 
 import numpy as np
 
@@ -130,14 +130,15 @@ def train_surrogate(model_file, sampling_rate=5, surrogate='rule',
         surrogate_model.surrogate(model, instances, constraints, sampling_rate)
     # surrogate_model.evaluate(train_x, train_y)
     # surrogate_model.describe(feature_names=feature_names)
-    # surrogate_model.save()
+    surrogate_model.save()
     # surrogate_model.self_test()
-    self_fidelity = surrogate_model.self_test(len(train_y) * 0.25)
+    self_fidelity = surrogate_model.self_test(len(train_y) * sampling_rate * 0.25)
     fidelity, acc = surrogate_model.test(test_x, test_y)
     return fidelity, acc, self_fidelity
 
 
 datasets = ['breast_cancer', 'wine', 'iris', 'adult', 'wine_quality_red']
+samling_rate = [5, 5, 5, 3, 3]
 
 
 def train_all_nn():
@@ -194,22 +195,22 @@ def train_all_svm():
 
 def run_test(dataset, names, rule_maxlen, n_test=10):
     results = []
+    sampling_rate = 2 if dataset in {'adult'} else 5
     for name in names:
         model_file = get_path('models', name + '.mdl')
         fidelities = []
         self_fidelities = []
         accs = []
+        seconds = []
         for i in range(n_test):
             print('test', i)
-            try:
-                fidelity, acc, self_fidelity = train_surrogate(model_file, surrogate='rule', sampling_rate=5,
-                                                               rule_maxlen=rule_maxlen)
-                self_fidelities.append(self_fidelity)
-                fidelities.append(fidelity)
-                accs.append(acc)
-            except:
-                print('error occurs')
-                print('just keep move on')
+            start = time.time()
+            fidelity, acc, self_fidelity = train_surrogate(model_file, surrogate='rule', sampling_rate=sampling_rate,
+                                                           rule_maxlen=rule_maxlen)
+            seconds.append(time.time() - start)
+            self_fidelities.append(self_fidelity)
+            fidelities.append(fidelity)
+            accs.append(acc)
 
         std_acc = float(np.std(accs))
         mean_acc = float(np.mean(accs))
@@ -223,12 +224,14 @@ def run_test(dataset, names, rule_maxlen, n_test=10):
         mean_self_fidelity = float(np.mean(self_fidelities))
         max_self_fidelity = float(np.max(self_fidelities))
         min_self_fidelity = float(np.min(self_fidelities))
+        mean_time = float(np.mean(seconds))
         obj = {'fidelity': fidelities, 'acc': accs,
                'std_acc': std_acc, 'mean_acc': mean_acc, 'min_acc': min_acc, 'max_acc': max_acc,
                'std_fidelity': std_fidelity, 'mean_fidelity': mean_fidelity,
                'min_fidelity': min_fidelity, 'max_fidelity': max_fidelity,
                'std_self_fidelity': std_self_fidelity, 'mean_self_fidelity': mean_self_fidelity,
-               'min_self_fidelity': min_self_fidelity, 'max_self_fidelity': max_self_fidelity}
+               'min_self_fidelity': min_self_fidelity, 'max_self_fidelity': max_self_fidelity,
+               'time': seconds, 'mean_time': mean_time}
         print(dataset)
         print(name)
         print(obj)

@@ -136,7 +136,7 @@ class Classifier(ModelBase):
         if stage == 'test':
             prefix = 'Testing'
         print(prefix + " accuracy: {:.5f}; loss: {:.5f}; auc: {:.5f}".format(acc, loss, auc))
-        return acc, loss, auc
+        return loss, acc, auc
 
     def predict_prob(self, x):
         raise NotImplementedError("This is the classifier base class!")

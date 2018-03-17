@@ -9,7 +9,7 @@ export interface ConditionX extends Condition {
   // activeRatio: [number, number];
   expanded?: boolean;
   stream?: Stream;
-
+  isCategorical: boolean;
   x: number;
   width: number;
   height: number;
@@ -33,6 +33,7 @@ export interface Feature {
   x: number;
   width: number;
   count: number;
+  categories?: string[] | null;
   cutPoints?: number[] | null;
   range?: [number, number];
   expanded?: boolean;

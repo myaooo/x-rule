@@ -1,5 +1,5 @@
 """
-Dataset: Thoracic Surgery Data,
+Dataset: Bank Marketing,
 Url: https://archive.ics.uci.edu/ml/datasets/Bank+Marketing
 Download:
 ```bash
@@ -73,7 +73,7 @@ meta = {
     'campaign': ['numeric', None],
     'pdays': ['numeric', None],
     'previous': ['numeric', None],
-    'poutcome': ['nominal', "failure","nonexistent","success"],
+    'poutcome': ['nominal', ("failure","nonexistent","success")],
     'emp.var.rate': ['numeric', None],
     'cons.price.idx': ['numeric', None],
     'cons.conf.idx': ['numeric', None],
