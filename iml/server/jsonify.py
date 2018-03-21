@@ -56,6 +56,7 @@ def rl2json(rl: RuleList) -> dict:
                     'category': category
                 } for feature, category in zip(rule.feature_indices, rule.categories)],
                 'output': rule.output,
+                'cover': np.sum(supports[i]),
                 'support': supports[i],
                 'totalSupport': np.sum(supports[i]),
                 'label': int(np.argmax(rule.output)),
@@ -98,6 +99,7 @@ def get_category_ratios(data, discretizer: MDLP, categories: List[List[str]]=Non
     continuous = set(discretizer.continuous_features)
     ratios = []
     for idx in range(data.shape[1]):
+        print(idx)
         col = data[:, idx]
         if idx in continuous:
             cats = discretizer.cts2cat(col, idx)

@@ -10,6 +10,7 @@ import TreeStyleControl from './TreeStyleControl';
 import RuleStyleControl from './RuleStyleControl';
 import ModelInfo from '../components/ModelInfo';
 import SettingsControl from './SettingsControl';
+import RuleFilter from './RuleFilter';
 
 const { Panel } = Collapse;
 
@@ -81,6 +82,11 @@ class SideBar extends React.Component<SideBarProps, SideBarState> {
             {model !== null && 
               <Panel header={collapsed ? 'S' : `Settings`} key={(i++).toString()}>
                 <SettingsControl/>
+              </Panel>
+            }
+            {model !== null && 
+              <Panel header={collapsed ? 'S' : `Rule Filters`} key={(i++).toString()}>
+                <RuleFilter/>
               </Panel>
             }
           </Collapse>

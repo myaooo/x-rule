@@ -95,7 +95,7 @@ def train_rule(name='rule', dataset='breast_cancer', rule_max_len=2, **kwargs):
 
 
 def train_surrogate(model_file, sampling_rate=5, surrogate='rule',
-                    rule_maxlen=2, min_support=0.01, eta=1):
+                    rule_maxlen=2, min_support=0.01, eta=1, _lambda=50, iters=50000):
     is_rule = surrogate == 'rule'
     model = load_model(model_file)
     dataset = model.name.split('-')[0]
@@ -111,7 +111,7 @@ def train_surrogate(model_file, sampling_rate=5, surrogate='rule',
     if surrogate == 'rule':
         surrogate_model = RuleSurrogate(name=model_name, discretizer=data['discretizer'],
                                         rule_minlen=1, rule_maxlen=rule_maxlen, min_support=min_support,
-                                        _lambda=50, nchain=30, eta=eta, iters=50000)
+                                        _lambda=_lambda, nchain=30, eta=eta, iters=iters)
     elif surrogate == 'tree':
         surrogate_model = TreeSurrogate(name=model_name, max_depth=None, min_samples_leaf=0.01)
     else:
@@ -137,7 +137,7 @@ def train_surrogate(model_file, sampling_rate=5, surrogate='rule',
     return fidelity, acc, self_fidelity, surrogate_model.n_rules
 
 
-datasets = ['breast_cancer', 'wine', 'iris', 'adult', 'wine_quality_red']
+datasets = ['breast_cancer', 'wine', 'iris', 'wine_quality_red', 'abalone', 'adult']
 samling_rate = [5, 5, 5, 3, 3]
 
 
@@ -193,9 +193,11 @@ def train_all_svm():
     return names
 
 
-def run_test(dataset, names, rule_maxlen, n_test=10):
+def run_test(dataset, names, n_test=10):
     results = []
     sampling_rate = 2 if dataset in {'adult'} else 5
+    rule_maxlen = 3
+    _lambda = 10 if dataset in {'iris', 'breast_cancer', 'wine'} else 50
     for name in names:
         model_file = get_path('models', name + '.mdl')
         fidelities = []
@@ -208,9 +210,10 @@ def run_test(dataset, names, rule_maxlen, n_test=10):
             start = time.time()
             fidelity, acc, self_fidelity, n_rules = train_surrogate(model_file, surrogate='rule',
                                                                     sampling_rate=sampling_rate,
-                                                                    rule_maxlen=rule_maxlen)
+                                                                    rule_maxlen=rule_maxlen,
+                                                                    min_support=0.05, _lambda=_lambda)
             seconds.append(time.time() - start)
-            print('time: {}s; length: {}', seconds[-1], n_rules)
+            print('time: {}s; length: {}'.format(seconds[-1], n_rules))
             list_lengths.append(n_rules)
             self_fidelities.append(self_fidelity)
             fidelities.append(fidelity)
@@ -248,20 +251,20 @@ def run_test(dataset, names, rule_maxlen, n_test=10):
 def test(target='svm'):
 
     n_test = 10
-    max_rulelens = [2, 2, 2, 3, 3]
+    # max_rulelens = [2, 2, 2, 3, 3, 3]
     performance_dict = {}
     if target == 'nn':
         nns = train_all_nn()
         for i, nn_names in enumerate(nns):
             dataset = datasets[i]
-            max_rulelen = max_rulelens[i]
+            # max_rulelen = max_rulelens[i]
             # performance_dict
-            file_name = dataset + '-nn.json'
+            file_name = get_path('experiments', dataset + '-nn.json')
             if file_exists(file_name):
                 results = json2dict(file_name)
             else:
-                results = run_test(dataset, nn_names, max_rulelen, n_test=n_test)
-                dict2json(results, dataset + '-nn.json')
+                results = run_test(dataset, nn_names, n_test=n_test)
+                dict2json(results, file_name)
             performance_dict[dataset] = results
  
         dict2json(performance_dict, 'results-nn.json')
@@ -271,13 +274,13 @@ def test(target='svm'):
     print(svms)
     for i, svm_name in enumerate(svms):
         dataset = datasets[i]
-        max_rulelen = max_rulelens[i]
+        # max_rulelen = max_rulelens[i]
         # performance_dict
-        file_name = dataset + '-svm.json'
+        file_name = get_path('experiments', dataset + '-svm.json')
         if file_exists(file_name):
             results = json2dict(file_name)
         else:
-            results = run_test(dataset, [svm_name], max_rulelen, n_test=n_test)
+            results = run_test(dataset, [svm_name], n_test=n_test)
             dict2json(results, file_name)
         performance_dict[dataset] = results
 
@@ -286,7 +289,7 @@ def test(target='svm'):
 
 if __name__ == '__main__':
 
-    test('nn')
+    test('svm')
     ###########
     # Trees
     ###########

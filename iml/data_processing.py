@@ -111,7 +111,8 @@ def load_data(name):
 sklearn_datasets = {'breast_cancer': {}, 'iris': {}, 'wine': {}}
 local_datasets = {'diabetes': {}, 'abalone': {}, 'thoracic': {'min_depth': 3},
                   'bank_marketing': {}, 'credit_card': {}, 'adult': {},
-                  'wine_quality_white': {}, 'wine_quality_red': {}
+                  'wine_quality_white': {}, 'wine_quality_red': {}, 'diabetes_balance': {},
+                  'abalone2': {}, 'abalone3': {}, 'pima': {}
                   }
 
 
@@ -190,6 +191,9 @@ def get_dataset(data_name, discrete=False, seed=None, split=False,
         print("-----------------------")
         print("Data Specs: {:s}".format(data_name))
         print("#data: {:d}".format(len(data['target'])))
+        uniq, counts = np.unique(data['target'], return_counts=True)
+        counts = [str(c) for c in counts]
+        print("Label distribution: [{}]".format('/'.join(counts)))
         print("#features: {:d}".format(data['data'].shape[1]))
         print("#labels: {:d}".format(len(np.unique(data['target']))))
         print("-----------------------")

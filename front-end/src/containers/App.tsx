@@ -36,7 +36,7 @@ class App extends React.Component<AppProps, AppState> {
             collapsible={true}
             collapsed={this.state.collapsed}
             onCollapse={this.onCollapse}
-            width={250}
+            width={300}
             collapsedWidth={80}
           >
             <SideBar collapsed={this.state.collapsed}/>

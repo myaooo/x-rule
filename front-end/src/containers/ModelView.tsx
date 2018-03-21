@@ -97,7 +97,7 @@ class ModelView extends React.Component<ModelViewProp, any> {
     // console.log(streams); // tslint:disable-line
     return (
       <Card>
-        <svg ref={(ref: SVGSVGElement) => this.svgRef = ref} width={width} height={height}>
+        <svg ref={(ref: SVGSVGElement) => this.svgRef = ref} width={width} height={height} id="main">
         <Patterns />
           { (isTreeModel(model) || ruleStyles.mode === 'list') &&
           <FeatureList 

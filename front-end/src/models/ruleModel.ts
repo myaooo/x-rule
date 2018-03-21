@@ -17,6 +17,7 @@ export interface Rule {
   readonly output: number[];
   readonly label: number;
   readonly idx: number;
+  readonly cover: number;
   support: number[] | number[][];
   _support: number[];
   totalSupport: number;
@@ -60,7 +61,7 @@ export class RuleList extends BaseModel implements RuleModel {
     this.rules = rules;
     this.supports = supports;
     this.rules.forEach((r, i) => {
-      r._support = nt.isMat(r.support) ? nt.sumVec(r.support) : r.support;
+      r._support = nt.isMat(r.support) ? r.support.map(s => nt.sum(s)) : r.support;
     });
     this.maxSupport = d3.max(supports, nt.sum) || 0.1;
     // this.minSupport = 0.01;
@@ -86,8 +87,11 @@ export class RuleList extends BaseModel implements RuleModel {
     this.rules.forEach((r, i) => {
       const support = newSupport[i];
       r.support = support;
-      if (nt.isMat(support)) r._support = nt.sumVec(support);
-      else r._support = support;
+      if (nt.isMat(support)) {
+        r._support = support.map(s => nt.sum(s));
+      } else {
+        r._support = support;
+      }
       r.totalSupport = nt.sum(r._support);
     });
     // this._minSupport = 0;

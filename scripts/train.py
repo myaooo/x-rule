@@ -2,7 +2,7 @@ from typing import List
 
 import numpy as np
 
-from iml.models import Tree, NeuralNet, SVM, load_model, RuleSurrogate, TreeSurrogate, create_constraints
+from iml.models import Tree, NeuralNet, SVM, load_model, RuleSurrogate, TreeSurrogate, create_constraints, SKClassifier
 from iml.data_processing import get_dataset, sample_balance
 from iml.utils.io_utils import get_path
 
@@ -35,26 +35,27 @@ def train_tree(name='tree', dataset='wine', max_depth=None, min_samples_leaf=0.0
     tree.export(get_path('models', '{}.json'.format(model_name)))
     tree.save()
 
-
-def train_nn(name='nn', dataset='wine', neurons=(20,), alpha=0.01, problem='classification', **kwargs):
-    data = get_dataset(dataset, split=True, discrete=False, one_hot=True)
-    train_x, train_y, test_x, test_y, feature_names = \
-        data['train_x'], data['train_y'], data['test_x'], data['test_y'], data['feature_names']
-    if rebalance:
-        print("balancing training data")
-        train_x, train_y = sample_balance(train_x, train_y)
-        print("#data after balancing:", len(train_y))
-    one_hot_encoder, is_categorical = data['one_hot_encoder'], data['is_categorical']
-    model_name = '-'.join([dataset, name] + [str(neuron) for neuron in neurons])
-    nn = NeuralNet(name=model_name, problem=problem, neurons=neurons, max_iter=5000, alpha=alpha,
-                   one_hot_encoder=one_hot_encoder, **kwargs)
-    nn.train(train_x, train_y)
-    nn.evaluate(train_x, train_y, stage='train')
-    nn.test(test_x, test_y)
-    nn.save()
+#
+# def train_nn(name='nn', dataset='wine', neurons=(20,), alpha=0.01, problem='classification', **kwargs):
+#     data = get_dataset(dataset, split=True, discrete=False, one_hot=True)
+#     train_x, train_y, test_x, test_y, feature_names = \
+#         data['train_x'], data['train_y'], data['test_x'], data['test_y'], data['feature_names']
+#     if rebalance:
+#         print("balancing training data")
+#         train_x, train_y = sample_balance(train_x, train_y)
+#         print("#data after balancing:", len(train_y))
+#     one_hot_encoder, is_categorical = data['one_hot_encoder'], data['is_categorical']
+#     model_name = '-'.join([dataset, name] + [str(neuron) for neuron in neurons])
+#     nn = NeuralNet(name=model_name, problem=problem, neurons=neurons, max_iter=5000, alpha=alpha,
+#                    one_hot_encoder=one_hot_encoder, **kwargs)
+#     nn.train(train_x, train_y)
+#     nn.evaluate(train_x, train_y, stage='train')
+#     nn.test(test_x, test_y)
+#     nn.save()
 
 
 def train_svm(name='svm', dataset='wine', C=1.0, problem='classification', **kwargs):
+    from sklearn.svm import SVC
     data = get_dataset(dataset, split=True, discrete=False, one_hot=True)
     train_x, train_y, test_x, test_y, feature_names = \
         data['train_x'], data['train_y'], data['test_x'], data['test_y'], data['feature_names']
@@ -64,11 +65,31 @@ def train_svm(name='svm', dataset='wine', C=1.0, problem='classification', **kwa
         print("#data after balancing:", len(train_y))
     one_hot_encoder, is_categorical = data['one_hot_encoder'], data['is_categorical']
     model_name = '-'.join([dataset, name])
-    svm = SVM(name=model_name, problem=problem, C=C, one_hot_encoder=one_hot_encoder, **kwargs)
+    model = SVC(C=C, probability=True, **kwargs)
+    svm = SKClassifier(model, name=model_name, one_hot_encoder=one_hot_encoder)
     svm.train(train_x, train_y)
     svm.evaluate(train_x, train_y, stage='train')
     svm.test(test_x, test_y)
     svm.save()
+
+
+def train_nn(name='nn', dataset='wine', neurons=(20,), alpha=0.01, **kwargs):
+    from sklearn.neural_network import MLPClassifier
+    data = get_dataset(dataset, split=True, discrete=False, one_hot=True)
+    train_x, train_y, test_x, test_y, feature_names = \
+        data['train_x'], data['train_y'], data['test_x'], data['test_y'], data['feature_names']
+    if rebalance:
+        print("balancing training data")
+        train_x, train_y = sample_balance(train_x, train_y)
+        print("#data after balancing:", len(train_y))
+    one_hot_encoder, is_categorical = data['one_hot_encoder'], data['is_categorical']
+    model_name = '-'.join([dataset, name] + [str(neuron) for neuron in neurons])
+    model = MLPClassifier(hidden_layer_sizes=neurons, max_iter=5000, alpha=alpha, **kwargs)
+    nn = SKClassifier(model, name=model_name, standardize=True, one_hot_encoder=one_hot_encoder)
+    nn.train(train_x, train_y)
+    nn.evaluate(train_x, train_y, stage='train')
+    nn.test(test_x, test_y)
+    nn.save()
 
 
 def train_rule(name='rule', dataset='breast_cancer', rule_max_len=2, **kwargs):
@@ -94,8 +115,8 @@ def train_rule(name='rule', dataset='breast_cancer', rule_max_len=2, **kwargs):
     brl.save()
 
 
-def train_surrogate(model_file, is_global=True, sampling_rate=5, surrogate='rule',
-                    rule_maxlen=2, min_support=0.01, eta=1, iters=50000):
+def train_surrogate(model_file, is_global=True, sampling_rate=5., surrogate='rule',
+                    rule_maxlen=2, min_support=0.01, eta=1, iters=50000, _lambda=30):
     is_rule = surrogate == 'rule'
     model = load_model(model_file)
     dataset = model.name.split('-')[0]
@@ -111,7 +132,7 @@ def train_surrogate(model_file, is_global=True, sampling_rate=5, surrogate='rule
     if surrogate == 'rule':
         surrogate_model = RuleSurrogate(name=model_name, discretizer=data['discretizer'],
                                         rule_minlen=1, rule_maxlen=rule_maxlen, min_support=min_support,
-                                        _lambda=50, nchain=30, eta=eta, iters=iters)
+                                        _lambda=_lambda, nchain=30, eta=eta, iters=iters)
     elif surrogate == 'tree':
         surrogate_model = TreeSurrogate(name=model_name, max_depth=None, min_samples_leaf=0.01)
     else:
@@ -183,11 +204,12 @@ if __name__ == '__main__':
     # train_svm(dataset='wine')
     # train_svm(dataset='thoracic')
     # train_svm(dataset='bank_marketing')
-    # train_svm(dataset='abalone')
+    # train_svm(dataset='abalone2')
     # train_svm(dataset='credit_card')
     # train_svm(dataset='adult')
     # train_svm(dataset='wine_quality_red')
-    # train_svm(dataset='wine_quality_white')
+    # train_svm(dataset='diabetes')
+    # train_svm(dataset='pima', C=1)
 
     ###########
     # NNs
@@ -198,34 +220,44 @@ if __name__ == '__main__':
     # train_nn(dataset='wine')
     # train_nn(dataset='thoracic', neurons=(30, 30), alpha=5.0)
     # train_nn(dataset='bank_marketing', neurons=(30, 30), alpha=0.1)
-    # train_nn(dataset='credit_card', neurons=(40, 40), alpha=0.01)
-    train_nn(dataset='abalone', neurons=(40, 40), tol=1e-6, alpha=0.01, verbose=True)
-    # train_nn(dataset='adult', neurons=(50, 50), alpha=0.01)
+    train_nn(dataset='credit_card', neurons=(40, 40), alpha=0.01)
+    # train_nn(dataset='abalone2', neurons=(40, 40), tol=1e-6, alpha=0.0001)
+    # train_nn(dataset='abalone3', neurons=(40, 40, 40), tol=1e-6, alpha=0.0001)
+    # train_nn(dataset='adult', neurons=(50, 50), alpha=0.001)
     # train_nn(dataset='diabetes', neurons=(50, 50), standardize=False,
     #          solver='sgd', momentum=0.8)
     # train_nn(dataset='diabetes', neurons=(50,), verbose=True, tol=1e-6)
-    # train_nn(dataset='diabetes', neurons=(200, 100, 50), verbose=True,
-    #          tol=1e-6)
+    # train_nn(dataset='diabetes_balance', neurons=(40, 40), verbose=True, alpha=0.1, tol=1e-6)
     # train_nn(dataset='wine_quality_red', neurons=(40, 40), tol=1e-6, alpha=0.01, activation='logistic', verbose=True)
     # train_nn(dataset='wine_quality_white', neurons=(40, 40), tol=1e-6, alpha=0.01, activation='logistic', verbose=True)
+    # train_nn(dataset='pima', neurons=(20, 20), tol=1e-5, alpha=2.0)
 
     ###########
     # Surrogates of NNs
     ###########
 
-    train_surrogate('models/abalone-nn-40-40.mdl', surrogate='rule')
-    # train_surrogate('models/abalone-nn-30-30-30-30.mdl', surrogate='tree')
+    # train_surrogate('models/abalone3-nn-40-40-40.mdl', surrogate='rule', rule_maxlen=3, iters=50000,
+    #                 _lambda=30, min_support=0.02)
+    # train_surrogate('models/abalone2-nn-40-40.mdl', surrogate='rule', rule_maxlen=3, iters=90000, _lambda=30)
+    # train_surrogate('models/abalone-svm.mdl', surrogate='rule', rule_maxlen=3, iters=90000, _lambda=30)
 
     # train_surrogate('models/iris-nn-20.mdl', surrogate='rule')
-    # train_surrogate('models/breast_cancer-nn-20.mdl', surrogate='rule')
+    # train_surrogate('models/breast_cancer-nn-20.mdl', surrogate='rule', iters=30000, _lambda=5, rule_maxlen=3,
+    #                 min_support=0.1)
     # train_surrogate('models/wine-nn-20.mdl', surrogate='rule')
 
     # train_surrogate('models/diabetes-nn-200-100-50.mdl', surrogate='tree', sampling_rate=0.1)
     # train_surrogate('models/credit_card-nn-40-40.mdl', surrogate='rule', sampling_rate=3, rule_maxlen=3, iters=70000)
-    # train_surrogate('models/adult-nn-50-50.mdl', surrogate='rule', sampling_rate=3, rule_maxlen=3, iters=70000)
+    # train_surrogate('models/adult-nn-50-50.mdl', surrogate='rule', sampling_rate=2, rule_maxlen=3,
+    #                 iters=70000, min_support=0.02)
     # train_surrogate('models/wine_quality_red-nn-40-40.mdl', surrogate='rule', sampling_rate=5, rule_maxlen=3)
     # train_surrogate('models/wine_quality_white-nn-40-40.mdl', surrogate='rule', sampling_rate=10)
     # train_surrogate('models/bank_marketing-nn-30-30.mdl', surrogate='rule', sampling_rate=3, rule_maxlen=3)
+    # train_surrogate('models/diabetes_balance-nn-40-40.mdl', surrogate='rule',
+    #                 sampling_rate=1.0, rule_maxlen=3, min_support=0.01, _lambda=50)
+    # train_surrogate('models/pima-nn-10-10.mdl', surrogate='rule', sampling_rate=5, rule_maxlen=3, _lambda=10)
+    # train_surrogate('models/pima-nn-10-10.mdl', surrogate='rule', sampling_rate=5, rule_maxlen=3,
+    #                 _lambda=10, iters=90000)
 
     ###########
     # Surrogates of SVMs
@@ -242,3 +274,4 @@ if __name__ == '__main__':
     # train_surrogate('models/wine_quality_white-svm.mdl', surrogate='rule', sampling_rate=5)
 
     # train_surrogate('models/diabetes-nn-200-100-50.mdl', surrogate='tree', sampling_rate=0.1)
+    # train_surrogate('models/pima-svm.mdl', surrogate='rule', sampling_rate=5, rule_maxlen=3, _lambda=10)

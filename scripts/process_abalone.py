@@ -44,14 +44,17 @@ is_categorical = [True, False, False, False, False,
 
 # labels = ['']
 bins = [1, 9, 15, 30]
-labels = ["[{},{})".format(bins[i], bins[i+1]) for i in range(len(bins) - 1)]
+bins2 = [1, 9, 14, 30]
+bins3 = [1, 9, 12, 15, 30]
+# labels = ["[{},{})".format(bins[i], bins[i+1]) for i in range(len(bins) - 1)]
 
 
-def main():
+def main(label_bins=bins, name='abalone'):
+    target_names = ["[{},{})".format(label_bins[i], label_bins[i + 1]) for i in range(len(label_bins) - 1)]
     raw = pd.read_csv(data_path, header=None, names=header)
     # target = raw['rings']
     data = raw.drop(columns='rings', axis=1).as_matrix()
-    target, target_names = process_labels(raw, 'rings')
+    target = process_labels(raw, 'rings', label_bins)
 
     sex, sex_names = process_categorical(raw, 'sex')
     data[:, 0] = sex
@@ -66,17 +69,19 @@ def main():
         'feature_names': header[:-1],
         'categories': categories
     }
-    save_data(dataset, 'abalone')
+    save_data(dataset, name)
 
 
-def process_labels(df, label):
+def process_labels(df, label, label_bins):
     label_series = df[label]
+    uniq, counts = np.unique(label_series, return_counts=True)
+    print(list(zip(uniq, counts)))
     # label_encoder = LabelEncoder().fit(label_series)
     # return label_encoder.transform(label_series), label_encoder.classes_.tolist()
-    target = np.digitize(label_series, bins) - 1
+    target = np.digitize(label_series, label_bins) - 1
     uniq, counts = np.unique(target, return_counts=True)
     print(counts)
-    return target, labels
+    return target
 
 
 def process_categorical(df, label):
@@ -86,4 +91,4 @@ def process_categorical(df, label):
 
 
 if __name__ == '__main__':
-    main()
+    main(bins3, 'abalone3')

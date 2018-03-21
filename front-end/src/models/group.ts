@@ -22,24 +22,27 @@ export function groupRules(rules: Rule[]): Rule | RuleGroup {
   let support: number[] | number[][];
   let supportSums: number[];
   let _support: number[];
+  // let fidelity: number;
   if (Array.isArray(supports[0][0])) {
     support = nt.sumMat(supports as number[][][]);
     supportSums = (<number[][][]> supports).map(s => nt.sum(nt.sumVec(s)));
-    _support = nt.sumVec(support);
+    // _support = nt.sumVec(support);
+    _support = support.map(s => nt.sum(s));
   } else {
     support = nt.sumVec(supports as number[][]);
     supportSums = (<number[][]> supports).map(s => nt.sum(s));
     _support = support;
   }
   const totalSupport = nt.sum(supportSums);
-  const output = nt.sumVec(nested.map(r => nt.muls(r.output, r.totalSupport / totalSupport)));
+  const cover = nt.sum(rules.map(r => r.cover));
+  const output = nt.sumVec(nested.map(r => nt.muls(r.output, r.cover / cover)));
   const label = nt.argMax(output);
   const conditions: Condition[] = [];
   rules.forEach((r, i) => {
     const conds = r.conditions.map((c) => ({...c, rank: i}));
     conditions.push(...conds);
   });
-  const ret = { rules, support, _support, output, label, totalSupport, conditions, idx: rules[0].idx };
+  const ret = { rules, support, _support, output, label, totalSupport, conditions, idx: rules[0].idx, cover };
   rules.forEach((r) => r.parent = ret);
   return ret;
 }

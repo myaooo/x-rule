@@ -8,3 +8,5 @@ def label2binary(y):
 
 def auc_score(y_true, y_pred, average=None):
     return roc_auc_score(label2binary(y_true), y_pred, average=average)
+
+

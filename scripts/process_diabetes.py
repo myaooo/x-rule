@@ -60,7 +60,7 @@ def process_data(df, droped_cols):
     categories = [None] * len(is_categorical)
     for i, encoder in enumerate(encoders):
         categories[i] = encoder.classes_.tolist()
-    return data, feature_names, is_categorical, categories
+    return data, feature_names, is_categorical.tolist(), categories
 
 
 def standardize(data, features):
