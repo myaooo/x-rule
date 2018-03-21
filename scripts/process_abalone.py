@@ -91,4 +91,4 @@ def process_categorical(df, label):
 
 
 if __name__ == '__main__':
-    main(bins3, 'abalone3')
+    main()
