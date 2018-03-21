@@ -195,7 +195,7 @@ def train_all_svm():
 
 def run_test(dataset, names, rule_maxlen, n_test=10):
     results = []
-    sampling_rate = 2 if dataset in {'adult'} else 5
+    sampling_rate = 1.5 if dataset == 'adult' else 5
     for name in names:
         model_file = get_path('models', name + '.mdl')
         fidelities = []
