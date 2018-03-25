@@ -94,6 +94,8 @@ export class RuleList extends BaseModel implements RuleModel {
       }
       r.totalSupport = nt.sum(r._support);
     });
+    console.log('Support changed'); // tslint:disable-line
+    
     // this._minSupport = 0;
     // this.rules.forEach((r: Rule, i: number) => r.support = newSupport[i]);
     return this;
@@ -111,6 +113,29 @@ export class RuleList extends BaseModel implements RuleModel {
     //   this.computeGroups();
     if (this.useSupportMat) return this.supportMats;
     return this.supports;
+  }
+
+  public predict(data: number[]): number {
+    if (data.length !== this.meta.featureNames.length) {
+      console.warn('The input data does not has the same length as the featureNames!');
+    }
+    const rules = this.rules;
+    const {discretizers} = this.meta;
+    for (let i = 0; i < rules.length; i++) {
+      const {conditions} = rules[i];
+      const flags: boolean[] = conditions.map(({feature, category}) => {
+        const intervals = discretizers[feature].intervals;
+        if (intervals) {
+          const interval = intervals[category];
+          const low = interval[0] || -Infinity;
+          const high = interval[1] || Infinity;
+          return low < data[feature] && data[feature] < high;
+        }
+        return data[feature] === category;
+      });
+      if (flags.every(f => f)) return i;
+    }
+    return rules.length - 1;
   }
 
   // public setMinSupport(minSupport: number): this {

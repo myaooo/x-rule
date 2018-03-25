@@ -64,6 +64,16 @@ export function add<T extends Vector>(a: T, b: T, copy: boolean = true): T {
   return ret;
 }
 
+export function minus<T extends Vector>(a: T, b: T, copy: boolean = true): T {
+  if (a.length !== b.length) {
+    throw 'Length of a and b must be equal!';
+  }
+  const ret = copy ? a.slice() as T : a;
+  for (let i = 0; i < ret.length; ++i)
+    ret[i] -= b[i];
+  return ret;
+}
+
 export function addMat<T extends Vector>(a: T[], b: T[], copy: boolean = true): T[] {
   if (a.length !== b.length) {
     throw 'Length of a and b must be equal!';

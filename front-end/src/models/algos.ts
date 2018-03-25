@@ -6,7 +6,7 @@ export function rankRuleFeatures(rules: Rule[], nFeatures: number): number[] {
   const featureImportance = new Array(nFeatures).fill(0);
   rules.forEach((r: Rule) => {
     r.conditions.forEach((c: Condition) => {
-      featureImportance[c.feature] += r.totalSupport;
+      featureImportance[c.feature] += r.cover;
     });
   });
   const features = d3.range(nFeatures);

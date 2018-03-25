@@ -136,7 +136,7 @@ export default class FlowPainter implements Painter<Flow[], FlowPainterParams> {
         const xs = [0, ...(nt.cumsum(widths.slice(0, -1)))];
         return d.support.map((s: number, j: number) => {
           return {
-            width: widths[j], height: heights[i], x: xs[j]
+            width: widths[j], height: heights[i] - 4, x: xs[j]
           };
         });
       });

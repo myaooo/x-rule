@@ -33,6 +33,7 @@ export enum ActionType {
   CHANGE_RULE_STYLES = 'CHANGE_RULE_STYLES',
   CHANGE_SETTINGS = 'CHANGE_SETTINGS',
   CHANGE_FILTERS = 'CHANGE_FILTERS',
+  PREDICT = 'PREDICT',
 }
 
 export interface TypedAction<T> extends Action {
@@ -103,6 +104,10 @@ export interface ChangeSettingsAction extends TypedAction<ActionType.CHANGE_SETT
 
 export interface ChangeFiltersAction extends TypedAction<ActionType.CHANGE_FILTERS> {
   readonly newFilters: DataFilter[];
+}
+
+export interface PredictAction extends TypedAction<ActionType.PREDICT> {
+  readonly input: number[] | null;
 }
 
 export function requestModel(modelName: string): RequestModelAction {
@@ -224,6 +229,13 @@ export function changeFilters(newFilters: DataFilter[]): ChangeFiltersAction {
   };
 }
 
+export function predictInput(input: number[] | null): PredictAction {
+  return {
+    type: ActionType.PREDICT,
+    input
+  };
+}
+
 export type AsyncAction = ThunkAction<any, RootState, {}>;
 
 function fetchDataWrapper<ArgType, ReturnType>(
@@ -342,16 +354,22 @@ export function selectDatasetAndFetchSupport(dataNames: DataTypeX[]): ThunkActio
 
     // only fetch support for the first data (focus)
     if (dataNames.length > 0) {
-      console.log('Fetching support'); // tslint:disable-line
-      dispatch(fetchSupportIfNeeded({ modelName, data: dataNames[0] }));
-      dispatch(fetchStreamIfNeeded({modelName, dataType: dataNames[0], conditional}));
+      // console.log('Fetching support'); // tslint:disable-line
+      const p1 = dispatch(fetchSupportIfNeeded({ modelName, data: dataNames[0] }));
+      const p2 = dispatch(fetchStreamIfNeeded({modelName, dataType: dataNames[0], conditional}));
+      return Promise.all([p1, p2]).then(() => {
+        // console.log('change settings'); // tslint:disable-line
+        return dispatch(selectDataset(dataNames));
+      });
+    } else {
+      return dispatch(selectDataset(dataNames));
     }
-    dispatch(selectDataset(dataNames));
   };
 }
 
 export function changeSettingsAndFetchData(newSettings: Partial<Settings>): ThunkAction<void, RootState, {}> {
   return (dispatch: Dispatch, getState: () => RootState): any => {
+    const d = dispatch(changeSettings(newSettings));
     const state = getState();
     const model = getModel(state);
     if (model === null) return null;
@@ -361,15 +379,16 @@ export function changeSettingsAndFetchData(newSettings: Partial<Settings>): Thun
 
     // only fetch support for the first data (focus)
     if (dataNames.length > 0) {
-      console.log('Fetching stream and support'); // tslint:disable-line
+      // console.log('Fetching stream and support'); // tslint:disable-line
       const p1 = dispatch(fetchSupportIfNeeded({ modelName, data: dataNames[0] }));
       const p2 = dispatch(fetchStreamIfNeeded({modelName, dataType: dataNames[0], conditional}));
-      Promise.all([p1, p2]).then(() => {
-        console.log('change settings'); // tslint:disable-line
-        return dispatch(changeSettings(newSettings));
-      });
+      return Promise.all([p1, p2]);
+      // .then(() => {
+      //   // console.log('change settings'); // tslint:disable-line
+      //   return dispatch(changeSettings(newSettings));
+      // });
     } else {
-      return dispatch(changeSettings(newSettings));
+      return d;
     }
   };
 }

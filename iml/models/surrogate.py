@@ -162,7 +162,7 @@ def create_constraints(is_categorical: np.ndarray, is_continuous: np.ndarray, ra
     return constraints
 
 
-def create_sampler(instances: np.ndarray, constraints, verbose=False) -> Callable[[int], np.ndarray]:
+def create_sampler(instances: np.ndarray, constraints, cov_factor=1.0, verbose=False) -> Callable[[int], np.ndarray]:
     """
     We treat the sampling of categorical values as a multivariate categorical distribution.
     We sample categorical values first, then sample the continuous and integer variables
@@ -210,7 +210,7 @@ def create_sampler(instances: np.ndarray, constraints, verbose=False) -> Callabl
 
     # Try stats.gaussian_kde
     glb_kde = stats.gaussian_kde(instances[:, is_numeric].T, 'silverman')
-    cov = glb_kde.covariance
+    cov = cov_factor * glb_kde.covariance
 
     def sample(n: int) -> np.ndarray:
         samples = []
@@ -248,12 +248,12 @@ class SurrogateMixin(ModelBase):
         self.self_test_fidelity = None
 
     def surrogate(self, target: ModelInterface, instances: np.ndarray,
-                  constraints: list, sampling_rate: float=5., cache=True,
+                  constraints: list, sampling_rate: float=5., cache=True, cov_factor: float=1.0,
                   **kwargs):
         n_samples = int(sampling_rate * len(instances))
 
         self.target = target
-        self.data_distribution = create_sampler(instances, constraints)
+        self.data_distribution = create_sampler(instances, constraints, cov_factor)
         train_x = self.data_distribution(n_samples)
         train_y = target.predict(train_x).astype(np.int)
         self.train(train_x, train_y, **kwargs)

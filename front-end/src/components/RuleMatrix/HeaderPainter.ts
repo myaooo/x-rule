@@ -38,7 +38,7 @@ export default class HeaderPainter implements Painter<Feature[], HeaderParams> {
   render<GElement extends d3.BaseType>(
     selector: d3.Selection<SVGGElement, any, GElement, any>,
   ): this {
-    const { duration, headerSize, rotate, margin, maxHeight } = this.params;
+    const { duration, headerSize, rotate, margin, maxHeight, onClick } = this.params;
     const maxCount = d3.max(this.features, (f: Feature) => f.count);
     const multiplier = maxHeight / (maxCount || 5);
     /* TEXT GROUP */
@@ -55,7 +55,8 @@ export default class HeaderPainter implements Painter<Feature[], HeaderParams> {
     textGEnter.append('text').attr('class', 'header-text').attr('text-anchor', 'start');
 
     // UPDATE
-    const textGUpdate = textGEnter.merge(textG);
+    const textGUpdate = textGEnter.merge(textG)
+      .on('click', (onClick ? ((d: Feature) => onClick(d.feature)) : null) as null);
     textGUpdate.select('text.header-text').style('font-size', headerSize)
       .classed('header-expanded', d => Boolean(d.expanded))
       .text(d => `${d.text} (${d.count})`);

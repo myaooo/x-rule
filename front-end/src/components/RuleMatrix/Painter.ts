@@ -44,7 +44,8 @@ function initRuleXs(rules: Rule[], model: BaseModel): RuleX[] {
       x: 0, width: 0, height: 0, 
       interval: model.categoryInterval(c.feature, c.category),
       expanded: false, 
-      histRange: model.categoryHistRange(c.feature, c.category),
+      range: model.meta.ranges[c.feature],
+      // histRange: model.categoryHistRange(c.feature, c.category),
       isCategorical: model.meta.isCategorical[c.feature]
     }));
 
@@ -64,6 +65,7 @@ interface OptionalParams {
   headerRotate: number;
   paddingX: number;
   paddingY: number;
+  paddingLeft: number;
   flowWidth: number;
   x0: number;
   y0: number;
@@ -79,6 +81,7 @@ export interface RuleMatrixParams extends Partial<OptionalParams> {
   support: number[][] | number[][][];
   dataset?: DataSet;
   streams?: Streams | ConditionalStreams;
+  input: number[] | null;
   // supports: number[][]
   // outputs?: number[];
 }
@@ -99,10 +102,11 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
     headerRotate: -50,
     paddingX: 0.1,
     paddingY: 0.2,
+    paddingLeft: 0.5,
     // buttonSize: 12,
     outputWidth: 200,
     // transform: '',
-    expandFactor: [4, 3],
+    expandFactor: [3, 2],
     flowWidth: 50,
     // onClick: () => null
     // interval: 20,
@@ -122,20 +126,24 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
   private f2Idx: number[];
   // private highlightRules
   private expandedElements: Set<string>;
+  private expandedFeatures: Set<number>;
   private activeFeatures: Set<number>;
-  private onClick: (r: number, f: number) => void;
+  // private onClick: (r: number, f: number) => void;
   private rowPainter: RowPainter;
   private flowPainter: FlowPainter;
   private outputPainter: OutputPainter;
   private headerPainter: HeaderPainter;
   constructor() {
     this.expandedElements = new Set();
+    this.activeFeatures = new Set();
     this.rowPainter = new RowPainter();
     this.flowPainter = new FlowPainter();
     this.outputPainter = new OutputPainter();
     this.headerPainter = new HeaderPainter();
     this.collapseAll = this.collapseAll.bind(this);
     this.clickExpand = this.clickExpand.bind(this);
+    this.clickFeature = this.clickFeature.bind(this);
+    this.clickCondition = this.clickCondition.bind(this);
   }
 
   feature2Idx(f: number) {
@@ -181,9 +189,32 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
 
   }
 
+  public clickCondition(r: number, f: number): void {
+    const key = `${r},${f}`;
+    console.log(`clicked ${key}`); // tslint:disable-line
+    if (this.expandedElements.has(key)) {
+      this.expandedElements.delete(key);
+    } else {
+      this.expandedElements.add(key);
+    }
+    this.render(this.selector);
+  }
+
+  public clickFeature(f: number): void {
+    if (this.activeFeatures.has(f)) {
+      this.activeFeatures.delete(f);
+      this.clickCondition(-1, f);
+    } else {
+      this.activeFeatures.add(f);
+      this.clickCondition(-1, f);
+    }
+    // this.render(this.selector);
+  }
+
   public updateRules(): this {
     const {model, minSupport, support} = this.params;
     if (this.model !== model || this.minSupport !== minSupport || this.support !== support) {
+      // console.log('Updating Rules'); // tslint:disable-line
       const rules = model.getRules();
       const nFeatures = model.nFeatures;
 
@@ -206,15 +237,15 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
   }
 
   public updatePresentation(): this {
-    const {expandFactor, elemWidth, elemHeight, paddingX, paddingY} = this.params;
+    const {expandFactor, elemWidth, elemHeight, paddingX, paddingY, paddingLeft} = this.params;
    
     // compute active sets
-    const activeRules = new Set<number>();
-    const activeFeatures = new Set<number>();
+    const expandedRules = new Set<number>();
+    const expandedFeatures = new Set<number>();
     this.expandedElements.forEach((s: string) => {
-      const rf = s.split('-');
-      activeRules.add(Number(rf[0]));
-      activeFeatures.add(Number(rf[1]));
+      const rf = s.split(',');
+      expandedRules.add(Number(rf[0]));
+      expandedFeatures.add(Number(rf[1]));
     });
 
     // compute the widths and heights
@@ -223,40 +254,44 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
     const groupedHeight = Math.min(elemHeight, Math.max(elemHeight / 2, 10));
     const padX = paddingX * elemWidth;
     const padY = paddingY * elemHeight;
+    const padLeft = paddingLeft * elemWidth;
 
     const featureWidths = 
-      this.features.map((f: number) => (activeFeatures.has(f) ? expandWidth : elemWidth));
+      this.features.map((f: number) => (expandedFeatures.has(f) ? expandWidth : elemWidth));
     const ruleHeights = 
       this.rules.map((r: Rule, i: number) => 
-        (activeRules.has(i) ? expandHeight : (isRuleGroup(r) ? groupedHeight : elemHeight))
+        (expandedRules.has(i) ? expandHeight : (isRuleGroup(r) ? groupedHeight : elemHeight))
       );
 
     let ys = ruleHeights.map((h) => h + padY);
     ys = [0, ...(nt.cumsum(ys.slice(0, -1)))];
 
-    let xs = featureWidths.map((w: number) => w + padX);
-    xs = [0, ...(nt.cumsum(xs.slice(0, -1)))];
+    let xs = [padLeft, ...(featureWidths.map((w: number) => w + padX))];
+    xs = nt.cumsum(xs.slice(0, -1));
 
     this.xs = xs;
     this.ys = ys;
     this.widths = featureWidths;
     this.heights = ruleHeights;
     // this.activeRules = activeRules;
-    this.activeFeatures = activeFeatures;
+    this.expandedFeatures = expandedFeatures;
     return this;
   }
 
   public updatePos(): this {
-    const {streams} = this.params;
-    const {xs, ys, widths, heights, expandedElements} = this;
+    const {streams, input} = this.params;
+    const {xs, ys, widths, heights, expandedElements, activeFeatures, model} = this;
     const width = xs[xs.length - 1] + widths[widths.length - 1];
+    const lastIdx = input ? model.predict(input) : -1;
     // const support = model.getSupportOrSupportMat();
+    // console.log(lastIdx); // tslint:disable-line
     // update ruleX positions
     this.rules.forEach((r, i) => {
       r.y = ys[i]; 
       r.height = heights[i];
       r.width = isRuleGroup(r) ? width - 10 : width; // isRuleGroup(r) ? (width - 10) : width;
       r.x = isRuleGroup(r) ? 10 : 0;
+      r.highlight = i === lastIdx;
       // r.support = support[i];
     });
 
@@ -267,7 +302,9 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
           c.x = xs[this.feature2Idx(c.feature)];
           c.width = widths[this.feature2Idx(c.feature)];
           c.height = heights[i];
-          c.expanded = expandedElements.has(`${i}-${c.feature}`); 
+          c.expanded = expandedElements.has(`${i},${c.feature}`);
+          c.active = activeFeatures.has(c.feature); 
+          c.value = (i <= lastIdx && input) ? input[c.feature] : undefined;
         }
         if (streams) {
           if (isConditionalStreams(streams)) c.stream = streams[i][c.feature];
@@ -282,17 +319,17 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
     const {x0, y0} = this.params;
     this.selector = selector;
     this.updateRules().updatePresentation().updatePos();
-    console.log(this.rules); // tslint:disable-line
-    this.onClick = (r: number, f: number) => {
-      const key = `${r}-${f}`;
-      console.log(`clicked ${key}`); // tslint:disable-line
-      if (this.expandedElements.has(key)) {
-        this.expandedElements.delete(key);
-      } else {
-        this.expandedElements.add(key);
-      }
-      this.render(selector);
-    };
+    // console.log(this.rules); // tslint:disable-line
+    // this.onClick = (r: number, f: number) => {
+    //   const key = `${r}-${f}`;
+    //   console.log(`clicked ${key}`); // tslint:disable-line
+    //   if (this.expandedElements.has(key)) {
+    //     this.expandedElements.delete(key);
+    //   } else {
+    //     this.expandedElements.add(key);
+    //   }
+    //   this.render(selector);
+    // };
 
     // Global Transform
     selector.attr('transform', `translate(${x0}, ${y0})`);
@@ -343,9 +380,10 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
     this.registerZoom(selector, container);
 
     selector.select('rect.bg')
-      .attr('width', this.getWidth())
-      .attr('height', this.getHeight())
-      .attr('fill', 'white');
+      .attr('width', this.getWidth() + 400)
+      .attr('height', this.getHeight() + 400)
+      .attr('fill', 'white')
+      .attr('fill-opacity', 1e-6);
 
     return this;
   }
@@ -396,7 +434,7 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
       painter.data(d)
         .update({
           // feature2Idx: this.feature2Idx, 
-          onClick: (f) => this.onClick(i, f),
+          onClick: (f) => this.clickCondition(i, f),
           onClickButton: () => this.clickExpand(i),
         })
         .render(d3.select(nodes[i]));
@@ -436,7 +474,7 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
 
   public renderHeader(root: d3.Selection<SVGGElement, any, any, any>): this {
     const {duration, headerSize, headerRotate, flowWidth} = this.params;
-    const {xs, widths, features, activeFeatures, featureCounts, model} = this;
+    const {xs, widths, features, expandedFeatures, featureCounts, model} = this;
 
     root.attr('transform', `translate(${flowWidth},0)`);
     const featureData: Feature[] = features.map((f: number, i: number) => ({
@@ -447,11 +485,12 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
       cutPoints: model.meta.discretizers[f].cutPoints,
       range: model.meta.ranges[f],
       categories: model.meta.categories[f],
-      expanded: activeFeatures.has(f),
+      expanded: expandedFeatures.has(f),
+      feature: f
     }));
 
     this.headerPainter.data(featureData)
-      .update({duration, rotate: headerRotate, headerSize})
+      .update({duration, rotate: headerRotate, headerSize, onClick: this.clickFeature})
       .render(root);
     
     return this;
@@ -533,16 +572,14 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
     container: d3.Selection<SVGGElement, any, any, any>
   ): this {
     // const {x0, y0} = this.params;
-    const width = this.getWidth();
-    const height = this.getHeight();
     const rootNode = container.node();
     const zoomed = function () {
       if (rootNode) {
         container.attr('transform', d3.event.transform);
       }
     };
-    console.log(width); // tslint:disable-line
-    console.log(height); // tslint:disable-line
+    // console.log(width); // tslint:disable-line
+    // console.log(height); // tslint:disable-line
     const zoom = d3.zoom()
       .scaleExtent([0.5, 5])
       .translateExtent([[-200, -200], [2000, 2000]])

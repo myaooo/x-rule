@@ -35,6 +35,8 @@ def index():
 def send_index(model):
     if model == 'service-worker.js':
         return send_from_directory(app.config['FRONT_END_ROOT'], 'service-worker.js')
+    if model == 'favicon.ico':
+        return send_from_directory(app.config['FRONT_END_ROOT'], 'favicon.ico')
     return send_from_directory(app.config['FRONT_END_ROOT'], 'index.html')
 
 

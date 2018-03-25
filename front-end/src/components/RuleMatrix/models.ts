@@ -5,10 +5,13 @@ export interface ConditionX extends Condition {
   title: string;
   desc: string;
   interval: [number, number];
-  histRange: [number, number];
+  range: [number, number];
+  // histRange: [number, number];
   // activeRatio: [number, number];
   expanded?: boolean;
+  active?: boolean;
   stream?: Stream;
+  value?: number;
   isCategorical: boolean;
   x: number;
   width: number;
@@ -19,6 +22,7 @@ export interface RuleX extends Rule {
   conditions: ConditionX[];
   x: number;
   y: number;
+  highlight?: boolean;
   height: number;
   width: number;
   expanded: boolean;
@@ -30,6 +34,7 @@ export interface RuleX extends Rule {
 
 export interface Feature {
   text: string;
+  feature: number;
   x: number;
   width: number;
   count: number;

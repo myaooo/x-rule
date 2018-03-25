@@ -95,7 +95,7 @@ def train_rule(name='rule', dataset='breast_cancer', rule_max_len=2, **kwargs):
 
 
 def train_surrogate(model_file, sampling_rate=5, surrogate='rule',
-                    rule_maxlen=2, min_support=0.01, eta=1, _lambda=50, iters=50000):
+                    rule_maxlen=2, min_support=0.01, eta=1, _lambda=50, iters=50000, alpha=1):
     is_rule = surrogate == 'rule'
     model = load_model(model_file)
     dataset = model.name.split('-')[0]
@@ -111,7 +111,7 @@ def train_surrogate(model_file, sampling_rate=5, surrogate='rule',
     if surrogate == 'rule':
         surrogate_model = RuleSurrogate(name=model_name, discretizer=data['discretizer'],
                                         rule_minlen=1, rule_maxlen=rule_maxlen, min_support=min_support,
-                                        _lambda=_lambda, nchain=40, eta=eta, iters=iters)
+                                        _lambda=_lambda, nchain=30, eta=eta, iters=iters, alpha=alpha)
     elif surrogate == 'tree':
         surrogate_model = TreeSurrogate(name=model_name, max_depth=None, min_samples_leaf=0.01)
     else:
@@ -125,7 +125,7 @@ def train_surrogate(model_file, sampling_rate=5, surrogate='rule',
     # print('target_y')
     # print(model.predict(instances))
     if isinstance(surrogate_model, RuleSurrogate):
-        surrogate_model.surrogate(model, instances, constraints, sampling_rate, rediscretize=True)
+        surrogate_model.surrogate(model, instances, constraints, sampling_rate, cov_factor=0.5, rediscretize=True)
     else:
         surrogate_model.surrogate(model, instances, constraints, sampling_rate)
     # surrogate_model.evaluate(train_x, train_y)
@@ -137,8 +137,8 @@ def train_surrogate(model_file, sampling_rate=5, surrogate='rule',
     return fidelity, acc, self_fidelity, surrogate_model.n_rules
 
 
-datasets = ['breast_cancer', 'wine', 'iris', 'wine_quality_red', 'abalone', 'adult']
-samling_rate = [5, 5, 5, 3, 3]
+# datasets = ['breast_cancer', 'wine', 'iris', 'wine_quality_red', 'abalone', 'adult']
+datasets = ['wine_quality_red']
 
 
 def train_all_nn():
@@ -193,13 +193,11 @@ def train_all_svm():
     return names
 
 
-def run_test(dataset, names, n_test=10):
+def run_test(dataset, names, n_test=10, alpha=1):
     results = []
-    sampling_rate = 2 if dataset in {'adult'} else 5
-    # rule_maxlen = 4 if dataset == 'wine_quality_red' else  3
+    sampling_rate = 2 if dataset in {'adult'} else 5.
     rule_maxlen = 3
-    _lambda = 10 if dataset in {'iris', 'breast_cancer', 'wine'} else 50
-    eta = 1
+    _lambda = 10 if dataset in {'iris', 'breast_cancer', 'wine'} else 70
     for name in names:
         model_file = get_path('models', name + '.mdl')
         fidelities = []
@@ -211,10 +209,9 @@ def run_test(dataset, names, n_test=10):
             print('test', i)
             start = time.time()
             fidelity, acc, self_fidelity, n_rules = train_surrogate(model_file, surrogate='rule',
-                                                                    sampling_rate=sampling_rate,
-                                                                    rule_maxlen=rule_maxlen,
-                                                                    eta=eta, iters=70000,
-                                                                    min_support=0.05, _lambda=_lambda)
+                                                                    sampling_rate=sampling_rate, iters=100000,
+                                                                    rule_maxlen=rule_maxlen, alpha=alpha,
+                                                                    min_support=0.02, _lambda=_lambda)
             seconds.append(time.time() - start)
             print('time: {}s; length: {}'.format(seconds[-1], n_rules))
             list_lengths.append(n_rules)
@@ -266,7 +263,7 @@ def test(target='svm'):
             if file_exists(file_name):
                 results = json2dict(file_name)
             else:
-                results = run_test(dataset, nn_names, n_test=n_test)
+                results = run_test(dataset, nn_names, n_test=n_test, alpha=0)
                 dict2json(results, file_name)
             performance_dict[dataset] = results
  
@@ -283,110 +280,37 @@ def test(target='svm'):
         if file_exists(file_name):
             results = json2dict(file_name)
         else:
-            results = run_test(dataset, [svm_name], n_test=n_test)
+            results = run_test(dataset, [svm_name], n_test=n_test, alpha=0)
             dict2json(results, file_name)
         performance_dict[dataset] = results
 
     dict2json(performance_dict, 'results-svm.json')
 
 
+def test_sampling_rate(dataset='abalone3'):
+    n_test = 10
+    # max_rulelens = [2, 2, 2, 3, 3, 3]
+    neurons = (50, 50, 50, 50)
+    sampling_rates = [0.125, 0.25, 0.5, 1, 2, 4, 8]
+    performance_dict = {}
+    model_name = '-'.join([dataset, 'nn'] + [str(i) for i in neurons])
+    for sampling_rate in sampling_rates:
+        file_name = get_path('experiments', '-'.join(['sample', dataset, str(sampling_rate), '.json']))
+        if file_exists(file_name):
+            results = json2dict(file_name)
+        else:
+            results = run_test(dataset, [model_name], n_test=n_test)
+            dict2json(results, file_name)
+        performance_dict[dataset] = results
+
+    dict2json(performance_dict, '-'.join(['sample', dataset, '.json']))
+    return
+
+
 if __name__ == '__main__':
 
     test('nn')
-    ###########
-    # Trees
-    ###########
-
-    # train_tree(dataset='breast_cancer')
-    # train_tree(dataset='wine')
-    # train_tree(dataset='iris')
-    # train_tree(dataset='thoracic')
-    # train_tree(dataset='bank_marketing')
-    # train_tree(dataset='credit_card')
-    # train_tree(dataset='adult')
-    # train_tree(dataset='abalone', min_samples_leaf=0.01)
-    # train_tree(dataset='wine_quality_red', min_samples_leaf=0.01)
-    # train_tree(dataset='wine_quality_white', min_samples_leaf=0.01)
-    # train_tree(dataset='diabetes', min_samples_leaf=25, max_depth=None)
-
-    ###########
-    # Rules
-    ###########
-
-    # train_rule(dataset='breast_cancer')
-    # train_rule(dataset='iris')
-    # train_rule(dataset='wine')
-    # train_rule(dataset='thoracic', rule_max_len=2, )
-    # train_rule(dataset='bank_marketing')
-    # train_rule(dataset='abalone', min_support=0.01, eta=2)
-    # train_rule(dataset='credit_card')
-    # train_rule(dataset='adult')
-    # train_rule(dataset='wine_quality_red', min_support=0.01, eta=2)
-    # train_rule(dataset='wine_quality_white', min_support=0.01, eta=2)
-
-    ###########
-    # SVMs
-    ###########
-
-    # train_svm(dataset='breast_cancer')
-    # train_svm(dataset='iris')
-    # train_svm(dataset='wine')
-    # train_svm(dataset='thoracic')
-    # train_svm(dataset='bank_marketing')
-    # train_svm(dataset='abalone')
-    # train_svm(dataset='credit_card')
-    # train_svm(dataset='adult')
-    # train_svm(dataset='wine_quality_red')
-    # train_svm(dataset='wine_quality_white')
-
-    ###########
-    # NNs
-    ###########
-
-    # train_nn(dataset='breast_cancer')
-    # train_nn(dataset='iris')
-    # train_nn(dataset='wine')
-    # train_nn(dataset='thoracic', neurons=(30, 30), alpha=5.0)
-    # train_nn(dataset='bank_marketing', neurons=(30, 30), alpha=1.0)
-    # train_nn(dataset='credit_card', neurons=(40, 40), alpha=0.01)
-    # train_nn(dataset='abalone', neurons=(40, 40), tol=1e-6, alpha=0.01, verbose=True)
-    # train_nn(dataset='adult', neurons=(30, 31), alpha=0.1)
-    # train_nn(dataset='diabetes', neurons=(50, 50), standardize=False,
-    #          solver='sgd', momentum=0.8)
-    # train_nn(dataset='diabetes', neurons=(50,), verbose=True, tol=1e-6)
-    # train_nn(dataset='diabetes', neurons=(200, 100, 50), verbose=True,
-    #          tol=1e-6)
-    # train_nn(dataset='wine_quality_red', neurons=(40, 40), tol=1e-6, alpha=0.01, activation='logistic', verbose=True)
-    # train_nn(dataset='wine_quality_white', neurons=(40, 40), tol=1e-6, alpha=0.01, activation='logistic', verbose=True)
-
-    ###########
-    # Surrogates of NNs
-    ###########
-
-    # train_surrogate('models/abalone-nn-40-40-40.mdl', surrogate='rule')
-    # train_surrogate('models/abalone-nn-30-30-30-30.mdl', surrogate='tree')
-
-    # train_surrogate('models/iris-nn-20.mdl', surrogate='rule')
-    # train_surrogate('models/breast_cancer-nn-20.mdl', surrogate='rule')
-    # train_surrogate('models/wine-nn-20.mdl', surrogate='rule')
-
-    # train_surrogate('models/diabetes-nn-200-100-50.mdl', surrogate='tree', sampling_rate=0.1)
-    # train_surrogate('models/adult-nn-30-30.mdl', surrogate='rule', sampling_rate=5)
-    # train_surrogate('models/wine_quality_red-nn-40-40.mdl', surrogate='rule', sampling_rate=5, rule_maxlen=3)
-    # train_surrogate('models/wine_quality_white-nn-40-40.mdl', surrogate='rule', sampling_rate=10)
-
-    ###########
-    # Surrogates of SVMs
-    ###########
-
-    # train_surrogate('models/iris-svm.mdl', surrogate='rule')
-    # train_surrogate('models/breast_cancer-svm.mdl', surrogate='rule')
-    # train_surrogate('models/wine-svm.mdl', surrogate='rule')
-    # train_surrogate('models/abalone-svm.mdl', surrogate='rule', sampling_rate=2)
-    # train_surrogate('models/bank_marketing-svm.mdl', surrogate='rule', sampling_rate=2)
-    # train_surrogate('models/thoracic-svm.mdl', surrogate='rule', sampling_rate=2)
-    # train_surrogate('models/adult-svm.mdl', surrogate='rule', sampling_rate=2)
-    # train_surrogate('models/wine_quality_red-svm.mdl', surrogate='rule', sampling_rate=5)
-    # train_surrogate('models/wine_quality_white-svm.mdl', surrogate='rule', sampling_rate=5)
-
-    # train_surrogate('models/diabetes-nn-200-100-50.mdl', surrogate='tree', sampling_rate=0.1)
+    # test_sampling_rate('abalone3')
+    #
+    # nn, acc = train_nn(dataset='abalone3', neurons=(50, 50, 50, 50), alpha=0.01, tol=1e-6)
+    # nn.save()

@@ -14,6 +14,7 @@ export interface RuleListProps {
   // rules: Rule[];
   model: RuleList;
   support: number[][] | number[][][];
+  input: number[] | null;
   data: DataSet[];
   fontSize?: number;
   width: number;
@@ -76,7 +77,7 @@ class RuleListView extends React.Component<RuleListProps, RuleListState> {
     this.update();
   }
   render() {
-    const {transform, styles, model, data, streams, settings, support} = this.props;
+    const {transform, styles, model, data, streams, settings, support, input} = this.props;
     if (styles === undefined || styles.mode === 'list') {
       return <g ref={(ref: SVGGElement) => (this.ref = ref)} transform={transform}/>;
     }
@@ -88,6 +89,7 @@ class RuleListView extends React.Component<RuleListProps, RuleListState> {
           streams={streams} 
           transform={transform} 
           support={support}
+          input={input}
           {...styles} 
           minSupport={settings ? settings.minSupport : 0}
         />

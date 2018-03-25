@@ -1,7 +1,7 @@
 import { createSelector } from 'reselect';
 import { ModelBase, DataSet, DataTypeX, Streams, ConditionalStreams } from '../models';
-import { RootState, TreeStyles, RuleStyles, FeatureState, FeatureStatus, StreamBaseState, Settings } from './state';
-import { DataBaseState } from './index';
+import { RootState, TreeStyles, RuleStyles, FeatureState, FeatureStatus, Settings } from './state';
+import { DataBaseState, StreamBase } from './index';
 
 export const getModel = (state: RootState): ModelBase | null => state.model.model;
 export const getModelIsFetching = (state: RootState): boolean => state.model.isFetching;
@@ -58,14 +58,16 @@ export const getSelectedData = createSelector(
   }
 );
 
-export const getStreamBase = (state: RootState): StreamBaseState => state.streamBase;
+// Fix here
+export const getStreamBase = (state: RootState): StreamBase | undefined => 
+  getSelectedData(state).length ? state.streamBase[getSelectedData(state)[0].name] : undefined;
 
 export const getStreams = createSelector(
   [getSelectedData, getStreamBase, isConditional],
-  (dataSets: DataSet[], streamBases: StreamBaseState, conditional: boolean
+  (dataSets: DataSet[], streamBase: StreamBase | undefined, conditional: boolean
   ): Streams | ConditionalStreams | undefined => {
     if (dataSets.length === 0) return undefined;
-    const streamBase = streamBases[dataSets[0].name];
+    // const streamBase = streamBases[dataSets[0].name];
     if (streamBase)
       return conditional ? streamBase.conditionalStreams : streamBase.streams;
     return undefined;
