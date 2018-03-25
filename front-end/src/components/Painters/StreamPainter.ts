@@ -56,9 +56,9 @@ export default class StreamPainter implements Painter<Section[], StreamParams> {
     const {margin, color, duration, width, height, range} = this.params;
     const streamData = this.stream;
     let xs = this.params.xs || d3.range(streamData.length);
-    const step = xs[1] - xs[0];
-    const xRange = range || [xs[0] - step / 2, xs[xs.length - 1] + step / 2];
-    xs = [xRange[0], ...xs, xRange[1]];
+    // const step = xs[1] - xs[0];
+    const xRange = range || [xs[0], xs[xs.length - 1]];
+    // xs = [xRange[0], ...xs, xRange[1]];
     const nStreams = streamData.length ? streamData[0].length : 0;
 
     const stackLayout = d3.stack<Section, number>()

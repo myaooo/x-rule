@@ -13,9 +13,14 @@ import {
   Settings,
   initialSettings,
   DataFilter,
+  initialStreamBaseState,
+  StreamBaseState,
+  SupportState,
+  initSupportState,
+  initDataFilter,
+  Input
 } from './state';
-import { ReceiveStreamAction, RequestSupportAction, ActionType, ChangeFiltersAction } from './actions';
-import { initialStreamBaseState, StreamBaseState, SupportState, initSupportState, initDataFilter } from './state';
+import { ReceiveStreamAction, RequestSupportAction, ActionType, ChangeFiltersAction, PredictAction } from './actions';
 import { isSurrogate } from '../models/base';
 
 import {
@@ -86,10 +91,7 @@ function modelStateReducer(
   }
 }
 
-function dataBaseReducer(
-  state: DataBaseState = initialDataBaseState,
-  action: ReceiveDatasetAction
-): DataBaseState {
+function dataBaseReducer(state: DataBaseState = initialDataBaseState, action: ReceiveDatasetAction): DataBaseState {
   switch (action.type) {
     case ActionType.RECEIVE_DATASET:
       const newState: DataBaseState = {};
@@ -101,13 +103,13 @@ function dataBaseReducer(
   }
 }
 
-function streamBaseReducer( 
+function streamBaseReducer(
   state: StreamBaseState = initialStreamBaseState,
   action: ReceiveStreamAction
 ): StreamBaseState {
   switch (action.type) {
     case ActionType.RECEIVE_STREAM:
-      const streamBase: StreamBaseState[DataTypeX] = {...(state[action.dataType])};
+      const streamBase: StreamBaseState[DataTypeX] = { ...state[action.dataType] };
       if (action.conditional) {
         streamBase.conditionalStreams = action.streams as ConditionalStreams;
       } else {
@@ -178,7 +180,7 @@ function ruleStylesReducer(state: RuleStyles = initRuleStyles, action: ChangeRul
 }
 
 function settingsReducer(
-  state: Settings = initialSettings, 
+  state: Settings = initialSettings,
   action: ChangeSettingsAction | ReceiveModelAction
 ): Settings {
   switch (action.type) {
@@ -187,31 +189,39 @@ function settingsReducer(
     case ActionType.RECEIVE_MODEL:
       const model = action.model;
       const supportMat = model !== null && isSurrogate(model);
-      return {...state, supportMat};
+      return { ...state, supportMat };
     default:
       return state;
   }
 }
 
 function supportReducer(
-  state: SupportState = initSupportState, action: RequestSupportAction | ReceiveSupportAction
+  state: SupportState = initSupportState,
+  action: RequestSupportAction | ReceiveSupportAction
 ): SupportState {
   switch (action.type) {
     case ActionType.REQUEST_SUPPORT:
       return { isFetching: true, support: null };
     case ActionType.RECEIVE_SUPPORT:
-      return { isFetching: false, support: action.support};
+      return { isFetching: false, support: action.support };
     default:
       return state;
   }
 }
 
-function filtersReducer(
-  state: DataFilter[] = initDataFilter, action: ChangeFiltersAction
-): DataFilter[] {
+function filtersReducer(state: DataFilter[] = initDataFilter, action: ChangeFiltersAction): DataFilter[] {
   switch (action.type) {
     case ActionType.CHANGE_FILTERS:
       return action.newFilters;
+    default:
+      return state;
+  }
+}
+
+function inputReducer(state: Input = null, action: PredictAction): Input {
+  switch (action.type) {
+    case ActionType.PREDICT:
+      return action.input;
     default:
       return state;
   }
@@ -232,4 +242,5 @@ export const rootReducer = combineReducers<RootState>({
   ruleStyles: ruleStylesReducer,
   settings: settingsReducer,
   support: supportReducer,
+  input: inputReducer
 });

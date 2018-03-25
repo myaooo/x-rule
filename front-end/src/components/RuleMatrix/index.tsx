@@ -28,6 +28,7 @@ export interface RuleMatrixProps extends Partial<RuleMatrixPropsOptional> {
   support: number[][] | number[][][];
   dataset?: DataSet;
   streams?: Streams | ConditionalStreams;
+  input: number[] | null;
 }
 
 export interface RuleMatrixState {
@@ -80,13 +81,14 @@ export default class RuleMatrix extends React.PureComponent<RuleMatrixProps, Rul
   }
 
   painterUpdate() {
-    const {dataset, streams, model, rectWidth, rectHeight, flowWidth, minSupport, support, x0, y0} = this.props;
+    const {dataset, streams, model, rectWidth, rectHeight, flowWidth, minSupport, support, x0, y0, input} = this.props;
     console.log('updating matrix'); // tslint:disable-line
     this.state.painter.update({
       dataset,
       streams, 
       support,
       x0, y0,
+      input,
       // transform: `translate(100, 160)`,
       elemWidth: rectWidth,
       elemHeight: rectHeight,
@@ -99,7 +101,7 @@ export default class RuleMatrix extends React.PureComponent<RuleMatrixProps, Rul
   render() {
     // const {width, height, x0, y0} = this.props as RuleMatrixProps & RuleMatrixPropsOptional;
     return(
-      <g ref={(ref) => ref && (this.ref = ref)}>
+      <g ref={(ref) => ref && (this.ref = ref)} className="rule-matrix">
         {/* <rect stroke="#888" x={-x0} y={-y0} width={width} height={height} fill="none"/> */}
       </g>
     );

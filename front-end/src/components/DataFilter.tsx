@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Checkbox, Row, Col, Slider, Button, List } from 'antd';
+import { Checkbox, Row, Col, Slider, Button, List, Divider, Tooltip } from 'antd';
 // import * as nt from '../service/num';
 import './DataFilter.css';
 import { ModelMeta } from '../models/base';
@@ -9,17 +9,37 @@ const CheckboxGroup = Checkbox.Group;
 // const Panel = Collapse.Panel;
 
 export interface DataInputHeaderProps {
-  onClick?: () => void;
+  onClickFilter?: () => void;
+  onClickPredict?: () => void;
+  onClickClear?: () => void;
 }
 
 export function DataInputHeader(props: DataInputHeaderProps) {
-  const { onClick } = props;
+  const { onClickFilter, onClickPredict, onClickClear } = props;
+  const style = {fontSize: 12, marginRight: 12};
   return (
     <div>
       Data Filter
-      <Button onClick={onClick} type="primary" icon="upload" style={{ float: 'right', fontSize: 12 }} size="small">
-        Filter
-      </Button>
+      <hr/>
+      {onClickPredict &&
+      <Tooltip placement="top" title="Predict an input">
+        <Button onClick={onClickPredict} icon="caret-right" style={style} size="small">
+          Predict
+        </Button>
+      </Tooltip>
+      }
+      {onClickClear &&
+      <Tooltip placement="top" title="Clean the prediction">
+        <Button onClick={onClickClear} icon="close" style={style} size="small">
+          Clean
+        </Button>
+      </Tooltip>
+      }
+      <Tooltip placement="top" title="Filter using range sliders">
+        <Button onClick={onClickFilter} type="primary" icon="upload" style={style} size="small">
+          Filter
+        </Button>
+      </Tooltip>
     </div>
   );
 }
@@ -30,6 +50,7 @@ export interface CategoricalInputProps {
   categories: string[];
   checkedList: number[] | null;
   featureName: string;
+  inputValue: number;
   onChange: (checkedList: number[]) => void;
 }
 
@@ -91,7 +112,9 @@ export interface NumericInputProps {
   cutPoints: number[];
   featureName: string;
   value: [number, number];
-  onChange: (valueRange: [number, number]) => void;
+  inputValue: number;
+  onChangeRange: (valueRange: [number, number]) => void;
+  onChangeValue?: (value: number) => void;
 }
 
 export interface NumericInputState {
@@ -103,7 +126,7 @@ export interface NumericInputState {
 export class NumericInput extends React.PureComponent<NumericInputProps, NumericInputState> {
   constructor(props: NumericInputProps) {
     super(props);
-    this.onChangeValue = this.onChangeValue.bind(this);
+    this.onChangeValueRange = this.onChangeValueRange.bind(this);
     // this.handleChangeMode = this.handleChangeMode.bind(this);
     const {cutPoints} = props;
     this.state = {
@@ -112,8 +135,8 @@ export class NumericInput extends React.PureComponent<NumericInputProps, Numeric
       valueRange: [cutPoints[0], cutPoints[cutPoints.length - 1]],
     };
   }
-  onChangeValue(input: [number, number]) {
-    this.props.onChange(input.slice(0, 2) as [number, number]);
+  onChangeValueRange(input: [number, number]) {
+    this.props.onChangeRange(input.slice(0, 2) as [number, number]);
   }
   // handleChangeMode(useRange: boolean) {
   //   this.setState({useRange});
@@ -126,7 +149,7 @@ export class NumericInput extends React.PureComponent<NumericInputProps, Numeric
   //     this.setState({value: value});
   // }
   render() {
-    const {cutPoints, featureName} = this.props;
+    const {cutPoints, featureName, inputValue, onChangeValue} = this.props;
     // const {value, valueRange, useRange} = this.state;
     const r0 = cutPoints[0];
     const r1 =  cutPoints[cutPoints.length - 1];
@@ -135,26 +158,51 @@ export class NumericInput extends React.PureComponent<NumericInputProps, Numeric
     const marks: {[key: number]: {style?: React.CSSProperties, label: string}} = {};
     // cutPoints.forEach((r) => marks[r] = {label: r.toPrecision(3), style});
     cutPoints.forEach((c) => marks[c] = {label: c.toPrecision(3), style});
-    const min = Math.floor(r0 / step) * step;
-    const max = Math.ceil(r1 / step) * step;
+    const min = Math.floor(r0 / step) * step - step;
+    const max = Math.ceil(r1 / step) * step + step;
     const common = {
-      onAfterChange: this.onChangeValue,
-      style: {marginTop: 24, marginBottom: 0, fontSize: 9},
       step, min, max,
+    };
+    const param1 = {
+      ...common, style: {marginTop: 24, marginBottom: 0, fontSize: 9},
       marks,
     };
     return (
-      <div className="card">
-        <Row gutter={6}>
-          <Col span={10}>
-            <span style={{fontSize: 12, marginTop: 16}}>
-              {featureName} 
-            </span>
-          </Col>
-          <Col span={14}>
-            <Slider range={true} defaultValue={[min, max]} {...common} />
-          </Col>
-        </Row>
+      <div className="card" style={{fontSize: 12}}>
+        <span>
+          {featureName} 
+        </span>
+        <hr style={{borderColor: '#ddd', borderStyle: 'solid', marginTop: 0}}/>
+          <Row>
+            <Col span={6} style={{marginTop: 20}}>
+              Filter
+            </Col>
+            <Col span={18}>
+              <Slider 
+                range={true}
+                defaultValue={[min, max]} 
+                onAfterChange={this.onChangeValueRange} 
+                {...param1}
+              />
+            </Col>
+          </Row>
+          {onChangeValue &&
+          <Row>
+            <Col span={6}>
+              Input
+            </Col>
+            <Col span={18}>
+              <Slider 
+                // style={{marginTop: }}
+                included={false}
+                range={false} 
+                value={inputValue} 
+                {...common} 
+                onChange={onChangeValue} 
+              />
+            </Col>
+          </Row>
+          }
       </div>
     );
   }
@@ -180,7 +228,7 @@ interface ListData {
   featureName: string;
   idx: number;
   categories: string[] | null;
-  cutPoints: number[] | null;
+  cutPoints: number[];
 }
 
 function computeListData(meta: ModelMeta, indices?: number[]): ListData[] {
@@ -200,12 +248,15 @@ export interface DataFilterProps {
   meta: ModelMeta;
   indices?: number[];
   filters: (number[] | null)[];
+  // data?: number[];
   onChangeFilter: (i: number, filter: number[] | null) => void;
+  onPredict?: (input: number[] | null) => void;
   onSubmitFilter?: () => void;
 }
 
 export interface DataFilterState {
   listData: ListData[];
+  data: number[];
   // conditionList: (string[] | number | [number, number])[];
 }
 
@@ -222,7 +273,13 @@ export default class DataFilter extends React.Component<DataFilterProps, DataFil
     super(props);
     // this.onChangeCategories = this.onChangeCategories.bind(this);
     // this.onChangeNumeric = this.onChangeNumeric.bind(this);
-    this.state = {listData: computeListData(props.meta, props.indices)};
+    const listData = computeListData(props.meta, props.indices);
+    const data = new Array(Math.max(...props.indices) + 1).fill(null); 
+    listData.forEach(({cutPoints, categories, idx}) => {
+      data[idx] = categories ? 0 : ((cutPoints[cutPoints.length - 1] + cutPoints[0]) / 2);
+    });
+    this.state = {listData, data};
+    this.handleChangeData = this.handleChangeData.bind(this);
     // this.state = DataFilter.resetState(props.meta);
   }
 
@@ -233,38 +290,60 @@ export default class DataFilter extends React.Component<DataFilterProps, DataFil
     }
   }
 
-  render() {
-    const { filters, onChangeFilter, onSubmitFilter } = this.props;
+  handleChangeData(idx: number, value: number) {
+    const data = this.state.data;
+    this.setState({data: [...data.slice(0, idx), value, ...data.slice(idx + 1)]});
+  }
 
+  render() {
+    const { filters, onChangeFilter, onSubmitFilter, onPredict } = this.props;
+    const data = this.state.data;
     return (
-      <List
-        header={<DataInputHeader onClick={onSubmitFilter}/>}
-        className="scrolling-wrapper"
-        // itemLayout="vertical"
-        dataSource={this.state.listData}
-        size="small"
-        renderItem={(item: ListData, i: number) => (
-          <List.Item key={i}>
-            {item.categories &&
-              <CategoricalInput 
-                featureName={item.featureName}
-                categories={item.categories} 
-                checkedList={filters[i]} 
-                onChange={(checkedList: number[]) => onChangeFilter(item.idx, checkedList)}
-              />
-            }
-            {item.cutPoints &&
-              <NumericInput 
-                featureName={item.featureName}
-                // range={ranges[i]}
-                cutPoints={item.cutPoints}
-                value={filters[i] as [number, number]}
-                onChange={(valueRange: [number, number]) => onChangeFilter(item.idx, valueRange)}
-              />
-            }
-          </List.Item>
-        )}
-      />);
+      <div>
+        <Col>
+          <Row>
+            <DataInputHeader 
+              onClickFilter={onSubmitFilter} 
+              onClickPredict={onPredict && (() => onPredict(this.state.data))}
+              onClickClear={onPredict && (() => onPredict(null))}
+            />
+          </Row>
+          <Divider style={{marginTop: 8, marginBottom: 0}}/>
+          <Row>
+            <List
+              className="scrolling-wrapper"
+              // itemLayout="vertical"
+              dataSource={this.state.listData}
+              size="small"
+              renderItem={(item: ListData) => (
+                <List.Item key={item.idx} style={{paddingBottom: 0}}>
+                  {item.categories &&
+                    <CategoricalInput 
+                      featureName={item.featureName}
+                      categories={item.categories} 
+                      checkedList={filters[item.idx]} 
+                      onChange={(checkedList: number[]) => onChangeFilter(item.idx, checkedList)}
+                      inputValue={data[item.idx]}
+                    />
+                  }
+                  {item.cutPoints &&
+                    <NumericInput 
+                      featureName={item.featureName}
+                      // range={ranges[i]}
+                      cutPoints={item.cutPoints}
+                      value={filters[item.idx] as [number, number]}
+                      onChangeRange={(valueRange: [number, number]) => onChangeFilter(item.idx, valueRange)}
+                      inputValue={data[item.idx]}
+                      onChangeValue={(value: number) => this.handleChangeData(item.idx, value)}
+                    />
+                  }
+                </List.Item>
+              )}
+            />
+          </Row>
+        </Col>
+      </div>
+    );
 
       // {featureNames.map((featureName: string, i: number) => {
       //   const category = categories[i];

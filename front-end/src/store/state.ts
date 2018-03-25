@@ -14,8 +14,13 @@ export type DataBaseState = {
   [name in DataTypeX]?: DataSet;
 };
 
+export type StreamBase = {
+  streams?: Streams;
+  conditionalStreams?: ConditionalStreams;
+};
+
 export type StreamBaseState = {
-  [name in DataTypeX]?: {streams?: Streams, conditionalStreams?: ConditionalStreams};
+  [name in DataTypeX]?: StreamBase;
 };
 
 // export type ModelBaseState = { [modelName: string]: ModelBase };
@@ -67,8 +72,8 @@ export const initSupportState: SupportState = {
 export const initRuleStyles: RuleStyles = {
   flowWidth: 50,
   mode: 'matrix',
-  rectWidth: 40,
-  rectHeight: 30,
+  rectWidth: 45,
+  rectHeight: 27,
   // conditional: false,
 };
 
@@ -77,6 +82,8 @@ export interface Settings {
   supportMat: boolean;
   minSupport: number;
 }
+
+export type Input = number[] | null;
 
 export const initialSettings: Settings = {
   conditional: false,
@@ -103,6 +110,7 @@ export interface RootState {
   ruleStyles: RuleStyles;
   settings: Settings;
   support: SupportState;
+  input: Input;
   // conditional: boolean;
 }
 

@@ -1,8 +1,8 @@
 import * as React from 'react';
 import * as d3 from 'd3';
-import { Table, Col, Row } from 'antd';
+import { Table, Row } from 'antd';
 import { ModelMeta } from '../models/base';
-import DataFilter from './DataFilter';
+// import DataFilter from './DataFilter';
 import { FilterType } from './DataFilter';
 import { BasicData, DataSet } from '../models/data';
 import * as nt from '../service/num';
@@ -20,11 +20,12 @@ function computeColumns(meta: ModelMeta, indices?: number[]): any[] {
   const {featureNames} = meta;
   const columns: any[] = [{ title: 'Label', dataIndex: 'label', width: 80, fixed: 'left' }];
   const orders = indices ? indices : d3.range(featureNames.length);
+  const minWidth = 60;
   columns.push(
     ...orders.map((i: number) => ({
       title: featureNames[i],
       dataIndex: i.toString(),
-      width: 100,
+      width: featureNames[i].length > 10 ? 100 : Math.max(featureNames[i].length * 10, minWidth),
       className: 'table-header'
     }))
   );
@@ -42,17 +43,17 @@ export interface DataTableProps extends Partial<OptionalProps> {
   height: number;
   // width: number;
   // data: number[][];
+  filters: FilterType[];
   indices?: number[];
   // query?: FilterType[];
   getData: (filters: FilterType[], start?: number, end?: number) => Promise<BasicData>;
-  onSubmitFilter?: (filters: FilterType[]) => void;
+  // onSubmitFilter?: (filters: FilterType[]) => void;
 }
 
 export interface DataTableState {
   columns: any[];
   data: DataElem[];
   totalLength: number;
-  filters: FilterType[];
   end: number;
   loading: boolean;
 }
@@ -65,35 +66,34 @@ export default class DataTable extends React.Component<DataTableProps, DataTable
   constructor(props: DataTableProps) {
     super(props);
     const columns = computeColumns(props.meta, props.indices);
-    const filters = new Array(columns.length).fill(null);
-    this.handleFilterChange = this.handleFilterChange.bind(this);
-    this.handleFilterUpdate = this.handleFilterUpdate.bind(this);
-    this.state = { data: [], filters, totalLength: 0, end: 0, loading: false, columns };
+    // this.handleFilterChange = this.handleFilterChange.bind(this);
+    // this.handleFilterUpdate = this.handleFilterUpdate.bind(this);
+    this.state = { data: [], totalLength: 0, end: 0, loading: false, columns };
   }
-  handleFilterChange(filters: FilterType[]) {
-    this.setState({ filters });
-    this.getData(filters, 0);
-    // this.props.getData(filters, 0).then((baseData: BasicData) => {
-    //   const {meta} = this.props;
-    //   const {data, target, end, totalLength} = baseData;
-    //   const processedData = data.map((elem: number[], i: number): DataElem => {
-    //     return {key: i};
-    //   });
-    //   // const newData = [...(this.state.data), ...processedData];
-    //   this.setState({data: newData, tot});
-    // });
-    return;
-  }
+  // handleFilterChange(filters: FilterType[]) {
+  //   this.setState({ filters });
+  //   this.getData(filters, 0);
+  //   // this.props.getData(filters, 0).then((baseData: BasicData) => {
+  //   //   const {meta} = this.props;
+  //   //   const {data, target, end, totalLength} = baseData;
+  //   //   const processedData = data.map((elem: number[], i: number): DataElem => {
+  //   //     return {key: i};
+  //   //   });
+  //   //   // const newData = [...(this.state.data), ...processedData];
+  //   //   this.setState({data: newData, tot});
+  //   // });
+  //   return;
+  // }
 
-  handleFilterUpdate(i: number, filter: FilterType): void {
-    const filters = this.state.filters;
-    if (filter === this.state.filters[i]) {
-      console.log(`No update on filter ${i}`); // tslint:disable-line
-    } else {
-      const newFilters = [...filters.slice(0, i), filter, ...filters.slice(i + 1)];
-      this.handleFilterChange(newFilters);
-    }
-  }
+  // handleFilterUpdate(i: number, filter: FilterType): void {
+  //   const filters = this.state.filters;
+  //   if (filter === this.state.filters[i]) {
+  //     console.log(`No update on filter ${i}`); // tslint:disable-line
+  //   } else {
+  //     const newFilters = [...filters.slice(0, i), filter, ...filters.slice(i + 1)];
+  //     this.handleFilterChange(newFilters);
+  //   }
+  // }
 
   getData(filters: FilterType[], start: number) {
     this.setState({loading: true});
@@ -119,19 +119,19 @@ export default class DataTable extends React.Component<DataTableProps, DataTable
     if (meta !== this.props.meta || indices !== this.props.indices || dataSet !== this.props.dataSet) {
       const columns = computeColumns(meta, indices);
       this.setState({columns});
-      this.getData(this.state.filters, 0);
+      this.getData(nextProps.filters, 0);
       // updateState.columns = columns;
     }
     // if ()
   }
 
   componentDidMount() {
-    this.getData(this.state.filters, 0);
+    this.getData(this.props.filters, 0);
   }
 
   render() {
-    const { meta, height, indices, onSubmitFilter, dataSet } = this.props as DataTableProps & OptionalProps;
-    const { data, columns, totalLength, filters } = this.state;
+    const { height, dataSet } = this.props as DataTableProps & OptionalProps;
+    const { data, columns, totalLength } = this.state;
 
     const totalWidth = nt.sum(columns.map(col => col.width)) + 20;
     let title = `DataSet: ${dataSet ? dataSet.name : 'train'}`;
@@ -139,16 +139,16 @@ export default class DataTable extends React.Component<DataTableProps, DataTable
       title +=  ` | (${totalLength}/${dataSet.data.length})`;
     return (
       <Row>
-        <Col span={6}>
-          <DataFilter 
+        {/* <Col span={6}> */}
+          {/* <DataFilter 
             meta={meta} 
             filters={filters} 
             onChangeFilter={this.handleFilterUpdate}
             onSubmitFilter={onSubmitFilter && (() => onSubmitFilter(filters))}
             indices={indices}
-          />
-        </Col>
-        <Col span={18}>
+          /> */}
+        {/* </Col> */}
+        {/* <Col span={18}> */}
           <Table
             size="small"
             bordered={true}
@@ -160,7 +160,7 @@ export default class DataTable extends React.Component<DataTableProps, DataTable
             style={{fontSize: 12}}
             loading={this.state.loading}
           />
-        </Col>
+        {/* </Col> */}
       </Row>
     );
   }

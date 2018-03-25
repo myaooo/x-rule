@@ -12,13 +12,13 @@ import {
   TreeStyles,
   getTreeStyles
 } from '../store';
-import { RuleModel, DataSet, ModelBase, isRuleModel, isTreeModel, ConditionalStreams, Streams } from '../models';
+import { RuleModel, DataSet, ModelBase, isRuleModel, isTreeModel } from '../models';
 import { countFeatureFreq } from '../service/utils';
 import Tree from '../components/Tree';
 import RuleList from '../containers/RuleList';
 import FeatureList from '../containers/FeatureList';
 import Legend from '../components/Legend';
-import { getStreams, getRuleStyles } from '../store/selectors';
+import { getRuleStyles } from '../store/selectors';
 import { Patterns } from '../components/patterns';
 import { RuleStyles } from '../store/state';
 
@@ -26,7 +26,7 @@ export interface ModelViewStateProp {
   model: RuleModel | ModelBase | null;
   modelIsFetching: boolean;
   data: (DataSet)[];
-  streams?: Streams | ConditionalStreams;
+  // streams?: Streams | ConditionalStreams;
   treeStyles: TreeStyles;
   ruleStyles: RuleStyles;
 }
@@ -38,7 +38,7 @@ const mapStateToProps = (state: RootState): ModelViewStateProp => {
     data: getSelectedData(state),
     treeStyles: getTreeStyles(state),
     ruleStyles: getRuleStyles(state),
-    streams: getStreams(state),
+    // streams: getStreams(state),
   };
 };
 
@@ -79,18 +79,18 @@ class ModelView extends React.Component<ModelViewProp, any> {
   //   d3.select(this.svgRef).attr('width', width).attr('height', height);
   // }
   render(): React.ReactNode {
-    const { modelIsFetching, model, data, modelName, treeStyles, ruleStyles, streams } = this.props;
+    const { modelIsFetching, model, data, modelName, treeStyles, ruleStyles } = this.props;
     if (model === null) {
       if (modelIsFetching)
         return (<div> Loading model {modelName}... </div>);
       return (<div>Cannot load model {modelName}</div>);
     }
     const width = 1200;
-    const height = 900;
+    const height = 800;
     const featureWidth = 160;
     // const availableData = data[0] || data[1];
     const transform = `translate(${featureWidth}, 40)`;
-    const modelProps = {data, width: width - featureWidth - 20, height: height - 60, transform, streams};
+    const modelProps = {data, width: width - featureWidth - 20, height: height - 60, transform};
     const featureNames = model.meta.featureNames;
     const labelNames = model.meta.labelNames;
     // let modelElement = (<div> Loading Dataset...</div>);

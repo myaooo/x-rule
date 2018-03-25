@@ -3,6 +3,16 @@
   "model_dir": "models",
   "models": [
     {
+      "model": "rule-surrogate-iris-svm",
+      "dataset": "iris"
+    },
+    {
+      "model": "rule-surrogate-pima-nn-20-20",
+      "dataset": "pima"
+    }
+  ],
+  "_models": [
+    {
       "model": "breast_cancer-rule",
       "dataset": "breast_cancer"
     },
@@ -35,7 +45,7 @@
       "dataset": "iris"
     },
     {
-      "model": "tree-surrogate-abalone-nn-30-30-30-30",
+      "model": "tree-surrogate-abalone-nn-40-40-40",
       "dataset": "abalone"
     },
     {
@@ -78,7 +88,7 @@
       "model": "iris-nn-20",
       "dataset": "iris"
     },
-        {
+    {
       "model": "wine-nn-20",
       "dataset": "wine"
     }

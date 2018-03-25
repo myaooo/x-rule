@@ -1,2 +1,5 @@
 .git*
 front-end/node_modules/*
+models/*
+!models/rule-surrogate-pima-nn-20-20.mdl
+!models/rule-surrogate-iris-svm.mdl

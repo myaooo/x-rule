@@ -1,7 +1,5 @@
-.matrix-bg {
-  fill: #fff;
-  stroke-width: 0.5px;
-  stroke: #bbb;
+.rule-matrix {
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .matrix-condition rect {
@@ -91,7 +89,8 @@ g.row-button {
 }
 
 g.row-button:hover {
-  fill-opacity: 0.5
+  fill-opacity: 0.5;
+  stroke-opacity: 0.5;
 }
 
 text.glyph-desc {
@@ -120,8 +119,8 @@ rect.tooltip {
   stroke: #444;
   stroke-width: 0.5;
   stroke-opacity: 0.6;
-  fill: #eee;
-  fill-opacity: 0.6;
+  fill: #fff;
+  fill-opacity: 0.8;
 }
 
 text.header-expanded {
@@ -130,4 +129,29 @@ text.header-expanded {
 
 path.mo-fidelity {
   fill: #52c41a;
+}
+
+g.matrix-rule:hover>rect.matrix-bg {
+  stroke: #444;
+  fill: #d8d8d8;
+  stroke-width: 0.5px;
+}
+
+
+.matrix-bg {
+  fill: #fff;
+  fill-opacity: 1e-6;
+  stroke-width: 0.5px;
+  stroke: #bbb;
+}
+
+.matrix-bg-active {
+  stroke-width: 1px;
+  stroke: #666;
+}
+
+.matrix-bg-highlight {
+  /* fill: #ddd; */
+  stroke-width: 1.5px;
+  stroke: #666;
 }

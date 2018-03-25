@@ -49,7 +49,8 @@ export const googleColor: ColorType = (n: number) => gColor[n % gColor.length];
 
 export const defaultColor: ColorType = d3.scaleOrdinal<number, string>(d3ScaleChromatic.schemeSet1 as string[]);
 
-export const labelColor: ColorType = d3.scaleOrdinal<number, string>(d3.schemeCategory10);
+// export const labelColor: ColorType = d3.scaleOrdinal<number, string>(d3.schemeCategory10);
 // export const labelColor: ColorType = d3.scaleOrdinal<number, string>(d3.schemeCategory20 as string[]);
+export const labelColor = googleColor;
 
 export const defaultDuration = 400;

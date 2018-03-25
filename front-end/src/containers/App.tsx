@@ -1,11 +1,13 @@
 import * as React from 'react';
-import { Layout, Row, Col } from 'antd';
+import { Layout, Button, Tooltip } from 'antd';
 import './App.css';
-import ModelView from './ModelView';
+// import ModelView from './ModelView';
 import SideBar from './SideBar';
-import DataTable from './DataTable';
+import Main from './Main';
+// import DataTable from './DataTable';
+import { introStart } from '../Guide';
 
-const { Sider } = Layout;
+const { Sider, Header } = Layout;
 
 export interface AppProps {
   match: { params: { modelName: string } };
@@ -31,34 +33,38 @@ class App extends React.Component<AppProps, AppState> {
     const { match } = this.props;
     return (
       <div className="App">
-        <Layout style={{ minHeight: '100vh' }}>
-          <Sider
-            collapsible={true}
-            collapsed={this.state.collapsed}
-            onCollapse={this.onCollapse}
-            width={300}
-            collapsedWidth={80}
-          >
-            <SideBar collapsed={this.state.collapsed}/>
-          </Sider>
-          <Col>
-            <Row>
-              <DataTable/>
-            </Row>
-            {/* <h1>Rule Inspector </h1> */}
-            {/* <Row gutter={16} type="flex" justify="space-around"> */}
-              {/* <Col span={1}/> */}
-              {/* <Col span={6}> */}
-                
+        <Layout>
+          <Header style={{ width: '100%', minHeight: 60 }}>
+            <div className="logo">
+              RuleMatrix
+            </div>
+            <div className="header-buttons">
+              <Tooltip placement="bottom" title="Click to start the guide">
+                <Button shape="circle" icon="question" style={{float: 'right'}} onClick={introStart}/>
+              </Tooltip>
+            </div>
+            {/* Header */}
+          </Header>
+          <Layout>
+            <Sider
+              collapsible={true}
+              collapsed={this.state.collapsed}
+              onCollapse={this.onCollapse}
+              width={300}
+              collapsedWidth={80}
+            >
+              <SideBar collapsed={this.state.collapsed}/>
+            </Sider>
+            <Main modelName={match.params.modelName}/>
+            {/* <Col>
+              <Row>
+                <ModelView modelName={match.params.modelName} />
+              </Row>
+            </Col> */}
               {/* </Col> */}
-              {/* <Col span={24}> */}
-            <Row>
-              <ModelView modelName={match.params.modelName} />
-            </Row>
-          </Col>
-            {/* </Col> */}
-              {/* <Col span={1}/> */}
-          {/* </Row> */}
+                {/* <Col span={1}/> */}
+            {/* </Row> */}
+          </Layout>
         </Layout>
       </div>
     );

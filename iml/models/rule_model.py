@@ -114,13 +114,14 @@ class SBRL(Classifier):
     # r_sbrl = importr('sbrl')
 
     def __init__(self, name='sbrl', rule_minlen=1, rule_maxlen=2,
-                 min_support=0.01, _lambda=50, eta=1, iters=30000, nchain=30):
+                 min_support=0.01, _lambda=50, eta=1, iters=30000, nchain=30, alpha=1):
         super(SBRL, self).__init__(name)
         self._r_model = None
         self.rule_minlen = rule_minlen
         self.rule_maxlen = rule_maxlen
         self.min_support = min_support
         self._lambda = _lambda
+        self.alpha = alpha
         self.eta = eta
         self.iters = iters
         self.nchain = nchain
@@ -191,7 +192,7 @@ class SBRL(Classifier):
         start = time.time()
         _model = train_sbrl(data_file, label_file, self._lambda, eta=self.eta,
                             max_iters=self.iters, nchain=self.nchain,
-                            alphas=[1 for _ in range(n_labels)])
+                            alphas=[self.alpha for _ in range(n_labels)])
         train_time = time.time() - start
         print('training time:', train_time)
         self._n_classes = n_labels

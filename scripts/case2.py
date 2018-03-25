@@ -72,7 +72,7 @@ def re_sampling(x, y, filters, rate=2.):
 
 
 filters1 = {'Glucose': [105, 121], 'Age': [31.5, 64.4], 'Body Mass Index': [25.7, 100]}
-filters2 = {'Glucose': [108, 137], 'Age': [32, 100], 'Body Mass Index': [25.9, 100],
+filters2 = {'Glucose': [108, 138], 'Age': [31.9, 100], 'Body Mass Index': [25.9, 100],
             'Diabetes Pedigree Function': [0., 1.18]}
 
 
@@ -195,7 +195,7 @@ def main():
     aucs = []
     for i in range(10):
         # acc, loss, auc=train_nn(dataset='pima', neurons=(20, 20), tol=1e-5, alpha=1.0, sample=False, name='original')
-        acc, loss, auc = train_nn(dataset='pima', neurons=(20, 20), tol=1e-5, alpha=0.5, sample=True, name='sample')
+        acc, loss, auc = train_nn(dataset='pima', neurons=(20, 20), tol=1e-5, alpha=1.0, sample=True, name='sample')
         # acc, loss, auc = train_svm(dataset='pima', C=0.1)
         accs.append(acc)
         losses.append(loss)
@@ -205,7 +205,7 @@ def main():
     print(np.std(accs))
     print(np.min(accs))
     print(np.max(accs))
-    dict2json({'loss': losses, 'acc': accs, 'auc': aucs}, 'case-pima-nn-2.json')
+    dict2json({'loss': losses, 'acc': accs, 'auc': aucs}, 'case-pima-nn-2-sample2.json')
 
 
 def cv_nn(dataset, neurons=(20,20), max_iter=1000):

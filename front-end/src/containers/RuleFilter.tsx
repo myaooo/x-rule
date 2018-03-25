@@ -30,7 +30,7 @@ class SettingsControl extends React.Component<SettingsControlProps, any> {
       <div style={{ paddingLeft: 12 }}>
         <Row style={{marginTop: 8}}>
           <Col span={14}>
-            <span>Support:</span>
+            <span>Min Evidence:</span>
           </Col>
           <Col span={10}>
             <Slider 
@@ -44,7 +44,7 @@ class SettingsControl extends React.Component<SettingsControlProps, any> {
             />
           </Col>
         </Row>
-        <Row style={{marginTop: 8}}>
+        {/* <Row style={{marginTop: 8}}>
           <Col span={14}>
             <span>Confidence:</span>
           </Col>
@@ -59,7 +59,7 @@ class SettingsControl extends React.Component<SettingsControlProps, any> {
               disabled={!model}
             />
           </Col>
-        </Row>
+        </Row> */}
         {/* </Slider> */}
       </div>
     );
