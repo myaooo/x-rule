@@ -28,7 +28,7 @@ class RuleStyleControl extends React.Component<RuleStyleControlProps, any> {
   render() {
     const {changeStyles} = this.props;
     return (
-      <div style={{ paddingLeft: 12, fontSize: 12 }}>
+      <div style={{ paddingLeft: 12, fontSize: 13 }}>
 
          <Row>
           <Col span={10}>

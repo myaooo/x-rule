@@ -132,11 +132,12 @@ class PreProcessMixin(ModelBase, PreProcessBase):
         for processor in self.processors:
             processor.fit(x, y)
 
-    def train(self, x, y, **kwargs):
+    def train(self, x, y, transform=True, **kwargs):
         # self.fit(x, y)
-        self.fit(x, y)
-        _x, _y = self.transform(x, y)
-        super(PreProcessMixin, self).train(_x, _y)
+        if transform:
+            self.fit(x, y)
+            x, y = self.transform(x, y)
+        super(PreProcessMixin, self).train(x, y)
 
     def predict_prob(self, x, transform=True, **kwargs):
         if transform:

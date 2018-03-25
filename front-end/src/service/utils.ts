@@ -66,7 +66,7 @@ export function condition2String(
 export function registerStripePattern(
   color: string, strokeWidth: number = 2, padding: number = 4
 ): string {
-  const defs = d3.select('svg').select('defs');
+  const defs = d3.select('svg#main').select('defs');
   const patternName = `stripe-${color.slice(1)}-${strokeWidth}-${padding}`;
   const patternNode = defs.select(`#${patternName}`).node();
   const pattern = patternNode === null 

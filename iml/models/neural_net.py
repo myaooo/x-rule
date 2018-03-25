@@ -18,7 +18,7 @@ class NeuralNet(PreProcessMixin, SKModelWrapper, Regressor, Classifier):
                  alpha=0.0001, max_iter=1000,
                  standardize=True, one_hot_encoder: OneHotEncoder=None,
                  **kwargs):
-        self.scaler = None
+        # self.scaler = None
 
         super(NeuralNet, self).__init__(problem=problem, name=name)
 

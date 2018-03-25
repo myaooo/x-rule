@@ -114,9 +114,11 @@ export default class FlowPainter implements Painter<Flow[], FlowPainterParams> {
 
     // ENTER
     const reserveEnter = reserve.enter().append('g').attr('class', 'v-reserves');
+    reserveEnter.append('title');
 
     // UPDATE
     const reserveUpdate = reserveEnter.merge(reserve);
+    reserveUpdate.select('title').text((d, i) => reserves[i].join('/'));
     // Transition groups
     reserveUpdate.transition().duration(duration)
       .attr('transform', (d: Flow, i: number) => `translate(0,${d.y - heights[i] - dy})`);
@@ -170,9 +172,10 @@ export default class FlowPainter implements Painter<Flow[], FlowPainterParams> {
 
     // ENTER
     const flowEnter = flow.enter().append('g').attr('class', 'v-flows');
-
+    flowEnter.append('title');
     // UPDATE
     const flowUpdate = flowEnter.merge(flow);
+    flowUpdate.select('title').text(d => d.support.join('/'));
     // Transition groups
     flowUpdate.transition().duration(duration)
       .attr('transform', (d: Flow, i: number) => `translate(0,${d.y})`);

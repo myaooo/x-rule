@@ -127,3 +127,7 @@ rect.tooltip {
 text.header-expanded {
   font-weight: 700;
 }
+
+path.mo-fidelity {
+  fill: #52c41a;
+}

@@ -50,24 +50,26 @@ meta = {
     'workclass': ['nominal', (
         "Private", "Self-emp-not-inc", "Self-emp-inc", "Federal-gov",
         "Local-gov", "State-gov", "Without-pay", "Never-worked")],
-    'fnlwgt': ['numeric', None],
+    # 'fnlwgt': ['numeric', None],
     'education': ['nominal', (
         "Bachelors", "Some-college", "11th", "HS-grad", "Prof-school", "Assoc-acdm", "Assoc-voc", "9th", "7th-8th",
         "12th", "Masters", "1st-4th", "10th", "Doctorate", "5th-6th", "Preschool")],
     'education-num': ['numeric', None],
-    'marital-status': ['nominal', ("Married-civ-spouse", "Divorced", "Never-married", "Separated", "Widowed",
-                                   "Married-spouse-absent", "Married-AF-spouse")],
+    # 'marital-status': ['nominal', ("Married-civ-spouse", "Divorced", "Never-married", "Separated", "Widowed",
+    #                                "Married-spouse-absent", "Married-AF-spouse")],
+    'marital-status': ['nominal', ("Married", "Has-married", "Never-married")],
     'occupation': ['nominal', ("Tech-support", "Craft-repair", "Other-service", "Sales", "Exec-managerial",
                                "Prof-specialty", "Handlers-cleaners", "Machine-op-inspct", "Adm-clerical",
                                "Farming-fishing", "Transport-moving", "Priv-house-serv", "Protective-serv",
                                "Armed-Forces")],
     'relationship': ['nominal', ("Wife", "Own-child", "Husband", "Not-in-family", "Other-relative", "Unmarried")],
-    'race': ['nominal', ("White", "Asian-Pac-Islander", "Amer-Indian-Eskimo", "Other", "Black")],
+    # 'race': ['nominal', ("White", "Asian-Pac-Islander", "Amer-Indian-Eskimo", "Other", "Black")],
+    'race': ['nominal', ("White", "Other")],
     'sex': ['nominal', ("Female", "Male")],
     'capital-gain': ['numeric', None],
     'capital-loss': ['numeric', None],
     'hours-per-week': ['numeric', None],
-    'native-country': ['nominal', ("United-States", "Others")],
+    'native-country': ['nominal', ("United-States", "Other")],
     'target': ['nominal', target_names]
 }
 
@@ -75,12 +77,21 @@ header = ['age', 'workclass', 'fnlwgt', 'education', 'education-num', 'marital-s
           'race', 'sex', 'capital-gain', 'capital-loss', 'hours-per-week', 'native-country', 'target']
 
 
+def simplify_marital(x):
+    if x == 'Married-civ-spouse' or x == 'Married-spouse-absent' or x == 'Married-AF-spouse':
+        return 'Married'
+    elif x == 'Divorced' or x == 'Separated' or x == 'Widowed':
+        return 'Has-married'
+    else:
+        return 'Never-married'
+
+
 def main():
 
     train = pd.read_csv(train_data_path, header=None, names=header, skipinitialspace=True, na_values="?")\
-        .drop(columns='education', axis=1).dropna()
+        .drop(columns=['education', 'fnlwgt'], axis=1).dropna()
     test = pd.read_csv(test_data_path, header=None, skiprows=[0], names=header, skipinitialspace=True, na_values="?")\
-        .drop(columns='education', axis=1).dropna()
+        .drop(columns=['education', 'fnlwgt'], axis=1).dropna()
     test['target'] = [s[:-1] for s in test['target']]
     attrs = list(train.columns)
 
@@ -90,9 +101,12 @@ def main():
     is_binary = [True if (meta[attr][0] == 'nominal' and len(meta[attr][1]) == 2) else False for attr in attrs[:-1]]
 
     def process_data(df):
-        countries = df['native-country'].copy()
-        countries[countries != 'United-States'] = 'Others'
-        df['native-country'] = countries
+        # countries = df['native-country'].copy()
+        # countries[countries != 'United-States'] = 'Others'
+        df.loc[df['native-country'] != 'United-States', 'native-country'] = 'Other'
+        df.loc[df['race'] != 'White', 'race'] = 'Other'
+        df['marital-status'] = [simplify_marital(x) for x in df['marital-status']]
+
         _data = np.full((len(df), len(attrs)), np.nan)
         for i, attr in enumerate(attrs):
             col = df[attr]

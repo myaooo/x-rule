@@ -351,21 +351,26 @@ export function selectDatasetAndFetchSupport(dataNames: DataTypeX[]): ThunkActio
 }
 
 export function changeSettingsAndFetchData(newSettings: Partial<Settings>): ThunkAction<void, RootState, {}> {
-  return (dispatch: Dispatch, getState: () => RootState) => {
+  return (dispatch: Dispatch, getState: () => RootState): any => {
     const state = getState();
     const model = getModel(state);
-    if (model === null) return;
+    if (model === null) return null;
     const dataNames = getSelectedDataNames(state);
     const modelName = model.name;
     const conditional = newSettings.conditional === undefined ? isConditional(state) : newSettings.conditional;
 
     // only fetch support for the first data (focus)
     if (dataNames.length > 0) {
-      console.log('Fetching stream'); // tslint:disable-line
-      dispatch(fetchSupportIfNeeded({ modelName, data: dataNames[0] }));
-      dispatch(fetchStreamIfNeeded({modelName, dataType: dataNames[0], conditional}));
+      console.log('Fetching stream and support'); // tslint:disable-line
+      const p1 = dispatch(fetchSupportIfNeeded({ modelName, data: dataNames[0] }));
+      const p2 = dispatch(fetchStreamIfNeeded({modelName, dataType: dataNames[0], conditional}));
+      Promise.all([p1, p2]).then(() => {
+        console.log('change settings'); // tslint:disable-line
+        return dispatch(changeSettings(newSettings));
+      });
+    } else {
+      return dispatch(changeSettings(newSettings));
     }
-    dispatch(changeSettings(newSettings));
   };
 }
 

@@ -89,7 +89,7 @@ def compute_support_matrix(model: ModelBase, x: np.ndarray, y: np.ndarray) -> np
             else:
                 mat = np.zeros((n_classes, n_classes), dtype=np.float)
             matrices[i, :, :] = mat
-        return matrices / len(y)
+        return matrices
     else:
         raise ValueError("Cannot calculate support for model {} of type {}".format(model, model.type))
 

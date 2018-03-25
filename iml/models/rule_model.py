@@ -1,7 +1,6 @@
 from typing import Optional, Dict, List, Tuple, Union
-import logging
-from math import inf
 from functools import reduce
+import time
 
 import numpy as np
 
@@ -10,7 +9,6 @@ from mdlp.discretization import MDLP
 from pysbrl import train_sbrl
 
 from iml.models import Classifier, SurrogateMixin
-from iml.utils.io_utils import get_path
 from iml.models.preprocess import PreProcessMixin, DiscreteProcessor
 from iml.data_processing import categorical2pysbrl_data, get_discretizer
 
@@ -93,208 +91,21 @@ class Rule:
         return reduce(np.logical_and, satisfied)
 
 
-# class SBRL(Classifier):
-#     """
-#     A binary classifier using R package sbrl
-#     """
-#     r_sbrl = importr('sbrl')
-#
-#     def __init__(self, pos_sign='1', neg_sign='0', rule_minlen=1, rule_maxlen=2,
-#                  minsupport_pos=0.02, minsupport_neg=0.02, _lambda=50, eta=1, nchain=30, name='sbrl',
-#                  discretizer=None, feature_names=None):
-#         super(SBRL, self).__init__(name)
-#         self._r_model = None
-#         self.options = {
-#             'pos_sign': pos_sign,
-#             'neg_sign': neg_sign,
-#             'rule_minlen': rule_minlen,
-#             'rule_maxlen': rule_maxlen,
-#             'minsupport_pos': minsupport_pos,
-#             'minsupport_neg': minsupport_neg,
-#             'lambda': _lambda,
-#             'eta': eta,
-#             'nchain': nchain,
-#         }
-#         assert discretizer is None or isinstance(discretizer, MDLP)
-#         self.discretizer = discretizer  # type: Optional[MDLP]
-#         # if discretize:
-#         #     self.discretizer = MDLP()
-#         self._rule_indices = None  # type: Optional[np.ndarray]
-#         self._rule_probs = None  # type: Optional[np.ndarray]
-#         self._rule_names = None
-#         self._feature_names = feature_names
-#         self._mat_feature_rule = None
-#         self._rule_list = []  # type: List[Rule]
-#
-#     def fit_discretizer(self, x, y):
-#         self.discretizer.fit(x, y)
-#
-#     @property
-#     def type(self):
-#         return 'sbrl'
-#
-#     # def score(self, y_true, y_pred):
-#     #     return self.accuracy(y_true, y_pred)
-#
-#     def train(self, x, y, feature_names=None, discretize=True):
-#         """
-#
-#         :param x: 2D np.ndarry (n_instances, n_features) could be continuous
-#         :param y: 1D np.ndarray (n_instances, ) labels
-#         :param feature_names:
-#         :param discretize: (bool) whether to use the new training data to fit the discretizer again
-#         :return:
-#         """
-#         _x = x
-#         if discretize:
-#             if self.discretizer is None:
-#                 logging.warning('discretize flag is set, buy no discretizer available!')
-#             else:
-#                 _x = self.discretizer.transform(x)
-#
-#         data = np2rdf(_x, y, feature_names)
-#         # print(x)
-#         # print(y)
-#         # Prevent printing from R
-#         r('sink("/dev/null")')
-#         self._r_model = self.r_sbrl.sbrl(data, **(self.options))
-#         self._rule_indices = numpy2ri.ri2py(self._r_model[0][0]).astype(int) - 1
-#         self._rule_probs = numpy2ri.ri2py(self._r_model[0][1])
-#         self._rule_names = numpy2ri.ri2py(self._r_model[1]).tolist()
-#         self._feature_names = numpy2ri.ri2py(self._r_model[2]).tolist()
-#         self._mat_feature_rule = numpy2ri.ri2py(self._r_model[3]).astype(np.bool)
-#         self._rule_list = []
-#         for i, idx in enumerate(self._rule_indices):
-#             _rule_name = self._rule_names[idx]
-#             # feature_indices, categories = self._rule_name2rule(_rule_name)
-#             self._rule_list.append(self._rule_name2rule(_rule_name, self._rule_probs[i]))
-#         acc, loss, support_summary = self.evaluate(x, y, stage='train')
-#         for rule, support in zip(self._rule_list, support_summary):
-#             rule.pos_support = support[0]
-#             rule.neg_support = support[1]
-#
-#     def evaluate(self, x, y, stage='train'):
-#         acc = self.accuracy(y, self.predict(x))
-#         y_prob, support = self.predict_prob(x, rt_support=True)
-#         support_summary = []
-#         for i, _sup in enumerate(support):
-#             prob = self._rule_list[i].output
-#             pos = np.sum(y[_sup] == (1 if prob > 0.5 else 0))
-#             neg = np.sum(_sup) - pos
-#             support_summary.append((pos, neg))
-#         loss = self.log_loss(y, y_prob)
-#         prefix = 'Training'
-#         if stage == 'test':
-#             prefix = 'Testing'
-#         print(prefix + " accuracy: {:.5f}; loss: {:.5f}".format(acc, loss))
-#         return acc, loss, support_summary
-#
-#     def _rule_name2rule(self, rule_name, prob):
-#         raw_rules = rule_name[1:-1].split(',')
-#         feature_indices = []
-#         categories = []
-#         for raw_rule in raw_rules:
-#             idx = raw_rule.find('=')
-#             if idx == '-1':
-#                 raise ValueError("No '=' find in the rule!")
-#             feature_indices.append(int(raw_rule[1:idx]))
-#             categories.append(int(raw_rule[(idx+1):]))
-#         return Rule(feature_indices, categories, prob)
-#
-#     def predict_prob(self, x, discretize=True, rt_support=False):
-#         """
-#             `X`  an instance of pandas.DataFrame object, representing the data to be making predictions on.
-#             `type`  whether the prediction is discrete or probabilistic.
-#
-#             return a numpy.ndarray of shape (#datapoints, 2), the probability for each observations
-#         """
-#         _x = x
-#         if discretize and self.discretizer is not None:
-#             _x = self.discretizer.transform(x)
-#
-#         # sbrl.predict
-#         # results = self.r_sbrl.predict_sbrl(self._r_model, np2rdf(x))
-#         # return np.array([numpy2ri.ri2py(result) for result in results]).T
-#
-#         y = np.zeros([_x.shape[0], 2])
-#         un_satisfied = np.ones([_x.shape[0]], dtype=bool)
-#         support = []
-#         for rule in self._rule_list:
-#             satisfied = np.logical_and(rule.is_satisfy(_x), un_satisfied)
-#             y[satisfied, 1] = rule.output
-#             y[satisfied, 0] = 1 - rule.output
-#             # marking new satisfied instances as satisfied
-#             un_satisfied = np.logical_xor(satisfied, un_satisfied)
-#             if rt_support:
-#                 support.append(satisfied)
-#         if rt_support:
-#             return y, support
-#         return y
-#
-#     def predict(self, x, discretize=True):
-#         y_prob = self.predict_prob(x, discretize=discretize)
-#         # print(y_prob[:50])
-#         y_pred = np.argmax(y_prob, axis=1)
-#         return y_pred
-#
-#     def describe2(self, feature_names=None, rt_str=False):
-#         n_rules = len(self._rule_indices)
-#         prefixes = ['IF']
-#         if n_rules > 2:
-#             prefixes += ['ELSE IF'] * (n_rules-2)
-#         # prefixes += ['ELSE (Default)']
-#         # if n_rules == 1:
-#         #     prefixes = ['Default']
-#         s = "The rule list is:\n\n"
-#         for i, prefix in enumerate(prefixes):
-#             idx = self._rule_indices[i]
-#             prob = self._rule_probs[i]
-#             rule_name = self._rule_names[idx]
-#             if feature_names is not None and self.discretizer is not None:
-#                 rule_name = self.raw_rule2readable(rule_name, feature_names)
-#             s += "{0:<7} {1} (rule[{2}]) THEN positive prob: {3:.4f}\n\n".format(prefix, rule_name, idx, prob)
-#         if n_rules != 1:
-#             s += "ELSE "
-#         s += "DEFAULT (rule[-1]) positive prob: {:.4f}\n".format(self._rule_probs[-1])
-#         if rt_str:
-#             return s
-#         print(s)
-#
-#     def describe(self, feature_names=None, rt_str=False):
-#         s = "The rule list is:\n\n     "
-#
-#         n_rules = len(self._rule_indices)
-#
-#         for i, rule in enumerate(self._rule_list):
-#             category_intervals = None
-#             if self.discretizer is not None:
-#                 category_intervals = []
-#                 for idx, cat in zip(rule.feature_indices, rule.categories):
-#                     category_intervals.append(
-#                         self.discretizer.cat2intervals(np.array([cat]), idx)[0]
-#                     )
-#             is_last = i == len(self._rule_list) - 1
-#             s += rule.describe(feature_names, category_intervals, label="positive prob", default=is_last) + "\n"
-#             if len(self._rule_list) > 1 and not is_last:
-#                 s += "\nELSE "
-#
-#         if rt_str:
-#             return s
-#         print(s)
-#
-#     def raw_rule2readable(self, rule_name, feature_names):
-#         assert self.discretizer is not None
-#         raw_rules = rule_name[1:-1].split(',')
-#         readable_rules = []
-#         for raw_rule in raw_rules:
-#             idx = raw_rule.find('=')
-#             if idx == '-1':
-#                 raise ValueError("No '=' find in the rule!")
-#             feature_index = int(raw_rule[1:idx])
-#             category = int(raw_rule[(idx+1):])
-#             interval = self.discretizer.cat2intervals(np.array([category]), feature_index)[0]
-#             readable_rules.append("(" + feature_names[feature_index] + " in " + str(interval) + ")")
-#         return " and ".join(readable_rules)
+def rule_name2rule(rule_name, prob, support=None):
+    if rule_name == 'default':
+        return Rule([], [], prob, support)
+
+    raw_rules = rule_name[1:-1].split(',')
+    feature_indices = []
+    categories = []
+    for raw_rule in raw_rules:
+        idx = raw_rule.find('=')
+        if idx == -1:
+            raise ValueError("No '=' find in the rule!")
+        feature_indices.append(int(raw_rule[1:idx]))
+        categories.append(int(raw_rule[(idx + 1):]))
+    return Rule(feature_indices, categories, prob, support=support)
+
 
 class SBRL(Classifier):
     """
@@ -344,7 +155,7 @@ class SBRL(Classifier):
 
     @property
     def n_rules(self):
-        return len(self._rule_indices)
+        return len(self._rule_list)
 
     @property
     def n_classes(self):
@@ -370,26 +181,55 @@ class SBRL(Classifier):
         """
 
         data_name = 'tmp/train'
+
+        start = time.time()
         data_file, label_file = categorical2pysbrl_data(x, y, data_name, supp=self.min_support,
                                                         zmin=self.rule_minlen, zmax=self.rule_maxlen)
+        cat_time = time.time() - start
+        print('time for rule mining:', cat_time)
         n_labels = int(np.max(y)) + 1
+        start = time.time()
         _model = train_sbrl(data_file, label_file, self._lambda, eta=self.eta,
                             max_iters=self.iters, nchain=self.nchain,
                             alphas=[1 for _ in range(n_labels)])
+        train_time = time.time() - start
+        print('training time:', train_time)
         self._n_classes = n_labels
         self._n_features = x.shape[1]
         self._rule_indices = _model[0]
         self._rule_probs = _model[1]
         self._rule_names = _model[2]
 
-        self._rule_list = []
+        # def post_process():
+        #     self._rule_list = []
+        #     for i, idx in enumerate(self._rule_indices):
+        #         _rule_name = self._rule_names[idx]
+        #         self._rule_list.append(rule_name2rule(_rule_name, self._rule_probs[i]))
+        #     support_summary = self.compute_support(x, y)
+        #     for rule, support in zip(self._rule_list, support_summary):
+        #         rule.support = support
 
+        self.post_process(x, y)
+
+    def post_process(self, x, y):
+        """
+        Post process function that clean the extracted rules
+        :return:
+        """
+        # trim_threshold = 0.0005 * len(y)
+        self._rule_list = []
         for i, idx in enumerate(self._rule_indices):
             _rule_name = self._rule_names[idx]
-            self._rule_list.append(self._rule_name2rule(_rule_name, self._rule_probs[i]))
+            self._rule_list.append(rule_name2rule(_rule_name, self._rule_probs[i]))
         support_summary = self.compute_support(x, y)
         for rule, support in zip(self._rule_list, support_summary):
             rule.support = support
+        # to_be_kept = [np.sum(rule.support) > trim_threshold for rule in self.rule_list]
+        # n_trimed = len(self.rule_list) - np.sum(to_be_kept)
+        # print("Trimmed {} rules".format(n_trimed))
+        # self._rule_indices = self._rule_indices[to_be_kept]
+        # self._rule_probs = self._rule_probs[to_be_kept]
+        # self.post_process(x, y)
 
     def compute_support(self, x, y) -> np.ndarray:
         """
@@ -409,7 +249,8 @@ class SBRL(Classifier):
         for i, support in enumerate(supports):
             support_labels = y[support]
             unique_labels, unique_counts = np.unique(support_labels, return_counts=True)
-            if len(unique_labels) > 0 and np.max(unique_labels) > support_summary.shape[1]:  # There occurs labels that have not seen in training
+            if len(unique_labels) > 0 and np.max(unique_labels) > support_summary.shape[1]:
+                # There occurs labels that have not seen in training
                 pad_len = np.max(unique_labels) - support_summary.shape[1]
                 support_summary = np.hstack((support_summary, np.zeros((n_rules, pad_len), dtype=np.int)))
             support_summary[i, unique_labels] = unique_counts
@@ -429,31 +270,13 @@ class SBRL(Classifier):
         print(prefix + " accuracy: {:.5f}; loss: {:.5f}".format(acc, loss))
         return acc, loss
 
-    @staticmethod
-    def _rule_name2rule(rule_name, prob, support=None):
-        if rule_name == 'default':
-            return Rule([], [], prob, support)
-
-        raw_rules = rule_name[1:-1].split(',')
-        feature_indices = []
-        categories = []
-        for raw_rule in raw_rules:
-            idx = raw_rule.find('=')
-            if idx == -1:
-                raise ValueError("No '=' find in the rule!")
-            feature_indices.append(int(raw_rule[1:idx]))
-            categories.append(int(raw_rule[(idx+1):]))
-        return Rule(feature_indices, categories, prob, support=support)
-
     def decision_support(self, x, per_condition=False) -> np.ndarray:
         """
         compute the decision support of the rule list on x
         :param x: x should be already transformed
         :param per_condition: depretcated. whether to return support per condition
         :return:
-            if per_condition is false, return a list of n_rules np.ndarray of shape [n_instances,] of type bool
-            if per_condition is true, return a list of satisfied list,
-                each satisfied list contains n_condition np.ndarray of shape [n_instances,] of type bool
+            return a list of n_rules np.ndarray of shape [n_instances,] of type bool
         """
         un_satisfied = np.ones((x.shape[0],), dtype=np.bool)
         supports = np.zeros((self.n_rules, x.shape[0]), dtype=np.bool)
@@ -481,10 +304,10 @@ class SBRL(Classifier):
         un_satisfied = np.ones([x.shape[0]], dtype=np.bool)
         paths = np.zeros((self.n_rules, x.shape[0]), dtype=np.bool)
         for i, rule in enumerate(self._rule_list):
+            paths[i, :] = un_satisfied
             satisfied = rule.is_satisfy(x)
             # marking new satisfied instances as satisfied
-            paths[i, :] = un_satisfied
-            un_satisfied = np.logical_xor(satisfied, un_satisfied)
+            un_satisfied = np.logical_and(np.logical_not(satisfied), un_satisfied)
         return paths
 
     def _predict_prob(self, x):
@@ -520,31 +343,6 @@ class SBRL(Classifier):
     def predict(self, x, **kwargs):
         return self._predict(x)
 
-    # def describe(self, feature_names=None, rt_str=False):
-    #     s = "The rule list is:\n\n     "
-    #
-    #     # n_rules = len(self._rule_indices)
-    #     # feature_names = feature_names if feature_names is not None else self._feature_names
-    #
-    #     for i, rule in enumerate(self._rule_list):
-    #         category_intervals = None
-    #         if self.discretizer is not None:
-    #             category_intervals = []
-    #             for idx, cat in zip(rule.feature_indices, rule.categories):
-    #                 if idx < 0:
-    #                     continue
-    #                 category_intervals.append(
-    #                     self.discretizer.cat2intervals(np.array([cat]), idx)[0]
-    #                 )
-    #         is_last = i == len(self._rule_list) - 1
-    #         s += rule.describe(feature_names, category_intervals, label="prob") + "\n"
-    #         if len(self._rule_list) > 1 and not is_last:
-    #             s += "\nELSE "
-    #
-    #     if rt_str:
-    #         return s
-    #     print(s)
-
 
 class RuleList(PreProcessMixin, SBRL):
     def __init__(self, name='rulelist', discretizer: MDLP=None, **kwargs):
@@ -570,6 +368,41 @@ class RuleList(PreProcessMixin, SBRL):
     #     # min_depth = 0 if 'min_depth' not in opts else opts['min_depth']
     #     discretizer = get_discretizer(x, y, continuous_features=continuous_features,
     #                                   filenames=discretizer_path, min_depth=min_depth)
+
+    def post_process(self, x, y):
+        """
+        Post process function that clean the extracted rules
+        :return:
+        """
+        trim_threshold = 0.0005 * len(y)
+        super(RuleList, self).post_process(x, y)
+
+        # Clean the rules that has little support
+        to_be_kept = [np.sum(rule.support) > trim_threshold for rule in self.rule_list]
+        n_trimed = len(self.rule_list) - np.sum(to_be_kept)
+        print("Trimmed {} rules".format(n_trimed))
+        self._rule_indices = self._rule_indices[to_be_kept]
+        self._rule_probs = self._rule_probs[to_be_kept]
+
+        super(RuleList, self).post_process(x, y)
+
+        # Clean the useless features
+        cut_points = self.discretizer.cut_points_
+        for j, rule in enumerate(self.rule_list):
+            features = []
+            categories = []
+            for i, feature in enumerate(rule.feature_indices):
+                if cut_points[feature] is None or len(cut_points[feature]) > 0:
+                    features.append(feature)
+                    categories.append(rule.categories[i])
+            # kept_features = [ for feature in rule.feature_indices]
+            if len(features) != len(rule.feature_indices):
+                print('Feature of rule {} trimmed'.format(j))
+                print(rule.feature_indices, '->', features)
+            rule.feature_indices = features
+            rule.categories = categories
+
+            # rule.feature_indices
 
     def compute_support(self, x, y, transform=False) -> np.ndarray:
         if transform:

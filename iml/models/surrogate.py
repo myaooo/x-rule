@@ -248,7 +248,7 @@ class SurrogateMixin(ModelBase):
         self.self_test_fidelity = None
 
     def surrogate(self, target: ModelInterface, instances: np.ndarray,
-                  constraints: list, sampling_rate: float=5, cache=True,
+                  constraints: list, sampling_rate: float=5., cache=True,
                   **kwargs):
         n_samples = int(sampling_rate * len(instances))
 
