@@ -1,4 +1,4 @@
-.v-reserves rect {
+rect.v-reserve {
   /* fill: none; */
   fill-opacity: 0.8;
 }
@@ -7,4 +7,15 @@
   fill: none;
   stroke-opacity: 0.8;
   stroke-linejoin: round;
+}
+
+.v-divide {
+  fill: #ddd;
+  fill-opacity: 0.2;
+  stroke: #888;
+  stroke-width: 0.8;
+}
+
+.v-divide:hover {
+  fill-opacity: 0.5;
 }

@@ -137,8 +137,8 @@ def train_surrogate(model_file, sampling_rate=5, surrogate='rule',
     return fidelity, acc, self_fidelity, surrogate_model.n_rules
 
 
-# datasets = ['breast_cancer', 'wine', 'iris', 'wine_quality_red', 'abalone', 'adult']
-datasets = ['wine_quality_red']
+datasets = ['breast_cancer', 'wine', 'iris', 'pima', 'abalone3', 'adult']
+# datasets = ['wine_quality_red']
 
 
 def train_all_nn():
@@ -193,9 +193,8 @@ def train_all_svm():
     return names
 
 
-def run_test(dataset, names, n_test=10, alpha=1):
+def run_test(dataset, names, sampling_rate=2., n_test=10, alpha=1):
     results = []
-    sampling_rate = 2 if dataset in {'adult'} else 5.
     rule_maxlen = 3
     _lambda = 10 if dataset in {'iris', 'breast_cancer', 'wine'} else 70
     for name in names:
@@ -257,13 +256,14 @@ def test(target='svm'):
         nns = train_all_nn()
         for i, nn_names in enumerate(nns):
             dataset = datasets[i]
+            sampling_rate = 2 if dataset in {'adult'} else 5.
             # max_rulelen = max_rulelens[i]
             # performance_dict
             file_name = get_path('experiments', dataset + '-nn.json')
             if file_exists(file_name):
                 results = json2dict(file_name)
             else:
-                results = run_test(dataset, nn_names, n_test=n_test, alpha=0)
+                results = run_test(dataset, nn_names, sampling_rate=sampling_rate, n_test=n_test, alpha=0)
                 dict2json(results, file_name)
             performance_dict[dataset] = results
  
@@ -276,11 +276,12 @@ def test(target='svm'):
         dataset = datasets[i]
         # max_rulelen = max_rulelens[i]
         # performance_dict
+        sampling_rate = 2 if dataset in {'adult'} else 5.
         file_name = get_path('experiments', dataset + '-svm.json')
         if file_exists(file_name):
             results = json2dict(file_name)
         else:
-            results = run_test(dataset, [svm_name], n_test=n_test, alpha=0)
+            results = run_test(dataset, [svm_name], sampling_rate=sampling_rate, n_test=n_test, alpha=0)
             dict2json(results, file_name)
         performance_dict[dataset] = results
 
@@ -291,7 +292,7 @@ def test_sampling_rate(dataset='abalone3'):
     n_test = 10
     # max_rulelens = [2, 2, 2, 3, 3, 3]
     neurons = (50, 50, 50, 50)
-    sampling_rates = [0.125, 0.25, 0.5, 1, 2, 4, 8]
+    sampling_rates = [0.25, 0.5, 1, 2, 4, 8]
     performance_dict = {}
     model_name = '-'.join([dataset, 'nn'] + [str(i) for i in neurons])
     for sampling_rate in sampling_rates:
@@ -299,7 +300,7 @@ def test_sampling_rate(dataset='abalone3'):
         if file_exists(file_name):
             results = json2dict(file_name)
         else:
-            results = run_test(dataset, [model_name], n_test=n_test)
+            results = run_test(dataset, [model_name], sampling_rate, n_test=n_test)
             dict2json(results, file_name)
         performance_dict[dataset] = results
 
