@@ -30,6 +30,8 @@ interface FlowOptional {
   height: number;
   duration: number;
   color: ColorType;
+  // testHeight: number;
+  divideHeight: number;
 }
 
 interface FlowPainterParams extends Partial<FlowOptional> {}
@@ -49,7 +51,8 @@ export default class FlowPainter implements Painter<Flow[], FlowPainterParams> {
     duration: defaultDuration,
     dy: -30,
     dx: -40,
-    color: labelColor
+    color: labelColor,
+    divideHeight: 10,
     // fontSize: 12,
     // multiplier: 1.0,
   };
@@ -103,7 +106,7 @@ export default class FlowPainter implements Painter<Flow[], FlowPainterParams> {
   }
 
   public renderRects(root: d3.Selection<SVGGElement, any, any, any>): this {
-    const {duration, height, width, dy, color} = this.params;
+    const {duration, height, width, dy, color, divideHeight} = this.params;
     const {flows, reserves, reserveSums} = this;
     // Compute pos
     const heights = flows.map((f, i) => i > 0 ? f.y - flows[i - 1].y : height);
@@ -116,9 +119,15 @@ export default class FlowPainter implements Painter<Flow[], FlowPainterParams> {
     const reserveEnter = reserve.enter().append('g').attr('class', 'v-reserves');
     reserveEnter.append('title');
 
+    reserveEnter.append('rect').attr('class', 'v-divide');
+
     // UPDATE
     const reserveUpdate = reserveEnter.merge(reserve);
     reserveUpdate.select('title').text((d, i) => reserves[i].join('/'));
+    reserveUpdate.select('rect.v-divide')
+      .attr('width', (d, i) => reserveSums[i] * multiplier + 4).attr('x', -2)
+      .attr('y', (d, i) => heights[i] - divideHeight)
+      .attr('height', divideHeight);
     // Transition groups
     reserveUpdate.transition().duration(duration)
       .attr('transform', (d: Flow, i: number) => `translate(0,${d.y - heights[i] - dy})`);
@@ -130,20 +139,20 @@ export default class FlowPainter implements Painter<Flow[], FlowPainterParams> {
     // *RECTS START*
     // JOIN RECT DATA
     // console.warn(reserves);
-    const rects = reserveUpdate.selectAll('rect')
+    const rects = reserveUpdate.selectAll('rect.v-reserve')
       .data<Rect>((d: Flow, i: number) => {
         const widths = reserves[i].map((r) => r * multiplier);
         const xs = [0, ...(nt.cumsum(widths.slice(0, -1)))];
         return d.support.map((s: number, j: number) => {
           return {
-            width: widths[j], height: heights[i] - 4, x: xs[j]
+            width: widths[j], height: heights[i] - divideHeight, x: xs[j]
           };
         });
       });
     
     // RECT ENTER
     const rectsEnter = rects.enter()
-      .append('rect')
+      .append('rect').attr('class', 'v-reserve')
       .attr('width', d => d.width)
       .style('fill', (d, i) => color(i));
       

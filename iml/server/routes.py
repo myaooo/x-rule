@@ -37,7 +37,7 @@ def send_index(model):
         return send_from_directory(app.config['FRONT_END_ROOT'], 'service-worker.js')
     if model == 'favicon.ico':
         return send_from_directory(app.config['FRONT_END_ROOT'], 'favicon.ico')
-    return send_from_directory(app.config['FRONT_END_ROOT'], 'index.html')
+    # return send_from_directory(app.config['FRONT_END_ROOT'], 'index.html')
 
 
 @app.route('/api/model', methods=['GET'])
