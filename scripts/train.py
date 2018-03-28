@@ -231,6 +231,8 @@ if __name__ == '__main__':
     # train_nn(dataset='wine_quality_red', neurons=(40, 40), tol=1e-6, alpha=0.01, activation='logistic', verbose=True)
     # train_nn(dataset='wine_quality_white', neurons=(40, 40), tol=1e-6, alpha=0.01, activation='logistic', verbose=True)
     # train_nn(dataset='pima', neurons=(20, 20), tol=1e-5, alpha=2.0)
+    # train_nn(dataset='mushroom', neurons=(40, 40), tol=1e-5, alpha=2.0)
+    train_nn(dataset='breast_cancer_original', neurons=(20, 20), tol=1e-5, alpha=2.0)
 
     ###########
     # Surrogates of NNs
@@ -256,8 +258,10 @@ if __name__ == '__main__':
     # train_surrogate('models/diabetes_balance-nn-40-40.mdl', surrogate='rule',
     #                 sampling_rate=1.0, rule_maxlen=3, min_support=0.01, _lambda=50)
     # train_surrogate('models/pima-nn-10-10.mdl', surrogate='rule', sampling_rate=5, rule_maxlen=3, _lambda=10)
-    train_surrogate('models/pima-nn-20-20.mdl', surrogate='rule', sampling_rate=5, rule_maxlen=2,
-                    _lambda=5, iters=90000, min_support=0.05)
+    # train_surrogate('models/pima-nn-20-20.mdl', surrogate='rule', sampling_rate=5, rule_maxlen=2,
+    #                 _lambda=5, iters=90000, min_support=0.05)
+    train_surrogate('models/breast_cancer_original-nn-20-20.mdl', surrogate='rule', sampling_rate=2,
+                    rule_maxlen=1, _lambda=5, min_support=0.05)
 
     ###########
     # Surrogates of SVMs

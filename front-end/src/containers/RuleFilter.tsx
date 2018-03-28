@@ -29,10 +29,10 @@ class SettingsControl extends React.Component<SettingsControlProps, any> {
     return (
       <div style={{ paddingLeft: 12 }}>
         <Row style={{marginTop: 8}}>
-          <Col span={14}>
+          <Col span={12}>
             <span>Min Evidence:</span>
           </Col>
-          <Col span={10}>
+          <Col span={12}>
             <Slider 
               min={0.0}
               max={0.1}
@@ -44,23 +44,23 @@ class SettingsControl extends React.Component<SettingsControlProps, any> {
             />
           </Col>
         </Row>
-        {/* <Row style={{marginTop: 8}}>
-          <Col span={14}>
-            <span>Confidence:</span>
+        <Row style={{marginTop: 8}}>
+          <Col span={12}>
+            <span>Fidelity:</span>
           </Col>
-          <Col span={10}>
+          <Col span={12}>
             <Slider 
               min={0.0}
-              max={0.1}
-              defaultValue={0.01}
+              max={1.0}
+              range={true}
+              defaultValue={[0.0, 1.00]}
               step={0.002}
               // value={this.props.settings.minSupport}
-              onAfterChange={(minSupport: number) => updateSettings({minSupport})}
+              // onAfterChange={(minSupport: number) => updateSettings({minSupport})}
               disabled={!model}
             />
           </Col>
-        </Row> */}
-        {/* </Slider> */}
+        </Row>
       </div>
     );
   }

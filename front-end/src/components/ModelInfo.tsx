@@ -21,8 +21,8 @@ export default class ModelInfo extends React.Component<ModelInfoProps, any> {
       // infos.push(['max depth', model.maxDepth.toString()]);
     }
     if (isSurrogate(model)) {
-      infos[0][1] += '-surrogate';
-      infos.push(['target', model.target]);
+      infos[0][1] += '-explainer';
+      infos.push(['model', model.target]);
     }
     return (
       <div style={{ paddingLeft: 12, fontSize: 12 }}>

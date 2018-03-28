@@ -220,7 +220,7 @@ export default class FlowPainter implements Painter<Flow[], FlowPainterParams> {
     const pathsUpdate = pathsEnter.merge(paths);
     pathsUpdate.transition().duration(duration)
       .attr('d', flowCurve)
-      .style('stroke-width', d => d.width);
+      .style('stroke-width', d => `${d.width}px`);
     
     // PATH EXIT
     paths.exit().transition().duration(duration)

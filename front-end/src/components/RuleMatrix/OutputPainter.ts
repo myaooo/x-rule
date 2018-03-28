@@ -72,7 +72,7 @@ function isMat(a: number[] | number[][]): a is number[][] {
 }
 
 function registerPatterns(color: ColorType, keys: number[]) {
-  return keys.map((key) => registerStripePattern(color(key), 3, 5));
+  return keys.map((key) => registerStripePattern(color(key), key, 3, 5));
 }
 
 export class SupportPainter implements Painter<SupportData, SupportParams> {
@@ -154,7 +154,7 @@ export class SupportPainter implements Painter<SupportData, SupportParams> {
       .attr('class', 'mo-acc')
       .attr('display', 'none')
       .merge(acc);
-    accUpdate.attr('x', width + 5).attr('y', height / 2 + 5).text(d => d.toFixed(2));
+    accUpdate.attr('x', width + 5).attr('y', height / 2 + 5).text(d => `acc: ${d.toFixed(2)}`);
 
     selector.on('mouseover', () => {
       accUpdate.attr('display', null);
@@ -219,7 +219,7 @@ export class SupportPainter implements Painter<SupportData, SupportParams> {
       // console.log(factor); // tslint:disable-line
       const ret = d.data.map((v, j) => ({
         width: _widths[j], x: _xs[j], label: d.label,
-        fill: j === 0 ? color(d.label) : `url(#${stripeNames[d.label]})`
+        fill: j === 0 ? color(d.label) : `url("#${stripeNames[d.label]}")`
       }));
       return ret.filter(r => r.width > 0);
     });
@@ -341,6 +341,7 @@ interface OptionalParams {
 
 export interface OutputParams extends Partial<OptionalParams> {
   // feature2Idx: (feature: number) => number;
+  elemHeight?: number;
   onClick?: (feature: number, condition: number) => void;
 }
 
@@ -612,19 +613,24 @@ export default class OutputPainter implements Painter<RuleX[], OutputParams> {
     enter: d3.Selection<SVGGElement, RuleX, SVGGElement, RuleX[]>,
     update: d3.Selection<SVGGElement, RuleX, SVGGElement, RuleX[]>
   ): this {
-    const { duration, fontSize, widthFactor, color } = this.params;
+    const { duration, fontSize, widthFactor, color, elemHeight } = this.params;
     const useMat = this.useMat;
     // Enter
     enter.append('g').attr('class', 'mo-supports');
     // Update
     const supports = update.select<SVGGElement>('g.mo-supports');
     supports.transition().duration(duration)
-      .attr('transform', `translate(${useMat ? (fontSize * 8) : (fontSize * 5)},0)`);
+      .attr('transform', ({height}) => {
+        const x = useMat ? (fontSize * 8) : (fontSize * 5);
+        const y = (elemHeight && elemHeight < height) ? ((height - elemHeight) / 2) : 0;
+        return `translate(${x},${y})`;
+    });
 
+    // const height = supports.each
     // supports
     supports.each(({support, height}, i, nodes) => 
       support && this.supportPainter
-        .update({widthFactor, height, color})
+        .update({widthFactor, height: (elemHeight && elemHeight < height) ? elemHeight : height, color})
         .data(support)
         .render(d3.select(nodes[i]))
     );

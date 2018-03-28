@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { connect } from 'react-redux';
-import { Layout, Card, Collapse } from 'antd';
+import { Layout, Card } from 'antd';
 import { FilterType } from '../components/DataFilter';
 // import { BasicData, ModelMeta } from '../models';
 import DataTable from '../components/DataTable';
@@ -12,7 +12,7 @@ import dataService from '../service/dataService';
 import { selectDatasetAndFetchSupport, fetchDatasetIfNeeded, predictInput } from '../store/actions';
 
 const { Content, Sider } = Layout;
-const { Panel } = Collapse;
+// const { Panel } = Collapse;
 
 interface StateToProps {
   model: ModelBase | null;
@@ -107,7 +107,7 @@ export class Main extends React.Component<MainProps, MainState> {
     const indices = model ? rankModelFeatures(model) : undefined;
     const {filters} = this.state;
     // const width = 1200;
-    const height = 150;
+    const height = 130;
     const dataSet = dataSets[0] as (DataSet | undefined);
     return (
       <Content>
@@ -139,24 +139,17 @@ export class Main extends React.Component<MainProps, MainState> {
         </Layout>
         {/* <Footer> */}
           {model &&
-          <Collapse 
-            defaultActiveKey={[]} 
-            // style={{position: 'fixed', bottom: 0}}
-          >
-            <Panel header="Data View" key="1">
-              <DataTable
-                dataSet={dataSet}
-                filters={filters}
-                // ref={(ref: DataTable) => this.tableRef = ref}
-                meta={model.meta}
-                height={height}
-                getData={(_filters: FilterType[], start?: number, end?: number) =>
-                  dataService.getFilterData(model.name, dataSet ? dataSet.name : 'train', _filters, start, end)
-                }
-                indices={indices}
-              />
-            </Panel>
-          </Collapse>
+          <DataTable
+            dataSet={dataSet}
+            filters={filters}
+            // ref={(ref: DataTable) => this.tableRef = ref}
+            meta={model.meta}
+            height={height}
+            getData={(_filters: FilterType[], start?: number, end?: number) =>
+              dataService.getFilterData(model.name, dataSet ? dataSet.name : 'train', _filters, start, end)
+            }
+            indices={indices}
+          />
           }
         {/* </Footer> */}
       </Content>

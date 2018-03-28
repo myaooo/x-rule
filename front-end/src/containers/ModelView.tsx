@@ -85,8 +85,8 @@ class ModelView extends React.Component<ModelViewProp, any> {
         return (<div> Loading model {modelName}... </div>);
       return (<div>Cannot load model {modelName}</div>);
     }
-    const width = 1200;
-    const height = 800;
+    const width = 1100;
+    const height = 700;
     const featureWidth = 160;
     // const availableData = data[0] || data[1];
     const transform = `translate(${featureWidth}, 40)`;

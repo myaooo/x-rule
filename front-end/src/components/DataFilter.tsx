@@ -326,7 +326,7 @@ export default class DataFilter extends React.Component<DataFilterProps, DataFil
                       inputValue={data[item.idx]}
                     />
                   }
-                  {item.cutPoints &&
+                  {!item.categories &&
                     <NumericInput 
                       featureName={item.featureName}
                       // range={ranges[i]}

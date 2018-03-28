@@ -85,7 +85,7 @@ export default class HeaderPainter implements Painter<Feature[], HeaderParams> {
     const axisUpdate = axis.enter()
       .append('g').attr('class', 'header-axis')
       .merge(axis)
-      .attr('transform', d => `translate(${d.x})`);
+      .attr('transform', d => `translate(${d.x}, -5)`);
 
     axisUpdate.each((d: Feature, i: number, nodes) => {
       if (d.expanded) {
