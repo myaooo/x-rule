@@ -144,7 +144,7 @@ datasets = ['breast_cancer', 'wine', 'iris', 'pima', 'abalone3', 'adult']
 def train_all_nn():
     layers = [1, 2, 3, 4]
     neurons = 40
-    alphas = [0.001, 0.01, 0.1]
+    alphas = [0.05, 0.2, 1.0, 2.0, 5.0]
 
     # NN
     names = []
@@ -196,7 +196,7 @@ def train_all_svm():
 def run_test(dataset, names, sampling_rate=2., n_test=10, alpha=1):
     results = []
     rule_maxlen = 3
-    _lambda = 10 if dataset in {'iris', 'breast_cancer', 'wine'} else 70
+    _lambda = 10 if dataset in {'iris', 'breast_cancer', 'wine'} else 40
     for name in names:
         model_file = get_path('models', name + '.mdl')
         fidelities = []
@@ -210,7 +210,7 @@ def run_test(dataset, names, sampling_rate=2., n_test=10, alpha=1):
             fidelity, acc, self_fidelity, n_rules = train_surrogate(model_file, surrogate='rule',
                                                                     sampling_rate=sampling_rate, iters=100000,
                                                                     rule_maxlen=rule_maxlen, alpha=alpha,
-                                                                    min_support=0.02, _lambda=_lambda)
+                                                                    min_support=0.01, _lambda=_lambda)
             seconds.append(time.time() - start)
             print('time: {}s; length: {}'.format(seconds[-1], n_rules))
             list_lengths.append(n_rules)
