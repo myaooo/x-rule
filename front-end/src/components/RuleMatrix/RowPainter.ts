@@ -270,7 +270,7 @@ export default class RuleRowPainter implements Painter<RuleX, RuleRowParams> {
     if (!isRuleGroup(rule) && !rule.expanded ) {
       collapseButton.attr('display', 'none').on('click', null);
       ruleButton.attr('display', null);
-      ruleButton.select('text.rule-no').attr('dy', rule.height / 2 + 6).text(rule.idx);
+      ruleButton.select('text.rule-no').attr('dy', rule.height / 2 + 6).text(rule.idx + 1);
       // selector.on('mouseover.button', () => {
       // }).on('mouseout.button', () => {
       //   ruleButton.select('text.rule-no').text('');

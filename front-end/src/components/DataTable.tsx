@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as d3 from 'd3';
-import { Table, Row } from 'antd';
+import { Table, Collapse } from 'antd';
 import { ModelMeta } from '../models/base';
 // import DataFilter from './DataFilter';
 import { FilterType } from './DataFilter';
@@ -9,7 +9,7 @@ import * as nt from '../service/num';
 
 import './DataTable.css';
 
-// const Column
+const { Panel } = Collapse;
 
 interface DataElem {
   key: number;
@@ -134,34 +134,28 @@ export default class DataTable extends React.Component<DataTableProps, DataTable
     const { data, columns, totalLength } = this.state;
 
     const totalWidth = nt.sum(columns.map(col => col.width)) + 20;
-    let title = `DataSet: ${dataSet ? dataSet.name : 'train'}`;
+    let title = `Data Table: ${dataSet ? dataSet.name : 'train'}`;
     if (dataSet)
       title +=  ` | (${totalLength}/${dataSet.data.length})`;
     return (
-      <Row>
-        {/* <Col span={6}> */}
-          {/* <DataFilter 
-            meta={meta} 
-            filters={filters} 
-            onChangeFilter={this.handleFilterUpdate}
-            onSubmitFilter={onSubmitFilter && (() => onSubmitFilter(filters))}
-            indices={indices}
-          /> */}
-        {/* </Col> */}
-        {/* <Col span={18}> */}
+      <Collapse 
+        defaultActiveKey={['1']} 
+        // style={{position: 'fixed', bottom: 0}}
+      >
+        <Panel header={title} key="1">
           <Table
             size="small"
             bordered={true}
             columns={columns}
             dataSource={data}
             scroll={{ y: height, x: totalWidth + 10 }}
-            title={() => title}
+            // title={() => title}
             pagination={{ pageSize: 25 }}
             style={{fontSize: 12}}
             loading={this.state.loading}
           />
-        {/* </Col> */}
-      </Row>
+        </Panel>
+      </Collapse>
     );
   }
 }

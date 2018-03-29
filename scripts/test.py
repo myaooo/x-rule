@@ -125,7 +125,7 @@ def train_surrogate(model_file, sampling_rate=5, surrogate='rule',
     # print('target_y')
     # print(model.predict(instances))
     if isinstance(surrogate_model, RuleSurrogate):
-        surrogate_model.surrogate(model, instances, constraints, sampling_rate, cov_factor=0.5, rediscretize=True)
+        surrogate_model.surrogate(model, instances, constraints, sampling_rate, cov_factor=1.0, rediscretize=True)
     else:
         surrogate_model.surrogate(model, instances, constraints, sampling_rate)
     # surrogate_model.evaluate(train_x, train_y)
@@ -137,8 +137,8 @@ def train_surrogate(model_file, sampling_rate=5, surrogate='rule',
     return fidelity, acc, self_fidelity, surrogate_model.n_rules
 
 
-datasets = ['breast_cancer', 'wine', 'iris', 'pima', 'abalone3', 'adult']
-# datasets = ['wine_quality_red']
+# datasets = ['breast_cancer', 'wine', 'iris', 'pima', 'abalone3', 'adult']
+datasets = ['wine_quality_white']
 
 
 def train_all_nn():
@@ -204,7 +204,7 @@ def train_all_svm():
 def run_test(dataset, names, sampling_rate=2., n_test=10, alpha=1):
     results = []
     rule_maxlen = 3
-    _lambda = 10 if dataset in {'iris', 'breast_cancer', 'wine'} else 40
+    _lambda = 10 if dataset in {'iris', 'breast_cancer', 'wine', 'pima'} else 50
     for name in names:
         model_file = get_path('models', name + '.mdl')
         tmp_file = get_path('experiments', name + '.json')
@@ -223,7 +223,7 @@ def run_test(dataset, names, sampling_rate=2., n_test=10, alpha=1):
             fidelity, acc, self_fidelity, n_rules = train_surrogate(model_file, surrogate='rule',
                                                                     sampling_rate=sampling_rate, iters=100000,
                                                                     rule_maxlen=rule_maxlen, alpha=alpha,
-                                                                    min_support=0.02, _lambda=_lambda)
+                                                                    min_support=0.05, _lambda=_lambda)
             seconds.append(time.time() - start)
             print('time: {}s; length: {}'.format(seconds[-1], n_rules))
             list_lengths.append(n_rules)

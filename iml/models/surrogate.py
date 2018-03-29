@@ -209,8 +209,13 @@ def create_sampler(instances: np.ndarray, constraints, cov_factor=1.0, verbose=F
     cat_keys, cat_probs, cat2instances = _build_cache()
 
     # Try stats.gaussian_kde
-    glb_kde = stats.gaussian_kde(instances[:, is_numeric].T, 'silverman')
-    cov = cov_factor * glb_kde.covariance
+    continuous_data = instances[:, is_numeric]
+    n_continuous_features = np.sum(is_numeric)
+    if n_continuous_features != 0:
+        glb_kde = stats.gaussian_kde(continuous_data.T, 'silverman')
+        cov = cov_factor * glb_kde.covariance
+    else:
+        cov = []
 
     def sample(n: int) -> np.ndarray:
         samples = []
@@ -219,7 +224,8 @@ def create_sampler(instances: np.ndarray, constraints, cov_factor=1.0, verbose=F
             if num == 0:
                 continue
             sample_buffer = np.empty((num, n_features), dtype=np.float)
-            sample_buffer[:, is_numeric] = gaussian_mixture(cat2instances[idx][:, is_numeric], cov)(num)
+            if n_continuous_features != 0:
+                sample_buffer[:, is_numeric] = gaussian_mixture(cat2instances[idx][:, is_numeric], cov)(num)
             categorical_part = np.frombuffer(cat_keys[idx], dtype=np.int8)
             sample_buffer[:, is_categorical] = np.tile(categorical_part, (num, 1)).astype(np.float)
 
@@ -256,6 +262,7 @@ class SurrogateMixin(ModelBase):
         self.data_distribution = create_sampler(instances, constraints, cov_factor)
         train_x = self.data_distribution(n_samples)
         train_y = target.predict(train_x).astype(np.int)
+        print('Sampled', len(train_y), 'data')
         self.train(train_x, train_y, **kwargs)
         self.evaluate(train_x, train_y, stage='train')
         self.self_test(int(n_samples * 0.2), cache=cache)

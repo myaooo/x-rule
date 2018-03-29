@@ -82,7 +82,24 @@ meta = {
 }
 
 
-def main():
+def under_sampling(data, target, rate=0.5):
+    logic = target == 0
+    negative_idx = np.arange(len(target))[logic]
+    positive_idx = np.arange(len(target))[np.logical_not(logic)]
+    pos_data = data[positive_idx]
+    pos_target = target[positive_idx]
+    idx = np.random.choice(negative_idx, int(rate * len(negative_idx)), replace=False)
+    neg_data = data[idx]
+    neg_target = target[idx]
+    data = np.vstack((pos_data, neg_data))
+    target = np.hstack((pos_target, neg_target))
+    shuffle_idx = np.arange(len(target))
+    np.random.shuffle(shuffle_idx)
+
+    return data[shuffle_idx], target[shuffle_idx]
+
+
+def main(save_name='bank_marketing', under_sample=False):
     df = pd.read_csv(data_path)
     attrs = list(df.columns)[:-1]
     is_binary = [True if (meta[attr][1] is not None and len(meta[attr][1]) == 2) else False for attr in attrs]
@@ -94,8 +111,15 @@ def main():
         if is_categorical[i]:
             col = process_categorical(np.array(col), meta[attr][1])
         data.append(col)
-    data = np.vstack(data)
+    data = np.vstack(data).T
     target = process_categorical(df[label], target_names)
+
+    if under_sample:
+        data, target = under_sampling(data, target)
+
+    uniq, count = np.unique(target, return_counts=True)
+    print(uniq)
+    print(count)
     # is_categorical = np.logical_and(is_categorical, np.logical_not(is_binary))
 
     categories = [meta[attr][1] if is_cat else None for attr, is_cat in zip(attrs, is_categorical)]
@@ -104,11 +128,11 @@ def main():
         'target_names': target_names,
         'is_categorical': is_categorical,
         'is_binary': is_binary,
-        'data': data.T,
+        'data': data,
         'feature_names': attrs,
         'categories': categories
     }
-    save_data(dataset, data_name)
+    save_data(dataset, save_name)
 
 
 # def process_target(col, labels):
@@ -128,4 +152,4 @@ def process_categorical(col, categories):
 
 
 if __name__ == '__main__':
-    main()
+    main('bank_marketing2', True)

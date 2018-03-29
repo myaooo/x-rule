@@ -87,7 +87,7 @@ class RuleListView extends React.Component<RuleListProps, RuleListState> {
           model={model} 
           dataset={data[0]} 
           streams={streams} 
-          transform={transform} 
+          transform={transform}
           support={support}
           input={input}
           {...styles} 

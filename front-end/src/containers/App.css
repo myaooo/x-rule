@@ -44,3 +44,17 @@
 .header-buttons {
   margin-top: 16px;
 }
+
+.ant-layout-header,
+.ant-layout-footer {
+  background: #003a63;
+  color: #fff;
+}
+.ant-layout-footer {
+  line-height: 1.5;
+}
+.ant-layout-sider {
+  background: #fff;
+  color: #444;
+  line-height: 120px;
+}

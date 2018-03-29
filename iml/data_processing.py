@@ -112,7 +112,7 @@ sklearn_datasets = {'breast_cancer': {}, 'iris': {}, 'wine': {}}
 local_datasets = {'diabetes': {}, 'abalone': {}, 'thoracic': {'min_depth': 3},
                   'bank_marketing': {}, 'credit_card': {}, 'adult': {},
                   'wine_quality_white': {}, 'wine_quality_red': {}, 'diabetes_balance': {},
-                  'abalone2': {}, 'abalone3': {}, 'pima': {}
+                  'abalone2': {}, 'abalone3': {}, 'pima': {}, 'mushroom': {}, 'breast_cancer_original': {}
                   }
 
 

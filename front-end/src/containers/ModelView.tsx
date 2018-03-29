@@ -10,7 +10,9 @@ import {
   getSelectedData,
   getModelIsFetching,
   TreeStyles,
-  getTreeStyles
+  getTreeStyles,
+  RuleStyles,
+  getRuleStyles
 } from '../store';
 import { RuleModel, DataSet, ModelBase, isRuleModel, isTreeModel } from '../models';
 import { countFeatureFreq } from '../service/utils';
@@ -18,9 +20,7 @@ import Tree from '../components/Tree';
 import RuleList from '../containers/RuleList';
 import FeatureList from '../containers/FeatureList';
 import Legend from '../components/Legend';
-import { getRuleStyles } from '../store/selectors';
 import { Patterns } from '../components/patterns';
-import { RuleStyles } from '../store/state';
 
 export interface ModelViewStateProp {
   model: RuleModel | ModelBase | null;
@@ -85,8 +85,8 @@ class ModelView extends React.Component<ModelViewProp, any> {
         return (<div> Loading model {modelName}... </div>);
       return (<div>Cannot load model {modelName}</div>);
     }
-    const width = 1200;
-    const height = 800;
+    const width = 1100;
+    const height = 700;
     const featureWidth = 160;
     // const availableData = data[0] || data[1];
     const transform = `translate(${featureWidth}, 40)`;
@@ -113,7 +113,7 @@ class ModelView extends React.Component<ModelViewProp, any> {
           {isTreeModel(model) && 
             <Tree {...modelProps} model={model} styles={treeStyles} />
           }
-          <Legend labels={labelNames} transform={`translate(${featureWidth + 20}, 5)`}/>
+          <Legend labels={labelNames} color={ruleStyles.color} transform={`translate(${featureWidth + 20}, 5)`}/>
           
         </svg>
       </Card>

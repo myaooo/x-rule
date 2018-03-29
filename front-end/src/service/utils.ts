@@ -64,10 +64,10 @@ export function condition2String(
 }
 
 export function registerStripePattern(
-  color: string, strokeWidth: number = 2, padding: number = 4
+  color: string, key: number, strokeWidth: number = 2, padding: number = 4
 ): string {
   const defs = d3.select('svg#main').select('defs');
-  const patternName = `stripe-${color.slice(1)}-${strokeWidth}-${padding}`;
+  const patternName = `stripe-${key}-${strokeWidth}-${padding}`;
   const patternNode = defs.select(`#${patternName}`).node();
   const pattern = patternNode === null 
     ? defs.append('pattern').attr('id', patternName)
@@ -79,9 +79,9 @@ export function registerStripePattern(
   const path = pattern.select('path').node() === null
     ? pattern.append('path') : pattern.select('path');
   path.attr('d', `M 0 ${padding / 2} H ${padding}`)
-    .attr('stroke-linecap', 'square')
-    .attr('stroke-width', strokeWidth)
-    .attr('stroke', color);
+    .style('stroke-linecap', 'square')
+    .style('stroke-width', `${strokeWidth}px`)
+    .style('stroke', color);
   // defs.append('pattern')
   return patternName;
 }

@@ -21,6 +21,7 @@ export function flattenRules(rules: Rule[]): Rule[] {
 function computeExistingFeatures(rules: Rule[], nFeatures: number) {
   const featureCounts = new Array(nFeatures).fill(0);
   for (let i = 0; i < rules.length - 1; ++i) {
+    if (isRuleGroup(rules[i])) continue; // do not display the these features
     const conditions = rules[i].conditions;
     for (let j = 0; j < conditions.length; ++j) {
       featureCounts[conditions[j].feature] += 1;
@@ -218,17 +219,20 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
       const rules = model.getRules();
       const nFeatures = model.nFeatures;
 
+      // Filter rules by grouping
+      const supportSum = nt.sum(rules.map(r => r.totalSupport));
+      const groupedRules = groupBySupport(rules, minSupport * supportSum);
+      
+      this.rules = initRuleXs(groupedRules, model);
+
       // compute feature Mapping
-      const {features, featureCounts} = computeExistingFeatures(rules, nFeatures);
+      const {features, featureCounts} = computeExistingFeatures(this.rules, nFeatures);
       const f2Idx = new Array(nFeatures).fill(-1);
       features.forEach((f: number, i: number) => f2Idx[f] = i);
       this.features = features;
       this.featureCounts = featureCounts;
       this.f2Idx = f2Idx;
-      const supportSum = nt.sum(rules.map(r => r.totalSupport));
-      const groupedRules = groupBySupport(rules, minSupport * supportSum);
-      
-      this.rules = initRuleXs(groupedRules, model);
+
     }
     this.support = support;
     this.minSupport = minSupport;
@@ -444,19 +448,19 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
   }
 
   public renderOutputs(root: d3.Selection<SVGGElement, any, SVGElement, any>): this {
-    const { outputWidth, duration, color, flowWidth } = this.params;
+    const { outputWidth, duration, color, flowWidth, elemHeight } = this.params;
     const widthFactor = outputWidth / this.model.maxSupport;
     const width = this.getWidth();
     root.transition().duration(duration)
       .attr('transform', `translate(${width + flowWidth},0)`);
 
-    this.outputPainter.update({widthFactor, duration, color})
+    this.outputPainter.update({widthFactor, duration, color, elemHeight})
       .data(this.rules).render(root);
     return this;
   }
 
   public renderFlows(root: d3.Selection<SVGGElement, any, any, any>): this {
-    const {elemWidth, flowWidth} = this.params;
+    const {elemWidth, flowWidth, color} = this.params;
     const { rules } = this;
     const dx = Math.max(50, elemWidth + 10);
 
@@ -467,7 +471,7 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
       support: _support, y: y + height / 2
     }));
 
-    this.flowPainter.update({dx, dy: elemWidth, width: flowWidth})
+    this.flowPainter.update({dx, dy: elemWidth, width: flowWidth, color})
       .data(flows).render(root);
     return this;
   }

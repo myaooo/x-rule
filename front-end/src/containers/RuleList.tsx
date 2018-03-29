@@ -4,7 +4,7 @@ import { connect } from 'react-redux';
 import { Streams, ConditionalStreams } from '../models/data';
 import { 
   RuleStyles, Settings, getSettings,
-  RootState, Dispatch, selectFeature, FeatureStatus, getFeatureStates, FeatureState, getStreams 
+  RootState, Dispatch, selectFeature, FeatureStatus, getFeatureStates, FeatureState, getStreams
 } from '../store';
 
 type RuleListStateProp = {
@@ -18,6 +18,7 @@ type RuleListStateProp = {
 
 const mapStateToProps = (state: RootState): RuleListStateProp => {
   // console.log("remapped"); // tslint:disable-line
+
   return {
     styles: state.ruleStyles,
     settings: getSettings(state),

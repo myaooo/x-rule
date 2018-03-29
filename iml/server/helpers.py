@@ -145,7 +145,7 @@ def _compute_streams(
     """
     streams = []
     categories = categories if categories is not None else [None] * len(ranges)
-    print(categories)
+    # print(categories)
     for col, _range, category in zip(x.T, ranges, categories):
         col_by_label = [col[idx] for idx in idx_by_label]
         bin_edges = np.linspace(_range[0], _range[1], bins + 1)
@@ -156,8 +156,8 @@ def _compute_streams(
             xs = list(range(len(category)))
             stream = compute_bars(col_by_label, category)
         else:
-            print(_range)
-            print(category)
+            # print(_range)
+            # print(category)
             raise ValueError('each element in categories should be either None or a list')
         streams.append({
             'stream': stream,

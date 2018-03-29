@@ -1,4 +1,5 @@
 import { ModelBase, DataSet, DataTypeX, Streams, ConditionalStreams } from '../models';
+import { labelColor, ColorType } from '../components/Painters/Painter';
 
 export interface ModelState {
   readonly model: ModelBase | null;
@@ -56,6 +57,7 @@ export interface RuleStyles {
   rectWidth: number;
   rectHeight: number;
   mode: 'list' | 'matrix';
+  color: ColorType;
   // conditional: boolean;
 }
 
@@ -74,6 +76,7 @@ export const initRuleStyles: RuleStyles = {
   mode: 'matrix',
   rectWidth: 45,
   rectHeight: 27,
+  color: labelColor,
   // conditional: false,
 };
 

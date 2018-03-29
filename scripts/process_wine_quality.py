@@ -26,7 +26,6 @@ from iml.utils.io_utils import get_path
 base_dir = 'datasets/wine_quality'
 
 # labels = ['']
-bins = [1, 9, 15, 30]
 target_col = 'quality'
 
 
@@ -57,9 +56,17 @@ def process(color='red'):
 
 
 def process_labels(df, label):
-    label_series = df[label]
-    label_encoder = LabelEncoder().fit(label_series)
-    return label_encoder.transform(label_series), label_encoder.classes_.tolist()
+    label_series = df[label].as_matrix()
+    max_label = np.max(label_series)
+    min_label = np.min(label_series)
+    label_series[label_series == min_label] = min_label + 1
+    label_series[label_series == max_label] = max_label - 1
+    label_series -= min_label + 1
+    labels = ['level ' + str(l) for l in range(min_label + 1, max_label)]
+    uniq, counts = np.unique(label_series, return_counts=True)
+    print(uniq)
+    print(counts)
+    return label_series, labels
     # target = np.digitize(label_series, bins) - 1
     # uniq, counts = np.unique(target, return_counts=True)
     # print(counts)

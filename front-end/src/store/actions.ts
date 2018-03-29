@@ -249,6 +249,7 @@ function fetchDataWrapper<ArgType, ReturnType>(
     return (dispatch: Dispatch): Promise<Action> => {
       dispatch(requestAction(fetchArg));
       return fetchFn(fetchArg, getState).then((returnData: ReturnType | undefined) => {
+        console.log(returnData); // tslint:disable-line
         if (returnData) return dispatch(receiveAction(returnData));
         return dispatch(receiveAction(null));
       });

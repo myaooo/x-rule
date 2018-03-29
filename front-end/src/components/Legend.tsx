@@ -18,7 +18,7 @@ export interface LegendProps extends Partial<OptionalProps> {
 export interface LegendState {
 }
 
-export default class Legend extends React.Component<LegendProps, LegendState> {
+export default class Legend extends React.PureComponent<LegendProps, LegendState> {
   public static defaultProps: OptionalProps = {
     labelSize: 10,
     fontSize: 12,
@@ -42,12 +42,12 @@ export default class Legend extends React.Component<LegendProps, LegendState> {
       // .attr('x', (d: string, i: number) => delta * i)
       .attr('y', -(fontSize + labelSize) / 2)
       .attr('width', labelSize)
-      .attr('height', labelSize)
-      .attr('fill', (d, i) => color(i));
+      .attr('height', labelSize);
     
     labelEnter.append('text').attr('text-anchor', 'start').attr('x', labelSize * 1.2);
 
-    const labelUpdate = labelEnter.merge(label);
+    const labelUpdate = labelEnter.merge(label)
+      .attr('fill', (d, i) => color(i));
     labelUpdate.transition()
       .duration(duration)
       .attr('transform', (d, i) => `translate(${i * delta}, ${fontSize * 1.2})`);
