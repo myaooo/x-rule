@@ -142,9 +142,9 @@ datasets = ['breast_cancer', 'wine', 'iris', 'pima', 'abalone3', 'adult']
 
 
 def train_all_nn():
-    layers = [1, 2, 3, 4]
+    layers = [1, 2, 4]
     neurons = 40
-    alphas = [0.05, 0.2, 1.0, 2.0, 5.0]
+    alphas = [0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 4.0]
 
     # NN
     names = []
@@ -159,10 +159,18 @@ def train_all_nn():
             best_nn = None
             score = 0
             for alpha in alphas:
-                nn, acc = train_nn(dataset=dataset, neurons=hidden_layers, alpha=alpha, tol=1e-6)
+                accs = []
+                nns = []
+                for i in range(5):
+                    nn, acc = train_nn(dataset=dataset, neurons=hidden_layers, alpha=alpha, tol=1e-6,
+                                       learning_rate='adaptive', solver='sgd', learning_rate_init=0.01)
+                    accs.append(acc)
+                    nns.append(nn)
+                acc = np.mean(accs)
                 if acc > score:
                     score = acc
-                    best_nn = nn
+                    best_idx = np.argmax(accs)
+                    best_nn = nns[best_idx]
             best_nn.save()
             model_names.append(best_nn.name)
         names.append(model_names)
@@ -199,6 +207,11 @@ def run_test(dataset, names, sampling_rate=2., n_test=10, alpha=1):
     _lambda = 10 if dataset in {'iris', 'breast_cancer', 'wine'} else 40
     for name in names:
         model_file = get_path('models', name + '.mdl')
+        tmp_file = get_path('experiments', name + '.json')
+        if file_exists(tmp_file):
+            obj = json2dict(tmp_file)
+            results.append(obj)
+            continue
         fidelities = []
         self_fidelities = []
         accs = []
@@ -210,7 +223,7 @@ def run_test(dataset, names, sampling_rate=2., n_test=10, alpha=1):
             fidelity, acc, self_fidelity, n_rules = train_surrogate(model_file, surrogate='rule',
                                                                     sampling_rate=sampling_rate, iters=100000,
                                                                     rule_maxlen=rule_maxlen, alpha=alpha,
-                                                                    min_support=0.01, _lambda=_lambda)
+                                                                    min_support=0.02, _lambda=_lambda)
             seconds.append(time.time() - start)
             print('time: {}s; length: {}'.format(seconds[-1], n_rules))
             list_lengths.append(n_rules)
@@ -243,6 +256,7 @@ def run_test(dataset, names, sampling_rate=2., n_test=10, alpha=1):
         print(name)
         print(obj)
         print('---------')
+        dict2json(obj, tmp_file)
         results.append(obj)
     return results
 
@@ -256,7 +270,7 @@ def test(target='svm'):
         nns = train_all_nn()
         for i, nn_names in enumerate(nns):
             dataset = datasets[i]
-            sampling_rate = 2 if dataset in {'adult'} else 5.
+            sampling_rate = 2 if dataset in {'adult'} else 4.
             # max_rulelen = max_rulelens[i]
             # performance_dict
             file_name = get_path('experiments', dataset + '-nn.json')
@@ -276,7 +290,7 @@ def test(target='svm'):
         dataset = datasets[i]
         # max_rulelen = max_rulelens[i]
         # performance_dict
-        sampling_rate = 2 if dataset in {'adult'} else 5.
+        sampling_rate = 2 if dataset in {'adult'} else 4.
         file_name = get_path('experiments', dataset + '-svm.json')
         if file_exists(file_name):
             results = json2dict(file_name)
