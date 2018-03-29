@@ -61,7 +61,11 @@ def process_labels(df, label):
     min_label = np.min(label_series)
     label_series[label_series == min_label] = min_label + 1
     label_series[label_series == max_label] = max_label - 1
+    label_series -= min_label + 1
     labels = ['level ' + str(l) for l in range(min_label + 1, max_label)]
+    uniq, counts = np.unique(label_series, return_counts=True)
+    print(uniq)
+    print(counts)
     return label_series, labels
     # target = np.digitize(label_series, bins) - 1
     # uniq, counts = np.unique(target, return_counts=True)
