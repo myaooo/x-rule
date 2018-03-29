@@ -259,7 +259,9 @@ if __name__ == '__main__':
 
     # cv_nn(dataset='wine_quality_red', neurons=(40, 40, 40, 40, 40, 40))
     # train_nn(dataset='wine_quality_white', neurons=(40, 40, 40, 40, 40, 40), tol=1e-6, alpha=1.0,
-    #             activation='relu', verbose=True, learning_rate='adaptive', solver='sgd', learning_rate_init=0.05)
+                # activation='relu', verbose=True, learning_rate='adaptive', solver='sgd', learning_rate_init=0.05)
+    # train_nn(dataset='wine_quality_red', neurons=(40, 40, 40, 40, 40, 40), tol=1e-5, alpha=2.0,
+    #          activation='relu', verbose=True, learning_rate='adaptive', solver='sgd', learning_rate_init=0.05)
     # train_nn(dataset='pima', neurons=(20, 20), tol=1e-5, alpha=2.0)
     # train_nn(dataset='mushroom', neurons=(40, 40), tol=1e-5, alpha=2.0)
     # train_nn(dataset='breast_cancer_original', neurons=(20, 20), tol=1e-5, alpha=2.0)
@@ -282,10 +284,10 @@ if __name__ == '__main__':
     # train_surrogate('models/credit_card-nn-40-40.mdl', surrogate='rule', sampling_rate=3, rule_maxlen=3, iters=70000)
     # train_surrogate('models/adult-nn-50-50.mdl', surrogate='rule', sampling_rate=2, rule_maxlen=3,
     #                 iters=70000, min_support=0.02)
-    # train_surrogate('models/wine_quality_red-nn-40-40-40-40-40-40.mdl', surrogate='rule', sampling_rate=8,
-    #                 rule_maxlen=3, alpha=0, min_support=0.05)
-    train_surrogate('models/wine_quality_white-nn-40-40-40-40-40-40.mdl', surrogate='rule', sampling_rate=4, alpha=0,
-                    min_support=0.05, rule_maxlen=3)
+    train_surrogate('models/wine_quality_red-nn-40-40-40-40-40-40.mdl', surrogate='rule', sampling_rate=4,
+                    rule_maxlen=3, alpha=0, min_support=0.1)
+    # train_surrogate('models/wine_quality_white-nn-40-40-40-40-40-40.mdl', surrogate='rule', sampling_rate=4, alpha=0,
+    #                 min_support=0.05, rule_maxlen=3)
     # train_surrogate('models/bank_marketing-nn-30-30.mdl', surrogate='rule', sampling_rate=3, rule_maxlen=3)
     # train_surrogate('models/diabetes_balance-nn-40-40.mdl', surrogate='rule',
     #                 sampling_rate=1.0, rule_maxlen=3, min_support=0.01, _lambda=50)
