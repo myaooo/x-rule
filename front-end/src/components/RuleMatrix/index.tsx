@@ -16,7 +16,7 @@ interface RuleMatrixPropsOptional {
   intervalY: number;
   intervalX: number;
   flowWidth: number;
-  labelColor: ColorType;
+  color: ColorType;
   width: number;
   height: number;
   x0: number;
@@ -44,7 +44,7 @@ export default class RuleMatrix extends React.PureComponent<RuleMatrixProps, Rul
     intervalY: 10,
     intervalX: 0.2,
     flowWidth: 60,
-    labelColor: defaultLabelColor,
+    color: defaultLabelColor,
     width: 1200,
     height: 800,
     x0: 100,
@@ -81,7 +81,8 @@ export default class RuleMatrix extends React.PureComponent<RuleMatrixProps, Rul
   }
 
   painterUpdate() {
-    const {dataset, streams, model, rectWidth, rectHeight, flowWidth, minSupport, support, x0, y0, input} = this.props;
+    const {dataset, streams, model, rectWidth, rectHeight, flowWidth, minSupport, support, x0, y0, input, color} 
+      = this.props;
     console.log('updating matrix'); // tslint:disable-line
     this.state.painter.update({
       dataset,
@@ -89,6 +90,7 @@ export default class RuleMatrix extends React.PureComponent<RuleMatrixProps, Rul
       support,
       x0, y0,
       input,
+      color,
       // transform: `translate(100, 160)`,
       elemWidth: rectWidth,
       elemHeight: rectHeight,

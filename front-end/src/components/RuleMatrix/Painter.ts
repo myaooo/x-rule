@@ -460,7 +460,7 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
   }
 
   public renderFlows(root: d3.Selection<SVGGElement, any, any, any>): this {
-    const {elemWidth, flowWidth} = this.params;
+    const {elemWidth, flowWidth, color} = this.params;
     const { rules } = this;
     const dx = Math.max(50, elemWidth + 10);
 
@@ -471,7 +471,7 @@ export default class RuleMatrixPainter implements Painter<{}, RuleMatrixParams> 
       support: _support, y: y + height / 2
     }));
 
-    this.flowPainter.update({dx, dy: elemWidth, width: flowWidth})
+    this.flowPainter.update({dx, dy: elemWidth, width: flowWidth, color})
       .data(flows).render(root);
     return this;
   }

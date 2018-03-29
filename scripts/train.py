@@ -116,7 +116,7 @@ def train_rule(name='rule', dataset='breast_cancer', rule_max_len=2, **kwargs):
 
 
 def train_surrogate(model_file, is_global=True, sampling_rate=5., surrogate='rule',
-                    rule_maxlen=2, min_support=0.01, eta=1, iters=50000, _lambda=30):
+                    rule_maxlen=2, min_support=0.01, eta=1, iters=50000, _lambda=30, alpha=1):
     is_rule = surrogate == 'rule'
     model = load_model(model_file)
     dataset = model.name.split('-')[0]
@@ -132,7 +132,7 @@ def train_surrogate(model_file, is_global=True, sampling_rate=5., surrogate='rul
     if surrogate == 'rule':
         surrogate_model = RuleSurrogate(name=model_name, discretizer=data['discretizer'],
                                         rule_minlen=1, rule_maxlen=rule_maxlen, min_support=min_support,
-                                        _lambda=_lambda, nchain=30, eta=eta, iters=iters)
+                                        _lambda=_lambda, nchain=30, eta=eta, iters=iters, alpha=alpha)
     elif surrogate == 'tree':
         surrogate_model = TreeSurrogate(name=model_name, max_depth=None, min_samples_leaf=0.01)
     else:
@@ -162,6 +162,31 @@ def train_surrogate(model_file, is_global=True, sampling_rate=5., surrogate='rul
         surrogate_model.test(train_x[19:20, :], train_y[19:20])
 
 
+def cv_nn(dataset, neurons=(20,20), max_iter=1000):
+    from sklearn.model_selection import cross_validate, ShuffleSplit
+    from sklearn.neural_network import MLPClassifier
+
+    n_test = 5
+    data = get_dataset(dataset, split=True, discrete=False, one_hot=True)
+    train_x, train_y, test_x, test_y, feature_names = \
+        data['train_x'], data['train_y'], data['test_x'], data['test_y'], data['feature_names']
+
+    alphas = [0.01, 0.1, 1.0, 10]
+    cv = ShuffleSplit(n_splits=3, test_size=0.3, random_state=0)
+    for alpha in alphas:
+        clf = MLPClassifier(neurons, alpha=alpha, max_iter=max_iter, tol=1e-7)
+        scores = []
+        for i in range(n_test):
+            cv_scores = cross_validate(clf, train_x, train_y, cv=cv)
+            scores += cv_scores['test_score'].tolist()
+        mean_score = np.mean(scores)
+        std_score = np.std(scores)
+        min_score = np.min(scores)
+        max_score = np.max(scores)
+        print('alpha {}:'.format(alpha))
+        print('score: {}, std: {}, min: {}, max: {}\n'.format(mean_score, std_score, min_score, max_score))
+
+
 if __name__ == '__main__':
 
     ###########
@@ -185,6 +210,7 @@ if __name__ == '__main__':
     ###########
 
     # train_rule(dataset='breast_cancer')
+    # train_rule(dataset='breast_cancer_original')
     # train_rule(dataset='iris')
     # train_rule(dataset='wine')
     # train_rule(dataset='thoracic', rule_max_len=2, )
@@ -228,11 +254,15 @@ if __name__ == '__main__':
     #          solver='sgd', momentum=0.8)
     # train_nn(dataset='diabetes', neurons=(50,), verbose=True, tol=1e-6)
     # train_nn(dataset='diabetes_balance', neurons=(40, 40), verbose=True, alpha=0.1, tol=1e-6)
-    # train_nn(dataset='wine_quality_red', neurons=(40, 40), tol=1e-6, alpha=0.01, activation='logistic', verbose=True)
-    # train_nn(dataset='wine_quality_white', neurons=(40, 40), tol=1e-6, alpha=0.01, activation='logistic', verbose=True)
+    # train_nn(dataset='wine_quality_red', neurons=(40, 40, 40, 40, 40, 40), tol=1e-7, alpha=0.5,
+    #          activation='relu', verbose=True)
+
+    # cv_nn(dataset='wine_quality_red', neurons=(40, 40, 40, 40, 40, 40))
+    train_nn(dataset='wine_quality_white', neurons=(40, 40, 40, 40, 40, 40), tol=1e-6, alpha=0.5,
+                activation='relu', verbose=True)
     # train_nn(dataset='pima', neurons=(20, 20), tol=1e-5, alpha=2.0)
     # train_nn(dataset='mushroom', neurons=(40, 40), tol=1e-5, alpha=2.0)
-    train_nn(dataset='breast_cancer_original', neurons=(20, 20), tol=1e-5, alpha=2.0)
+    # train_nn(dataset='breast_cancer_original', neurons=(20, 20), tol=1e-5, alpha=2.0)
 
     ###########
     # Surrogates of NNs
@@ -252,16 +282,18 @@ if __name__ == '__main__':
     # train_surrogate('models/credit_card-nn-40-40.mdl', surrogate='rule', sampling_rate=3, rule_maxlen=3, iters=70000)
     # train_surrogate('models/adult-nn-50-50.mdl', surrogate='rule', sampling_rate=2, rule_maxlen=3,
     #                 iters=70000, min_support=0.02)
-    # train_surrogate('models/wine_quality_red-nn-40-40.mdl', surrogate='rule', sampling_rate=5, rule_maxlen=3)
-    # train_surrogate('models/wine_quality_white-nn-40-40.mdl', surrogate='rule', sampling_rate=10)
+    # train_surrogate('models/wine_quality_red-nn-40-40-40-40-40-40.mdl', surrogate='rule', sampling_rate=8,
+    #                 rule_maxlen=3, alpha=0, min_support=0.05)
+    train_surrogate('models/wine_quality_white-nn-40-40-40-40-40-40.mdl', surrogate='rule', sampling_rate=5, alpha=0,
+                    min_support=0.05, rule_maxlen=3)
     # train_surrogate('models/bank_marketing-nn-30-30.mdl', surrogate='rule', sampling_rate=3, rule_maxlen=3)
     # train_surrogate('models/diabetes_balance-nn-40-40.mdl', surrogate='rule',
     #                 sampling_rate=1.0, rule_maxlen=3, min_support=0.01, _lambda=50)
     # train_surrogate('models/pima-nn-10-10.mdl', surrogate='rule', sampling_rate=5, rule_maxlen=3, _lambda=10)
     # train_surrogate('models/pima-nn-20-20.mdl', surrogate='rule', sampling_rate=5, rule_maxlen=2,
     #                 _lambda=5, iters=90000, min_support=0.05)
-    train_surrogate('models/breast_cancer_original-nn-20-20.mdl', surrogate='rule', sampling_rate=2,
-                    rule_maxlen=1, _lambda=5, min_support=0.05)
+    # train_surrogate('models/breast_cancer_original-nn-20-20.mdl', surrogate='rule', sampling_rate=2,
+    #                 rule_maxlen=1, _lambda=5, min_support=0.05)
 
     ###########
     # Surrogates of SVMs

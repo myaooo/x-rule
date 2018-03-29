@@ -74,6 +74,15 @@ export const getStreams = createSelector(
   }
 );
 
+// const getColorString = (state: RootState) => state.ruleStyles.color;
+
+// export const getColor = (state: RootState): ColorType => {
+//   const model = getModel(state);
+//   const color = getColorString(state);
+//   if (model && color === 'sequential') return sequentialColors(model.nClasses);
+//   return labelColor;
+// };
+
 // export const getModelSupport = (state: RootState): number[][] | number[][][] => {
 //   const model = getModel(this.model)
 // }

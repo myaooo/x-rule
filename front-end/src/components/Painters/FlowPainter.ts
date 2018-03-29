@@ -153,11 +153,11 @@ export default class FlowPainter implements Painter<Flow[], FlowPainterParams> {
     // RECT ENTER
     const rectsEnter = rects.enter()
       .append('rect').attr('class', 'v-reserve')
-      .attr('width', d => d.width)
-      .style('fill', (d, i) => color(i));
+      .attr('width', d => d.width);
       
     // RECT UPDATE
-    const rectsUpdate = rectsEnter.merge(rects);
+    const rectsUpdate = rectsEnter.merge(rects)
+      .style('fill', (d, i) => color(i));
     rectsUpdate.transition().duration(duration)
       .attr('width', d => d.width).attr('height', d => d.height).attr('x', d => d.x);
     
@@ -213,11 +213,11 @@ export default class FlowPainter implements Painter<Flow[], FlowPainterParams> {
     const pathsEnter = paths.enter()
       .append('path')
       .attr('d', flowCurve())
-      .style('stroke', (d, i) => color(i))
       .style('stroke-width', 1e-6);
       
     // PATH UPDATE
-    const pathsUpdate = pathsEnter.merge(paths);
+    const pathsUpdate = pathsEnter.merge(paths)
+      .style('stroke', (d, i) => color(i));
     pathsUpdate.transition().duration(duration)
       .attr('d', flowCurve)
       .style('stroke-width', d => `${d.width}px`);

@@ -3,12 +3,16 @@ import { Action } from 'redux';
 import { connect } from 'react-redux';
 import { Slider, Row, Col, Radio } from 'antd';
 import { RootState, Dispatch, changeRuleStyles, RuleStyles } from '../store';
+import { ModelBase } from '../models/base';
+import { getModel } from '../store/selectors';
+import { sequentialColors, labelColor } from '../components/Painters/Painter';
 
 const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;
 
 export interface RuleStyleStateProps {
   styles: RuleStyles;
+  model: ModelBase | null;
 }
 
 export interface RuleStyleDispatchProps {
@@ -26,7 +30,7 @@ class RuleStyleControl extends React.Component<RuleStyleControlProps, any> {
   //   this.props.changeStyles({width: value});
   // }
   render() {
-    const {changeStyles} = this.props;
+    const {changeStyles, model} = this.props;
     return (
       <div style={{ paddingLeft: 12, fontSize: 13 }}>
 
@@ -76,16 +80,30 @@ class RuleStyleControl extends React.Component<RuleStyleControlProps, any> {
 
         <Row style={{marginTop: 8}}>
           <Col span={10}>
-            <span>Mode: </span>
+            <span>Color Scheme: </span>
+            {/* <span>Mode: </span> */}
           </Col>
           <Col span={14}>
-            <RadioGroup 
+            {/* <RadioGroup 
               value={this.props.styles.mode}
               onChange={(e) => changeStyles({mode: e.target.value as 'matrix' | 'list'})}
               size="small"
             >
               <RadioButton value="list">List</RadioButton>
               <RadioButton value="matrix">Matrix</RadioButton>
+            </RadioGroup> */}
+            <RadioGroup 
+              // value={this.props.styles.color}
+              defaultValue={'qualitative'}
+              onChange={(e) => {
+                const color = (model && e.target.value === 'sequential') 
+                  ? sequentialColors(model.nClasses) : labelColor;
+                changeStyles({color});
+              }}
+              size="small"
+            >
+              <RadioButton value="sequential">Seq</RadioButton>
+              <RadioButton value="qualitative">Qual</RadioButton>
             </RadioGroup>
           </Col>
         </Row>
@@ -99,6 +117,7 @@ class RuleStyleControl extends React.Component<RuleStyleControlProps, any> {
 const mapStateToProps = (state: RootState): RuleStyleStateProps => {
   return {
     styles: state.ruleStyles,
+    model: getModel(state)
   };
 };
 

@@ -125,7 +125,7 @@ def train_surrogate(model_file, sampling_rate=5, surrogate='rule',
     # print('target_y')
     # print(model.predict(instances))
     if isinstance(surrogate_model, RuleSurrogate):
-        surrogate_model.surrogate(model, instances, constraints, sampling_rate, cov_factor=0.5, rediscretize=True)
+        surrogate_model.surrogate(model, instances, constraints, sampling_rate, cov_factor=1.0, rediscretize=True)
     else:
         surrogate_model.surrogate(model, instances, constraints, sampling_rate)
     # surrogate_model.evaluate(train_x, train_y)
@@ -137,12 +137,12 @@ def train_surrogate(model_file, sampling_rate=5, surrogate='rule',
     return fidelity, acc, self_fidelity, surrogate_model.n_rules
 
 
-datasets = ['breast_cancer', 'wine', 'iris', 'pima', 'abalone3', 'adult']
-# datasets = ['wine_quality_red']
+# datasets = ['breast_cancer', 'wine', 'iris', 'pima', 'abalone3', 'adult']
+datasets = ['wine_quality_white']
 
 
 def train_all_nn():
-    layers = [1, 2, 3, 4]
+    layers = [1, 2, 4]
     neurons = 40
     alphas = [0.05, 0.2, 1.0, 2.0, 5.0]
 
@@ -196,7 +196,7 @@ def train_all_svm():
 def run_test(dataset, names, sampling_rate=2., n_test=10, alpha=1):
     results = []
     rule_maxlen = 3
-    _lambda = 10 if dataset in {'iris', 'breast_cancer', 'wine'} else 40
+    _lambda = 10 if dataset in {'iris', 'breast_cancer', 'wine', 'pima'} else 50
     for name in names:
         model_file = get_path('models', name + '.mdl')
         fidelities = []
@@ -210,7 +210,7 @@ def run_test(dataset, names, sampling_rate=2., n_test=10, alpha=1):
             fidelity, acc, self_fidelity, n_rules = train_surrogate(model_file, surrogate='rule',
                                                                     sampling_rate=sampling_rate, iters=100000,
                                                                     rule_maxlen=rule_maxlen, alpha=alpha,
-                                                                    min_support=0.01, _lambda=_lambda)
+                                                                    min_support=0.05, _lambda=_lambda)
             seconds.append(time.time() - start)
             print('time: {}s; length: {}'.format(seconds[-1], n_rules))
             list_lengths.append(n_rules)
@@ -256,7 +256,7 @@ def test(target='svm'):
         nns = train_all_nn()
         for i, nn_names in enumerate(nns):
             dataset = datasets[i]
-            sampling_rate = 2 if dataset in {'adult'} else 5.
+            sampling_rate = 2 if dataset in {'adult'} else 4.
             # max_rulelen = max_rulelens[i]
             # performance_dict
             file_name = get_path('experiments', dataset + '-nn.json')
@@ -276,7 +276,7 @@ def test(target='svm'):
         dataset = datasets[i]
         # max_rulelen = max_rulelens[i]
         # performance_dict
-        sampling_rate = 2 if dataset in {'adult'} else 5.
+        sampling_rate = 2 if dataset in {'adult'} else 4.
         file_name = get_path('experiments', dataset + '-svm.json')
         if file_exists(file_name):
             results = json2dict(file_name)
